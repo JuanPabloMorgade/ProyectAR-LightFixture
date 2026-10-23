@@ -821,20 +821,6 @@ footer span {
   line-height: 1.7;
   margin: 7px 0 0;
 }
-.legacy-wrap {
-  margin: 0 auto 30px;
-  max-width: 1320px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  overflow: hidden;
-  background: #fff;
-}
-.shadow-editor {
-  border: 0;
-  width: 100%;
-  height: 1100px;
-  display: block;
-}
 @media (min-width: 1550px) {
   .preview-stage {
     height: 510px;
@@ -879,9 +865,6 @@ footer span {
   }
   .export-bar {
     flex-wrap: wrap;
-  }
-  .legacy-wrap {
-    margin: 0 20px 30px;
   }
 }
 @media (max-width: 680px) {
@@ -981,11 +964,5 @@ footer span {
   .export-bar .button {
     width: 100%;
     margin-top: 10px;
-  }
-  .legacy-wrap {
-    margin: 0 10px 20px;
-  }
-  .shadow-editor {
-    height: 1600px;
   }
 }
