@@ -20,15 +20,15 @@ export const defaults: Settings = {
 };
 export function validateSettings(s: Settings) {
   for (const k of [
-    "width",
-    "height",
-    "min",
-    "max",
-    "angle",
-    "resolution",
-    "contrast",
+    'width',
+    'height',
+    'min',
+    'max',
+    'angle',
+    'resolution',
+    'contrast',
   ] as const)
-    if (!Number.isFinite(s[k])) throw new Error("Parámetros inválidos.");
+    if (!Number.isFinite(s[k])) throw new Error('Parámetros inválidos.');
   if (
     s.width < 30 ||
     s.width > 250 ||
@@ -44,10 +44,10 @@ export function validateSettings(s: Settings) {
     s.resolution > 256 ||
     s.contrast < 0.5 ||
     s.contrast > 2 ||
-    typeof s.invert !== "boolean"
+    typeof s.invert !== 'boolean'
   )
     throw new Error(
-      "Revisá las medidas y los espesores: el máximo debe superar al mínimo.",
+      'Revisá las medidas y los espesores: el máximo debe superar al mínimo.',
     );
 }
 export function createMesh(
@@ -62,7 +62,7 @@ export function createMesh(
     imageHeight < 1 ||
     pixels.length !== imageWidth * imageHeight * 4
   )
-    throw new Error("La imagen no es válida.");
+    throw new Error('La imagen no es válida.');
   const cols = Math.max(
     2,
     Math.round((s.resolution * s.width) / Math.max(s.width, s.height)),
@@ -141,7 +141,7 @@ export function binarySTL(
     buffer = new ArrayBuffer(84 + count * 50),
     view = new DataView(buffer);
   new Uint8Array(buffer, 0, 80).set(
-    new TextEncoder().encode("ProyectAR - Litofania - millimeters"),
+    new TextEncoder().encode('ProyectAR - Litofania - millimeters'),
   );
   view.setUint32(80, count, true);
   for (let f = 0; f < count; f++) {
