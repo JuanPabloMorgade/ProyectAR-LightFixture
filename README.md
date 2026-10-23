@@ -1,34 +1,32 @@
 # ProyectAR
 
-Estudio web local con Next.js App Router, React y TypeScript para cuadros de sombra y litofanías imprimibles.
+Estudio web local con Next.js App Router, React y TypeScript para diseñar cuadros de sombra y paneles de litofanía imprimibles.
 
 ## Inicio
 
-Node.js 24.22.1 (ver `.nvmrc`).
+Usá Node.js 24.22.1 (ver `.nvmrc`).
 
 ```sh
 npm ci
 npm run dev
 ```
 
-Abrir http://localhost:3000. Para producción local: `npm run build` y `npm start`.
+Abrí http://127.0.0.1:3000. Para producción local: `npm run build` y `npm start`.
 
 ## Funciones
 
-- Inicio con acceso a ambos editores.
-- Cuadros: editor ShadowBox integrado, patrones, carga de imagen, proyección, vista 3D, SVG y STL.
-- Lámparas: foto JPG/PNG/WebP, panel plano, arco de 120° o semicírculo, dimensiones en mm, contraste, inversión, espesor mínimo y máximo, vista 3D y exportación STL binaria.
-- Cálculo de litofanías en Web Worker. Malla cerrada con caras frontal, posterior y bordes.
-- Guardado de un proyecto de lámpara en el navegador y exportación/importación JSON. El editor de cuadros conserva su biblioteca local original.
-- Las fotos se reducen a un máximo de 800 píxeles por lado al cargar; no se envían a un servidor.
+- Cuadros de sombra: presets, pincel y borrador, carga de JPG/PNG/WebP/SVG, recorte circular, medidas de caja y luz, proyección estimada, vista 3D, cuatro SVG y STL con cinco piezas.
+- Lámparas: foto JPG/PNG/WebP, panel plano, arco de 120° o semicírculo, medidas en mm, contraste, inversión, espesor mínimo y máximo, vista 3D y STL binario.
+- Guardado local y exportación/importación JSON. El editor nuevo de cuadros abre los diseños guardados por la versión anterior en `localStorage` sin borrarlos.
+- Las fotos y los modelos se procesan en el navegador; no se envían a un servidor.
 
-## Alcance de esta versión
+## Alcance y atribución
 
-El editor ShadowBox se preserva en un iframe del mismo origen, con librerías servidas localmente; aún no está reescrito como componentes React. Su código está en `public/shadowbox`, con su licencia MIT original. La litofanía sí es un editor React nativo, en `src/features/lithophane`.
+El editor de cuadros se reimplementó como funciones TypeScript y componentes React en `src/features/shadowbox`. Ya no se carga una copia del editor anterior dentro de un `iframe`. El proyecto original inspiró el concepto y las funciones; mantenemos su aviso MIT en [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Si el código anterior ya fue publicado en el historial Git, ese historial sigue conservando la copia previa.
 
-La lámpara exporta el panel, sin base, tapa, portalámparas ni encastres. El ancho curvo se mide sobre el arco de la cara posterior. La imagen se adapta a las proporciones indicadas. La iluminación mostrada es orientativa, no una simulación física. Comprobar el STL en un slicer y hacer una prueba física antes de fabricar.
+Las máscaras de corte usan una grilla de precisión configurable. Las curvas de los SVG son contornos poligonales y el STL es una malla de celdas; mayor detalle produce archivos más grandes. La proyección 3D supone una fuente de luz puntual y es orientativa. Verificá el STL en un slicer y probá una pieza física antes de fabricar.
 
-No hay cuentas, base de datos ni almacenamiento remoto en esta etapa. El guardado local depende de este navegador y puede perderse si se borran sus datos; exportar JSON conserva una copia. Las bibliotecas de cuadros y lámparas todavía son independientes.
+La lámpara exporta el panel, sin base, tapa, portalámparas ni encastres. Los proyectos se guardan en este navegador y pueden perderse si se borran sus datos: exportá JSON para conservar una copia.
 
 ## Verificación
 
@@ -38,8 +36,4 @@ npm run typecheck
 npm run build
 ```
 
-Las pruebas del motor comprueban bordes compartidos por dos caras con orientación opuesta, volumen positivo, valores finitos, espesores y estructura del STL para las tres formas. No sustituyen una prueba de impresión.
-
-## Siguientes etapas
-
-Migrar la UI de ShadowBox a React, biblioteca común de proyectos, persistencia de usuarios si se necesita sincronización, bases y encastres paramétricos, y exportaciones en segundo plano si las mallas superan la capacidad del navegador.
+Las pruebas cubren proyección de ida y vuelta, bordes de corte, mallas cerradas, orientación de caras y estructura de STL. No sustituyen una prueba de impresión.
