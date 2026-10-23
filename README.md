@@ -36,4 +36,6 @@ npm run typecheck
 npm run build
 ```
 
-Las pruebas cubren proyección de ida y vuelta, bordes de corte, mallas cerradas, orientación de caras y estructura de STL. No sustituyen una prueba de impresión.
+Las pruebas cubren proyección de ida y vuelta, bordes de corte, mallas cerradas, orientación de caras, estructura de STL, navegación, guardado y validación de proyectos, carga de imágenes y limpieza de SVG. No sustituyen una prueba de impresión.
+
+La documentación de rutas y componentes está en [docs/README.md](docs/README.md). Para ejecutar Vitest mientras editás, usá `npm run test:watch`.

@@ -1,5 +1,5 @@
 export const IMAGE_SIZE = 512;
-export const FACES = ["top", "bottom", "left", "right"] as const;
+export const FACES = ['top', 'bottom', 'left', 'right'] as const;
 export type Face = (typeof FACES)[number];
 export type BoxSettings = {
   width: number;
@@ -32,7 +32,7 @@ export const defaultBox: BoxSettings = {
 
 export function validateBox(s: BoxSettings) {
   for (const value of Object.values(s))
-    if (!Number.isFinite(value)) throw new Error("Ingresá medidas válidas.");
+    if (!Number.isFinite(value)) throw new Error('Ingresá medidas válidas.');
   if (
     s.width < 6 ||
     s.width > 80 ||
@@ -50,11 +50,11 @@ export function validateBox(s: BoxSettings) {
     s.margin > 10 ||
     ![96, 160, 224].includes(s.detail)
   )
-    throw new Error("Revisá las dimensiones y el espesor.");
+    throw new Error('Revisá las dimensiones y el espesor.');
 }
 
 export function faceSpan(face: Face, s: BoxSettings) {
-  return face === "top" || face === "bottom" ? s.width : s.height;
+  return face === 'top' || face === 'bottom' ? s.width : s.height;
 }
 
 export function wallToImage(
@@ -68,19 +68,19 @@ export function wallToImage(
   const scale = bulb / (bulb - depth);
   let x = 0,
     y = 0;
-  if (face === "right") {
+  if (face === 'right') {
     x = (s.width / 2) * scale;
     y = u * scale;
   }
-  if (face === "left") {
+  if (face === 'left') {
     x = (-s.width / 2) * scale;
     y = u * scale;
   }
-  if (face === "top") {
+  if (face === 'top') {
     x = u * scale;
     y = (s.height / 2) * scale;
   }
-  if (face === "bottom") {
+  if (face === 'bottom') {
     x = u * scale;
     y = (-s.height / 2) * scale;
   }
@@ -99,11 +99,11 @@ export function imageToWall(
   const t = horizontal ? tx : ty;
   const face: Face = horizontal
     ? x < 0
-      ? "left"
-      : "right"
+      ? 'left'
+      : 'right'
     : y < 0
-      ? "bottom"
-      : "top";
+      ? 'bottom'
+      : 'top';
   return {
     face,
     u: (horizontal ? y : x) * t,
@@ -117,7 +117,7 @@ export function masksFromImage(
 ): WallMask[] {
   validateBox(s);
   if (image.length !== IMAGE_SIZE * IMAGE_SIZE * 4)
-    throw new Error("La imagen de diseño no es válida.");
+    throw new Error('La imagen de diseño no es válida.');
   return FACES.map((face) => {
     const span = faceSpan(face, s);
     const columns = Math.max(
@@ -211,7 +211,7 @@ function boundaryLoops(mask: WallMask): Point[][] {
       }
   const next = new Map<string, number[]>();
   edges.forEach((edge, i) => {
-    const key = edge.from.join(",");
+    const key = edge.from.join(',');
     const found = next.get(key) || [];
     found.push(i);
     next.set(key, found);
@@ -226,7 +226,7 @@ function boundaryLoops(mask: WallMask): Point[][] {
       const edge = edges[current];
       used[current] = 1;
       points.push(edge.from);
-      const candidates = (next.get(edge.to.join(",")) || []).filter(
+      const candidates = (next.get(edge.to.join(',')) || []).filter(
         (i) => !used[i],
       );
       if (!candidates.length) break;
@@ -260,15 +260,15 @@ export function maskSVG(mask: WallMask): string {
   const paths = boundaryLoops(mask)
     .map(
       (points) =>
-        `M ${points.map(([x, y]) => `${(x * sx).toFixed(3)} ${(y * sy).toFixed(3)}`).join(" L ")} Z`,
+        `M ${points.map(([x, y]) => `${(x * sx).toFixed(3)} ${(y * sy).toFixed(3)}`).join(' L ')} Z`,
     )
-    .join(" ");
+    .join(' ');
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}mm" height="${height}mm" viewBox="0 0 ${width} ${height}"><path fill="black" d="M0 0 H${width} V${height} H0 Z"/><path fill="white" fill-rule="evenodd" d="${paths}"/></svg>`;
 }
 
 export function printMesh(masks: WallMask[], s: BoxSettings) {
   validateBox(s);
-  if (masks.length !== 4) throw new Error("Faltan paneles de la caja.");
+  if (masks.length !== 4) throw new Error('Faltan paneles de la caja.');
   const positions: number[] = [],
     indices: number[] = [];
   function quad(
@@ -285,7 +285,7 @@ export function printMesh(masks: WallMask[], s: BoxSettings) {
   const pieces = [
     ...masks,
     {
-      face: "base" as const,
+      face: 'base' as const,
       span: s.width,
       depth: s.height,
       columns: Math.max(
