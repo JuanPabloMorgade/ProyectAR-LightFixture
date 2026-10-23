@@ -20,7 +20,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
             ["/cuadros", "Cuadros de sombra"],
             ["/lamparas", "Lámparas con fotos"],
           ].map(([url, label]) => (
-            <Link href={url} key={url} className={path === url ? "active" : ""}>
+            <Link href={url} key={url} className={path === url ? "active" : ""} aria-current={path === url ? "page" : undefined}>
               {label}
             </Link>
           ))}

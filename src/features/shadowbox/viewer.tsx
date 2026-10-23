@@ -30,7 +30,7 @@ export default function ShadowViewer({
       return;
     }
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color("#192c32");
+    scene.background = new THREE.Color("#100b18");
     const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 1000);
     const size = Math.max(settings.width, settings.height, settings.depth);
     camera.position.set(size * 1.3, size * 0.85, size * 1.9);
