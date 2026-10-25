@@ -378,6 +378,27 @@
 .shadow-3d-footer strong {
   font-size: 12px;
 }
+.shadow-3d-footer {
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+.shadow-3d-footer .shadow-export {
+  flex: 0 1 330px;
+  width: 100%;
+  min-width: 0;
+  gap: 10px;
+}
+.shadow-export .field {
+  margin: 0;
+}
+.shadow-export .button {
+  width: 100%;
+}
+@media (max-width: 680px) {
+  .shadow-3d-footer .shadow-export {
+    flex: auto;
+  }
+}
 .shadow-3d-footer span {
   font-size: 11px;
   color: var(--muted);

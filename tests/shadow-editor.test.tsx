@@ -2,6 +2,7 @@
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import {
   cleanup,
+  act,
   fireEvent,
   render,
   screen,
@@ -59,4 +60,85 @@ test("rechaza un proyecto JSON inválido", async () => {
     ),
   );
   expect(localStorage.length).toBe(0);
+});
+
+test("permite elegir piezas separadas y descarga el ZIP devuelto por el worker", async () => {
+  let active: ExportWorker;
+  class ExportWorker {
+    onmessage: ((event: MessageEvent) => void) | null = null;
+    onerror: (() => void) | null = null;
+    postMessage = vi.fn();
+    terminate = vi.fn();
+    constructor() {
+      active = this;
+    }
+  }
+  vi.stubGlobal("Worker", ExportWorker);
+  const createURL = vi.fn((_blob: Blob) => "blob:stl-export");
+  vi.stubGlobal(
+    "URL",
+    Object.assign(class extends URL {}, {
+      createObjectURL: createURL,
+      revokeObjectURL: vi.fn(),
+    }),
+  );
+  const downloads: string[] = [];
+  vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(
+    function (this: HTMLAnchorElement) {
+      downloads.push(this.download);
+    },
+  );
+  render(<ShadowEditor />);
+  fireEvent.click(screen.getByRole("tab", { name: "Vista 3D" }));
+  const format = screen.getByRole("combobox", { name: "Formato de descarga" });
+  expect((format as HTMLSelectElement).value).toBe("combined");
+  fireEvent.change(format, { target: { value: "separate" } });
+  fireEvent.click(
+    screen.getByRole("button", { name: "Descargar ZIP · 5 STL" }),
+  );
+  expect(active!.postMessage).toHaveBeenCalledWith(
+    expect.objectContaining({
+      mode: "separate",
+      name: "Mi_cuadro_de_sombra",
+    }),
+  );
+  expect((format as HTMLSelectElement).disabled).toBe(true);
+  expect(
+    (
+      screen.getByRole("button", {
+        name: "Preparando descarga…",
+      }) as HTMLButtonElement
+    ).disabled,
+  ).toBe(true);
+  act(() =>
+    active!.onmessage?.({
+      data: {
+        buffer: new ArrayBuffer(22),
+        filename: "Mi_cuadro_de_sombra-piezas-separadas.zip",
+        mime: "application/zip",
+        triangles: 60,
+      },
+    } as MessageEvent),
+  );
+  expect(downloads).toEqual(["Mi_cuadro_de_sombra-piezas-separadas.zip"]);
+  expect((createURL.mock.calls[0][0] as Blob).type).toBe("application/zip");
+  expect(screen.getByRole("status").textContent).toContain("5 STL separados");
+  expect(active!.terminate).toHaveBeenCalled();
+  expect((format as HTMLSelectElement).disabled).toBe(false);
+  // A failed export must release the controls and permit a retry.
+  fireEvent.change(format, { target: { value: "combined" } });
+  fireEvent.click(
+    screen.getByRole("button", { name: "Descargar STL · 5 piezas" }),
+  );
+  expect(active!.postMessage).toHaveBeenCalledWith(
+    expect.objectContaining({ mode: "combined" }),
+  );
+  act(() =>
+    active!.onmessage?.({
+      data: { error: "No se pudo generar el STL." },
+    } as MessageEvent),
+  );
+  expect(screen.getByRole("alert").textContent).toContain("No se pudo generar");
+  expect((format as HTMLSelectElement).disabled).toBe(false);
+  expect(downloads).toHaveLength(1);
 });

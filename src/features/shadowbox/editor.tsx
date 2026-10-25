@@ -13,7 +13,6 @@ import {
   Check,
   Trash2,
 } from "lucide-react";
-import { binarySTL } from "../lithophane/mesh";
 import {
   IMAGE_SIZE,
   FACES,
@@ -33,6 +32,8 @@ import {
   type Preset,
 } from "./artwork";
 import ShadowViewer from "./viewer";
+import AssemblyGuide from "./assembly-guide";
+import type { STLExportMode, STLExportResult } from "./stl-export";
 import "./shadowbox.css";
 
 type Project = {
@@ -197,6 +198,8 @@ export default function ShadowEditor() {
     [message, setMessage] = useState(""),
     [error, setError] = useState(""),
     [working, setWorking] = useState(false),
+    [exportMode, setExportMode] = useState<STLExportMode>("combined"),
+    [assemblyOpen, setAssemblyOpen] = useState(false),
     [showRays, setShowRays] = useState(false);
   const masks = useMemo(() => {
     if (!target) return [];
@@ -393,22 +396,35 @@ export default function ShadowEditor() {
     }
   }
   async function exportSTL() {
-    if (masks.length !== 4) return;
+    if (masks.length !== 4 || exportJob.current) return;
     setWorking(true);
     setError("");
-    const worker = new Worker(new URL("./export.worker.ts", import.meta.url));
+    let worker: Worker;
+    try {
+      worker = new Worker(new URL("./export.worker.ts", import.meta.url));
+    } catch {
+      setWorking(false);
+      setError(
+        "No se pudo iniciar la exportación. Recargá la página e intentá de nuevo.",
+      );
+      return;
+    }
     exportJob.current = worker;
-    worker.onmessage = ({ data }) => {
+    worker.onmessage = ({
+      data,
+    }: MessageEvent<STLExportResult | { error: string }>) => {
       worker.terminate();
       exportJob.current = null;
       setWorking(false);
-      if (data.error) {
+      if ("error" in data) {
         setError(data.error);
         return;
       }
-      download(data.buffer, `${safeName(name)}-5-piezas.stl`, "model/stl");
+      download(data.buffer, data.filename, data.mime);
       setMessage(
-        `STL generado: ${data.triangles.toLocaleString("es-AR")} triángulos.`,
+        data.mime === "application/zip"
+          ? "ZIP generado: 5 STL separados y una guía de armado."
+          : `STL generado: ${data.triangles.toLocaleString("es-AR")} triángulos.`,
       );
     };
     worker.onerror = () => {
@@ -417,7 +433,12 @@ export default function ShadowEditor() {
       setWorking(false);
       setError("No se pudo generar el STL. Probá con menos detalle.");
     };
-    worker.postMessage({ settings, masks });
+    worker.postMessage({
+      settings,
+      masks,
+      mode: exportMode,
+      name: safeName(name),
+    });
   }
   const number = (
     key: keyof BoxSettings,
@@ -547,9 +568,10 @@ export default function ShadowEditor() {
             />
           </label>
           <div className="shadow-saved">
-            <label>Diseños guardados</label>
+            <label htmlFor="shadow-saved-design">Diseños guardados</label>
             <div>
               <select
+                id="shadow-saved-design"
                 value={selected}
                 onChange={(e) => setSelected(e.target.value)}
               >
@@ -603,6 +625,10 @@ export default function ShadowEditor() {
           </label>
           <p className="shadow-help">
             Todas las medidas de exportación se convierten a milímetros.
+          </p>
+          <p className="shadow-help">
+            Las partes sin unión al marco se eliminan tanto en la proyección
+            estimada como en los archivos exportados.
           </p>
         </aside>
         <section className="shadow-main">
@@ -766,7 +792,7 @@ export default function ShadowEditor() {
               <div className="shadow-3d-bar">
                 <div>
                   <h2>La caja, desde todos los ángulos</h2>
-                  <p>Arrastrá para girar · Rueda para acercar</p>
+                  <p>Arrastrá para girar · Rueda para acercar y alejar</p>
                 </div>
                 <label>
                   <input
@@ -795,18 +821,54 @@ export default function ShadowEditor() {
                     {settings.width} × {settings.height} × {settings.depth} cm
                   </strong>
                   <span>
-                    Cuatro paredes y una tapa, dispuestas en el STL para
-                    impresión.
+                    Cuatro paredes y una tapa frontal lisa, a escala real.
                   </span>
+                  <span>
+                    Izquierda y derecha mirando la caja de frente, desde la
+                    habitación.
+                  </span>
+                  <button
+                    type="button"
+                    className="button secondary assembly-open"
+                    disabled={!simulation || masks.length !== 4}
+                    onClick={() => setAssemblyOpen(true)}
+                  >
+                    <Box size={17} /> Ver guía de armado
+                  </button>
                 </div>
-                <button
-                  className="button primary"
-                  disabled={working || masks.length !== 4}
-                  onClick={() => void exportSTL()}
-                >
-                  <Download size={17} />
-                  {working ? "Generando STL…" : "Descargar STL · 5 piezas"}
-                </button>
+                <div className="shadow-export">
+                  <label className="field">
+                    Formato de descarga
+                    <select
+                      value={exportMode}
+                      disabled={working}
+                      onChange={(e) =>
+                        setExportMode(e.target.value as STLExportMode)
+                      }
+                      aria-describedby="shadow-export-description"
+                    >
+                      <option value="combined">Un STL con las 5 piezas</option>
+                      <option value="separate">Piezas separadas · ZIP</option>
+                    </select>
+                  </label>
+                  <span id="shadow-export-description">
+                    {exportMode === "combined"
+                      ? "Las cinco piezas, una al lado de la otra en un solo archivo."
+                      : "Cinco archivos STL numerados y una guía para identificar las piezas."}
+                  </span>
+                  <button
+                    className="button primary"
+                    disabled={working || masks.length !== 4}
+                    onClick={() => void exportSTL()}
+                  >
+                    <Download size={17} />
+                    {working
+                      ? "Preparando descarga…"
+                      : exportMode === "combined"
+                        ? "Descargar STL · 5 piezas"
+                        : "Descargar ZIP · 5 STL"}
+                  </button>
+                </div>
               </div>
             </>
           )}
@@ -860,6 +922,15 @@ export default function ShadowEditor() {
           )}
         </section>
       </div>
+      {assemblyOpen && simulation && masks.length === 4 && (
+        <AssemblyGuide
+          name={name}
+          settings={settings}
+          masks={masks}
+          simulation={simulation}
+          onClose={() => setAssemblyOpen(false)}
+        />
+      )}
       {crop && (
         <div className="shadow-modal-backdrop" role="presentation">
           <div

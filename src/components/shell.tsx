@@ -1,18 +1,21 @@
 "use client";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Box, Sun, Lamp, ArrowUpRight, Layers3 } from "lucide-react";
+import { Sun, Lamp, ArrowUpRight, Layers3 } from "lucide-react";
 export function Shell({ children }: { children: React.ReactNode }) {
   const path = usePathname();
   return (
     <>
       <header className="site-header">
         <Link className="brand" href="/" aria-label="ProyectAR inicio">
-          <span className="brand-icon">
-            <Box size={23} />
-          </span>
-          Proyect<span>AR</span>
-          <small>ESTUDIO 3D</small>
+          <Image
+            src="/assets/Logo-ProyectAR.png"
+            alt="ProyectAR"
+            width={2172}
+            height={724}
+            priority
+          />
         </Link>
         <nav aria-label="Navegación principal">
           {[

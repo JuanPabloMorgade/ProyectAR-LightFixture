@@ -1,17 +1,8 @@
-import { printMesh, type BoxSettings, type WallMask } from "./engine";
-import { binarySTL } from "../lithophane/mesh";
-self.onmessage = ({
-  data,
-}: {
-  data: { settings: BoxSettings; masks: WallMask[] };
-}) => {
+import { buildSTLExport, type STLExportRequest } from "./stl-export";
+self.onmessage = ({ data }: { data: STLExportRequest }) => {
   try {
-    const mesh = printMesh(data.masks, data.settings);
-    const buffer = binarySTL(mesh.positions, mesh.indices);
-    self.postMessage(
-      { buffer, triangles: mesh.indices.length / 3 },
-      { transfer: [buffer] },
-    );
+    const result = buildSTLExport(data);
+    self.postMessage(result, { transfer: [result.buffer] });
   } catch (error) {
     self.postMessage({
       error:

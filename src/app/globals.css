@@ -13,9 +13,9 @@
   --error: #ffadac;
 }
 * { box-sizing: border-box; }
-body { margin: 0; background: radial-gradient(ellipse 850px 600px at 50% 0, #41206a40, transparent), var(--bg); color: var(--ink); font-family: Arial, Helvetica, sans-serif; font-size: 14px; }
+body { margin: 0; background: radial-gradient(ellipse 850px 600px at 50% 0, #41206a40, transparent), var(--bg); color: var(--ink); font-family: var(--font-inter), Arial, Helvetica, sans-serif; font-size: 14px; }
 a { color: inherit; text-decoration: none; }
-button, input, select { font: inherit; }
+button, input, select, textarea { font: inherit; }
 button { cursor: pointer; transition: background .18s, border-color .18s, transform .18s; }
 button:disabled { opacity: .48; cursor: not-allowed; }
 button:hover:not(:disabled) { filter: brightness(1.12); }
@@ -23,10 +23,8 @@ button:hover:not(:disabled) { filter: brightness(1.12); }
 ::selection { background: #683b9c; color: #fff; }
 input, select { accent-color: var(--accent); }
 .site-header { min-height: 68px; max-width: 1320px; margin: 18px auto 0; padding: 12px 24px; display: flex; align-items: center; gap: 30px; border: 1px solid var(--line); border-radius: 40px; background: #100b18ed; }
-.brand { display: flex; align-items: center; font-size: 24px; font-weight: 800; letter-spacing: -1.2px; position: relative; white-space: nowrap; padding-bottom: 9px; }
-.brand > span:not(.brand-icon) { color: #c5a3ff; }
-.brand-icon { margin-right: 10px; background: var(--action); color: white; border-radius: 50%; width: 36px; height: 36px; display: grid; place-items: center; }
-.brand small { font-size: 8px; letter-spacing: 2.2px; position: absolute; left: 46px; bottom: 0; color: var(--muted); }
+.brand { display: flex; align-items: center; flex: 0 0 auto; }
+.brand img { display: block; width: 180px; height: auto; }
 nav { display: flex; gap: 26px; margin: auto; }
 nav a { color: var(--muted); padding: 10px 0; font-size: 13px; border-bottom: 2px solid transparent; }
 nav a.active { color: var(--ink); border-color: var(--accent); }
@@ -136,7 +134,7 @@ footer span { display: flex; align-items: center; gap: 8px; }
 @media (max-width: 1000px) { .site-header { gap: 20px; padding: 12px 20px; } nav { gap: 18px; } .local-badge { display: none; } .home { padding: 32px 24px; } .lamp-workspace { padding: 0 20px 30px; grid-template-columns: 260px minmax(0, 1fr); gap: 14px; } .editor-heading { padding: 28px 20px; } .preview-stage { height: 430px; } }
 @media (max-width: 680px) {
   .site-header { margin: 12px; padding: 15px 16px 6px; border-radius: 22px; display: block; }
-  .brand { width: max-content; font-size: 23px; }
+  .brand img { width: 160px; }
   nav { gap: 14px; justify-content: space-between; margin-top: 12px; flex-wrap: wrap; }
   nav a { font-size: 11px; padding: 10px 0; }
   .home { padding: 25px 16px; } .hero { padding: 16px 0 32px; } .hero::before { inset: -20px 0 0; } .hero h1 { letter-spacing: -1.6px; } .hero p { font-size: 14px; }
@@ -151,3 +149,160 @@ footer span { display: flex; align-items: center; gap: 8px; }
   .export-bar { padding: 20px 15px; } .export-bar .button { width: 100%; margin-top: 8px; }
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; } .project-card:hover { transform: none; } }
+
+/* Shared Astra form controls. The root qualifier keeps editor styles from
+   overriding these rules when route stylesheets load in a different order. */
+:root :is(.field, .shadow-field, .shadow-saved) :is(input:not([type]), input[type="text"], select, textarea),
+:root :is(.unit-input, .shadow-field > span) {
+  min-width: 0;
+  width: 100%;
+  min-height: 40px;
+  border: 1px solid #604175;
+  border-radius: 10px;
+  background-color: var(--field);
+  color: var(--ink);
+  box-shadow: inset 0 1px 2px #08070d26;
+  transition: border-color .18s, box-shadow .18s, background-color .18s;
+}
+:root :is(.field, .shadow-field, .shadow-saved) :is(input:not([type]), input[type="text"], select, textarea) {
+  padding: 10px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+:root :is(.field, .shadow-field) textarea {
+  display: block;
+  margin-top: 8px;
+  resize: vertical;
+  line-height: 1.65;
+}
+:root :is(.field, .shadow-field, .shadow-saved) :is(input, textarea)::placeholder {
+  color: var(--muted);
+  opacity: .8;
+}
+:root :is(.unit-input, .shadow-field > span) {
+  display: flex;
+  align-items: center;
+  padding: 0;
+  overflow: hidden;
+}
+:root :is(.unit-input, .shadow-field > span) input[type="number"] {
+  appearance: textfield;
+  -moz-appearance: textfield;
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  min-height: 38px;
+  margin: 0;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--ink);
+  box-shadow: none;
+  font-size: 13px;
+  line-height: 1.4;
+  font-variant-numeric: tabular-nums;
+}
+:root input[type="number"]::-webkit-inner-spin-button,
+:root input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+:root :is(.unit-input > span, .shadow-field > span > small) {
+  flex: none;
+  padding: 0 12px 0 0;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--muted);
+  white-space: nowrap;
+  user-select: none;
+}
+:root :is(.two-fields > .field, .shadow-two > .shadow-field) {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  min-width: 0;
+  line-height: 1.4;
+}
+:root :is(.field, .shadow-field, .shadow-saved) select {
+  appearance: none;
+  padding-right: 34px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23c8a8e7' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m7 10 5 5 5-5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+:root :is(.field, .shadow-field, .shadow-saved) select option {
+  background: var(--surface);
+  color: var(--ink);
+}
+:root :is(.field, .shadow-field, .shadow-saved) :is(input:not([type]), input[type="text"], select, textarea):hover:not(:disabled),
+:root :is(.unit-input, .shadow-field > span):hover {
+  border-color: #8961a5;
+}
+:root :is(.field, .shadow-field, .shadow-saved) :is(input:not([type]), input[type="text"], select, textarea):focus,
+:root :is(.unit-input, .shadow-field > span):focus-within {
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px #a879ff26;
+}
+:root :is(.unit-input, .shadow-field > span) input:focus {
+  outline: none;
+}
+:root :is(.field, .shadow-field, .shadow-saved) :is(input, select, textarea):disabled,
+:root :is(.unit-input, .shadow-field > span):has(input:disabled) {
+  opacity: .5;
+  cursor: not-allowed;
+}
+/* Customizable native selects retain keyboard, labels and mobile pickers.
+   Older browsers use the dark native option styling above. */
+@supports (appearance: base-select) {
+  :root :is(.field, .shadow-field, .shadow-saved) select,
+  :root :is(.field, .shadow-field, .shadow-saved) select::picker(select) {
+    appearance: base-select;
+  }
+  :root :is(.field, .shadow-field, .shadow-saved) select::picker-icon {
+    display: none;
+  }
+  :root :is(.field, .shadow-field, .shadow-saved) select::picker(select) {
+    margin-block: 6px;
+    padding: 5px;
+    border: 1px solid #604175;
+    border-radius: 12px;
+    background: #1d1428;
+    color: var(--ink);
+    box-shadow: 0 12px 32px #08070d80;
+    max-height: min(320px, 50dvh);
+    overflow-y: auto;
+  }
+  :root :is(.field, .shadow-field, .shadow-saved) select option {
+    padding: 10px 12px;
+    border-radius: 7px;
+    background: transparent;
+    font-size: inherit;
+    cursor: pointer;
+    overflow-wrap: anywhere;
+  }
+  :root :is(.field, .shadow-field, .shadow-saved) select option:checked {
+    background: #4b2868;
+    color: #f3eefb;
+  }
+  :root :is(.field, .shadow-field, .shadow-saved) select option:is(:hover, :focus-visible) {
+    background: #382347;
+    outline: 1px solid var(--accent);
+    outline-offset: -1px;
+  }
+}
+@media (max-width: 680px) {
+  :root :is(.field, .shadow-field, .shadow-saved) :is(input:not([type]), input[type="text"], select, textarea),
+  :root :is(.unit-input, .shadow-field > span) input[type="number"] {
+    min-height: 44px;
+    font-size: 16px;
+  }
+}
+:root :is(.field, .shadow-field) textarea:not([hidden]) {
+  min-height: 112px;
+}
