@@ -1,0 +1,51 @@
+.assembly-open { align-self: flex-start; margin-top: 14px; }
+.assembly-dialog { width: min(1120px, calc(100vw - 40px)); max-height: calc(100dvh - 40px); padding: 0; border: 1px solid #664780; border-radius: 24px; background: #181021; color: var(--ink); box-shadow: 0 30px 120px #000a; overflow: auto; }
+.assembly-dialog::backdrop { background: #08070dcc; backdrop-filter: blur(8px); }
+.assembly-header { padding: 24px 28px 20px; display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; }
+.assembly-header h2 { margin: 10px 0 8px; font-size: 26px; letter-spacing: -.6px; }
+.assembly-header p { margin: 0; color: var(--muted); font-size: 13px; overflow-wrap: anywhere; }
+.assembly-close, .assembly-camera button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; border: 1px solid #604175; border-radius: 12px; background: #24172f; color: var(--ink); min-height: 40px; padding: 10px; }
+.assembly-close { flex: none; width: 42px; height: 42px; }
+.assembly-steps { list-style: none; margin: 0; padding: 0 28px 20px; display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 6px; }
+.assembly-steps button { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 10px 3px; border: 1px solid transparent; border-radius: 12px; background: transparent; color: var(--muted); font-size: 11px; }
+.assembly-steps button > span { display: grid; place-items: center; border: 1px solid #604175; border-radius: 50%; width: 28px; height: 28px; }
+.assembly-steps button[aria-current="step"] { background: #39234e; border-color: #79549c; color: var(--ink); }
+.assembly-steps button[aria-current="step"] > span { background: var(--action); border-color: var(--accent); }
+.assembly-body { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(270px, 1fr); border-block: 1px solid var(--line); }
+.assembly-visual { position: relative; min-width: 0; min-height: 420px; background: radial-gradient(ellipse at 50% 40%, #352442, #100b18 75%); overflow: hidden; }
+.assembly-canvas, .assembly-labels { position: absolute; inset: 62px 0 38px; }
+.assembly-canvas canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+.assembly-labels { pointer-events: none; }
+.assembly-labels span { position: absolute; transform: translate(-50%, -50%); white-space: nowrap; font-size: 10px; font-weight: 600; border: 1px solid #8a62aa; background: #20122fec; padding: 7px 9px; border-radius: 8px; box-shadow: 0 4px 16px #0005; }
+.assembly-camera { position: absolute; top: 14px; left: 14px; display: flex; gap: 6px; }
+.assembly-camera button { font-size: 11px; background: #1c1329ed; }
+.assembly-gesture { position: absolute; bottom: 14px; left: 12px; right: 12px; text-align: center; margin: 0; color: #cebedc; font-size: 11px; pointer-events: none; }
+.assembly-instructions { padding: 30px 26px; border-left: 1px solid var(--line); display: flex; flex-direction: column; justify-content: space-between; gap: 24px; }
+.assembly-progress { color: #c4a1ef; font-size: 11px; letter-spacing: 1.3px; }
+.assembly-instructions h3 { font-size: 23px; line-height: 1.25; letter-spacing: -.5px; margin: 14px 0; }
+.assembly-instructions p { font-size: 14px; line-height: 1.75; color: #d0bedf; margin: 0; }
+.assembly-file { margin-top: 24px; border: 1px solid #523466; border-radius: 12px; background: #24172f; padding: 14px; }
+.assembly-file span { display: block; font-size: 10px; color: var(--muted); letter-spacing: 1px; margin-bottom: 9px; }
+.assembly-file strong { font-size: 12px; font-weight: 500; overflow-wrap: anywhere; line-height: 1.6; }
+.assembly-instructions .assembly-note { color: var(--muted); font-size: 11px; line-height: 1.7; }
+.assembly-footer { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 20px 28px; position: sticky; bottom: 0; z-index: 2; background: #181021; border-top: 1px solid var(--line); }
+.assembly-footer > div { display: flex; gap: 8px; }
+.assembly-restart { display: inline-flex; gap: 7px; align-items: center; border: 0; background: transparent; color: var(--muted); padding: 10px 0; font-size: 12px; }
+.assembly-error { position: absolute; inset: 40% 24px auto; text-align: center; color: var(--error); line-height: 1.7; }
+@media (max-width: 760px) {
+  .assembly-dialog { width: calc(100vw - 20px); max-height: calc(100dvh - 20px); border-radius: 20px; }
+  .assembly-header { padding: 20px 18px 14px; }
+  .assembly-header h2 { font-size: 23px; }
+  .assembly-header .eyebrow { font-size: 9px; letter-spacing: 1px; }
+  .assembly-steps { padding: 0 18px 14px; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 3px; }
+  .assembly-steps button { padding: 6px 3px; flex-direction: row; justify-content: center; gap: 5px; font-size: 10px; }
+  .assembly-steps button > span { width: 22px; height: 22px; flex: none; }
+  .assembly-body { grid-template-columns: 1fr; }
+  .assembly-visual { min-height: 350px; }
+  .assembly-instructions { padding: 20px; border-left: 0; border-top: 1px solid var(--line); gap: 18px; }
+  .assembly-instructions h3 { font-size: 21px; }
+  .assembly-file { margin-top: 16px; }
+  .assembly-footer { padding: 16px 18px; flex-wrap: wrap; }
+  .assembly-footer > div { margin-left: auto; }
+  .assembly-footer .button { min-height: 44px; padding: 10px 14px; }
+}

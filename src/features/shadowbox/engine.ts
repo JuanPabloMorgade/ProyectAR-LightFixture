@@ -1,5 +1,7 @@
+import { ShapeUtils, Vector2 } from "three";
+
 export const IMAGE_SIZE = 512;
-export const FACES = ['top', 'bottom', 'left', 'right'] as const;
+export const FACES = ["top", "bottom", "left", "right"] as const;
 export type Face = (typeof FACES)[number];
 export type BoxSettings = {
   width: number;
@@ -32,7 +34,7 @@ export const defaultBox: BoxSettings = {
 
 export function validateBox(s: BoxSettings) {
   for (const value of Object.values(s))
-    if (!Number.isFinite(value)) throw new Error('Ingresá medidas válidas.');
+    if (!Number.isFinite(value)) throw new Error("IngresÃ¡ medidas vÃ¡lidas.");
   if (
     s.width < 6 ||
     s.width > 80 ||
@@ -50,11 +52,11 @@ export function validateBox(s: BoxSettings) {
     s.margin > 10 ||
     ![96, 160, 224].includes(s.detail)
   )
-    throw new Error('Revisá las dimensiones y el espesor.');
+    throw new Error("RevisÃ¡ las dimensiones y el espesor.");
 }
 
 export function faceSpan(face: Face, s: BoxSettings) {
-  return face === 'top' || face === 'bottom' ? s.width : s.height;
+  return face === "top" || face === "bottom" ? s.width : s.height;
 }
 
 export function wallToImage(
@@ -68,19 +70,19 @@ export function wallToImage(
   const scale = bulb / (bulb - depth);
   let x = 0,
     y = 0;
-  if (face === 'right') {
+  if (face === "right") {
     x = (s.width / 2) * scale;
     y = u * scale;
   }
-  if (face === 'left') {
+  if (face === "left") {
     x = (-s.width / 2) * scale;
     y = u * scale;
   }
-  if (face === 'top') {
+  if (face === "top") {
     x = u * scale;
     y = (s.height / 2) * scale;
   }
-  if (face === 'bottom') {
+  if (face === "bottom") {
     x = u * scale;
     y = (-s.height / 2) * scale;
   }
@@ -99,11 +101,11 @@ export function imageToWall(
   const t = horizontal ? tx : ty;
   const face: Face = horizontal
     ? x < 0
-      ? 'left'
-      : 'right'
+      ? "left"
+      : "right"
     : y < 0
-      ? 'bottom'
-      : 'top';
+      ? "bottom"
+      : "top";
   return {
     face,
     u: (horizontal ? y : x) * t,
@@ -117,21 +119,32 @@ export function masksFromImage(
 ): WallMask[] {
   validateBox(s);
   if (image.length !== IMAGE_SIZE * IMAGE_SIZE * 4)
-    throw new Error('La imagen de diseño no es válida.');
+    throw new Error("La imagen de diseÃ±o no es vÃ¡lida.");
   return FACES.map((face) => {
     const span = faceSpan(face, s);
-    const columns = Math.max(
+    // Keep persisted detail values compatible with existing projects. Increase
+    // sampling in both axes; the old 160-row cap erased detail in deep panels.
+    const multiplier = s.detail === 224 ? 4 : s.detail === 160 ? 2 : 1;
+    const baseColumns = Math.max(
       48,
       Math.round((s.detail * span) / Math.max(s.width, s.height)),
     );
+    const baseRows = Math.max(
+      24,
+      Math.min(160, Math.round((baseColumns * s.depth) / span)),
+    );
+    const columns = baseColumns * multiplier;
     const rows = Math.max(
       24,
-      Math.min(160, Math.round((columns * s.depth) / span)),
+      Math.min(1024, Math.round((columns * s.depth) / span)),
     );
+    // Preserve the physical frame width when increasing resolution.
+    const borderX = Math.ceil((2 * columns) / baseColumns);
+    const borderY = Math.ceil((2 * rows) / baseRows);
     const cells = new Uint8Array(columns * rows);
     const bulb = (s.depth * s.lightPercent) / 100;
-    for (let row = 2; row < rows - 2; row++)
-      for (let column = 2; column < columns - 2; column++) {
+    for (let row = borderY; row < rows - borderY; row++)
+      for (let column = borderX; column < columns - borderX; column++) {
         const depth = ((row + 0.5) / rows) * s.depth;
         if (depth >= bulb - s.margin / 10) continue;
         const u = ((column + 0.5) / columns - 0.5) * span;
@@ -154,8 +167,61 @@ export function masksFromImage(
           255;
         cells[row * columns + column] = brightness >= 128 ? 1 : 0;
       }
-    return { face, columns, rows, span, depth: s.depth, cells };
+    return printableMask({ face, columns, rows, span, depth: s.depth, cells });
   });
+}
+
+/** Remove unsupported material once, so SVG, projection and STL agree. */
+export function printableMask(mask: WallMask): WallMask {
+  const { columns: w, rows: h, cells } = mask;
+  const connected = new Uint8Array(w * h);
+  const queue = new Int32Array(w * h);
+  let end = 0;
+  const visit = (i: number) => {
+    if (!cells[i] && !connected[i]) {
+      connected[i] = 1;
+      queue[end++] = i;
+    }
+  };
+  for (let x = 0; x < w; x++) {
+    visit(x);
+    visit((h - 1) * w + x);
+  }
+  for (let y = 0; y < h; y++) {
+    visit(y * w);
+    visit(y * w + w - 1);
+  }
+  for (let head = 0; head < end; head++) {
+    const i = queue[head],
+      x = i % w;
+    if (x > 0) visit(i - 1);
+    if (x < w - 1) visit(i + 1);
+    if (i >= w) visit(i - w);
+    if (i < w * (h - 1)) visit(i + w);
+  }
+  const printable = connected.map((solid) => 1 - solid);
+  // A diagonal-only contact creates four walls on one edge in an STL.
+  // Join the material with one grid cell instead of exporting that pinch.
+  let changed: boolean;
+  do {
+    changed = false;
+    for (let y = 0; y < h - 1; y++)
+      for (let x = 0; x < w - 1; x++) {
+        const a = y * w + x,
+          b = a + 1,
+          c = a + w,
+          d = c + 1;
+        if (
+          printable[a] === printable[d] &&
+          printable[b] === printable[c] &&
+          printable[a] !== printable[b]
+        ) {
+          printable[printable[c] ? c : d] = 0;
+          changed = true;
+        }
+      }
+  } while (changed);
+  return { ...mask, cells: printable };
 }
 
 export function simulatedImage(
@@ -164,7 +230,7 @@ export function simulatedImage(
 ): Uint8ClampedArray {
   const out = new Uint8ClampedArray(IMAGE_SIZE * IMAGE_SIZE * 4);
   const byFace = Object.fromEntries(
-    masks.map((mask) => [mask.face, mask]),
+    masks.map((mask) => [mask.face, printableMask(mask)]),
   ) as Record<Face, WallMask>;
   for (let iy = 0; iy < IMAGE_SIZE; iy++)
     for (let ix = 0; ix < IMAGE_SIZE; ix++) {
@@ -211,7 +277,7 @@ function boundaryLoops(mask: WallMask): Point[][] {
       }
   const next = new Map<string, number[]>();
   edges.forEach((edge, i) => {
-    const key = edge.from.join(',');
+    const key = edge.from.join(",");
     const found = next.get(key) || [];
     found.push(i);
     next.set(key, found);
@@ -226,7 +292,7 @@ function boundaryLoops(mask: WallMask): Point[][] {
       const edge = edges[current];
       used[current] = 1;
       points.push(edge.from);
-      const candidates = (next.get(edge.to.join(',')) || []).filter(
+      const candidates = (next.get(edge.to.join(",")) || []).filter(
         (i) => !used[i],
       );
       if (!candidates.length) break;
@@ -257,150 +323,195 @@ export function maskSVG(mask: WallMask): string {
     height = mask.depth * 10,
     sx = width / mask.columns,
     sy = height / mask.rows;
-  const paths = boundaryLoops(mask)
+  const paths = boundaryLoops(printableMask(mask))
     .map(
       (points) =>
-        `M ${points.map(([x, y]) => `${(x * sx).toFixed(3)} ${(y * sy).toFixed(3)}`).join(' L ')} Z`,
+        `M ${points.map(([x, y]) => `${(x * sx).toFixed(3)} ${(y * sy).toFixed(3)}`).join(" L ")} Z`,
     )
-    .join(' ');
+    .join(" ");
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}mm" height="${height}mm" viewBox="0 0 ${width} ${height}"><path fill="black" d="M0 0 H${width} V${height} H0 Z"/><path fill="white" fill-rule="evenodd" d="${paths}"/></svg>`;
 }
 
-export function printMesh(masks: WallMask[], s: BoxSettings) {
-  validateBox(s);
-  if (masks.length !== 4) throw new Error('Faltan paneles de la caja.');
+export const PRINT_PARTS = [
+  { id: "top", filename: "01-pared-superior", label: "Pared superior" },
+  { id: "bottom", filename: "02-pared-inferior", label: "Pared inferior" },
+  { id: "left", filename: "03-pared-izquierda", label: "Pared izquierda" },
+  { id: "right", filename: "04-pared-derecha", label: "Pared derecha" },
+  { id: "front", filename: "05-tapa-frontal", label: "Tapa frontal lisa" },
+] as const;
+
+type PrintMesh = { positions: Float32Array; indices: Uint32Array };
+
+function panelMesh(panel: WallMask, thickness: number): PrintMesh {
   const positions: number[] = [],
     indices: number[] = [];
-  function quad(
-    a: Point | number[],
-    b: Point | number[],
-    c: Point | number[],
-    d: Point | number[],
-  ) {
-    const start = positions.length / 3;
-    positions.push(...a, ...b, ...c, ...d);
-    indices.push(start, start + 1, start + 2, start, start + 2, start + 3);
-  }
-  let origin = 0;
-  const pieces = [
-    ...masks,
-    {
-      face: 'base' as const,
-      span: s.width,
-      depth: s.height,
-      columns: Math.max(
-        20,
-        Math.round((s.detail * s.width) / Math.max(s.width, s.height)),
-      ),
-      rows: Math.max(
-        20,
-        Math.round((s.detail * s.height) / Math.max(s.width, s.height)),
-      ),
-      cells: null,
-    },
-  ];
-  for (const panel of pieces) {
-    const { columns: w, rows: h } = panel,
-      all = panel.cells;
-    const solid = new Uint8Array(w * h);
-    for (let i = 0; i < solid.length; i++) solid[i] = all ? 1 - all[i] : 1;
-    // Discard floating islands left inside cutouts; keep material connected to the frame.
-    if (all) {
-      const seen = new Uint8Array(w * h),
-        queue: number[] = [];
-      for (let x = 0; x < w; x++)
-        for (const y of [0, h - 1]) {
-          const i = y * w + x;
-          if (solid[i] && !seen[i]) {
-            seen[i] = 1;
-            queue.push(i);
-          }
-        }
-      for (let y = 0; y < h; y++)
-        for (const x of [0, w - 1]) {
-          const i = y * w + x;
-          if (solid[i] && !seen[i]) {
-            seen[i] = 1;
-            queue.push(i);
-          }
-        }
-      for (let head = 0; head < queue.length; head++) {
-        const i = queue[head],
-          x = i % w,
-          y = Math.floor(i / w);
-        for (const [nx, ny] of [
-          [x - 1, y],
-          [x + 1, y],
-          [x, y - 1],
-          [x, y + 1],
-        ])
-          if (nx >= 0 && nx < w && ny >= 0 && ny < h) {
-            const n = ny * w + nx;
-            if (solid[n] && !seen[n]) {
-              seen[n] = 1;
-              queue.push(n);
-            }
-          }
-      }
-      for (let i = 0; i < solid.length; i++) solid[i] = seen[i];
+  // Triangulate the actual outlines, rather than tessellating every solid
+  // cell. Flat panel interiors need no extra triangles at higher detail.
+  const solid = { ...panel, cells: panel.cells.map((cut) => 1 - cut) };
+  const loops = boundaryLoops(solid).map((loop) =>
+    loop.map(
+      ([x, y]) =>
+        new Vector2(
+          (x * panel.span * 10) / panel.columns,
+          (y * panel.depth * 10) / panel.rows,
+        ),
+    ),
+  );
+  const outlines = loops.filter((loop) => ShapeUtils.area(loop) > 0);
+  const holes = loops.filter((loop) => ShapeUtils.area(loop) < 0);
+  const contains = (loop: Vector2[], p: Vector2) => {
+    let inside = false;
+    for (let i = 0, j = loop.length - 1; i < loop.length; j = i++) {
+      const a = loop[i],
+        b = loop[j];
+      if (
+        a.y > p.y !== b.y > p.y &&
+        p.x < ((b.x - a.x) * (p.y - a.y)) / (b.y - a.y) + a.x
+      )
+        inside = !inside;
     }
-    const dx = (panel.span * 10) / w,
-      dy = (panel.depth * 10) / h,
-      z = s.thickness;
-    const has = (x: number, y: number) =>
-      x >= 0 && x < w && y >= 0 && y < h && solid[y * w + x] === 1;
-    for (let y = 0; y < h; y++)
-      for (let x = 0; x < w; x++)
-        if (has(x, y)) {
-          const left = origin + x * dx,
-            right = left + dx,
-            bottom = y * dy,
-            top = bottom + dy;
-          quad(
-            [left, bottom, z],
-            [right, bottom, z],
-            [right, top, z],
-            [left, top, z],
-          );
-          quad(
-            [left, top, 0],
-            [right, top, 0],
-            [right, bottom, 0],
-            [left, bottom, 0],
-          );
-          if (!has(x, y - 1))
-            quad(
-              [left, bottom, 0],
-              [right, bottom, 0],
-              [right, bottom, z],
-              [left, bottom, z],
-            );
-          if (!has(x + 1, y))
-            quad(
-              [right, bottom, 0],
-              [right, top, 0],
-              [right, top, z],
-              [right, bottom, z],
-            );
-          if (!has(x, y + 1))
-            quad(
-              [right, top, 0],
-              [left, top, 0],
-              [left, top, z],
-              [right, top, z],
-            );
-          if (!has(x - 1, y))
-            quad(
-              [left, top, 0],
-              [left, bottom, 0],
-              [left, bottom, z],
-              [left, top, z],
-            );
-        }
-    origin += panel.span * 10 + 12;
+    return inside;
+  };
+  for (const outline of outlines) {
+    const inner = holes.filter((hole) => contains(outline, hole[0]));
+    const vertices = [outline, ...inner].flat();
+    const byX = new Map<number, number[]>(),
+      byY = new Map<number, number[]>();
+    vertices.forEach((p, i) => {
+      if (!byX.has(p.x)) byX.set(p.x, []);
+      if (!byY.has(p.y)) byY.set(p.y, []);
+      byX.get(p.x)!.push(i);
+      byY.get(p.y)!.push(i);
+    });
+    const faces: number[][] = [];
+    for (const triangle of ShapeUtils.triangulateShape(outline, inner)) {
+      // Earcut can bridge several holes on the same grid line and skip
+      // intermediate vertices. Split those edges so caps and walls meet
+      // exactly, without T junctions that a slicer would have to repair.
+      const perimeter: number[] = [];
+      for (let edge = 0; edge < 3; edge++) {
+        const a = triangle[edge],
+          b = triangle[(edge + 1) % 3];
+        const p = vertices[a],
+          q = vertices[b];
+        perimeter.push(a);
+        const vertical = p.x === q.x;
+        const candidates = vertical
+          ? byX.get(p.x)
+          : p.y === q.y
+            ? byY.get(p.y)
+            : [];
+        const axis = vertical ? "y" : "x";
+        const between = (candidates || []).filter(
+          (i) =>
+            vertices[i][axis] > Math.min(p[axis], q[axis]) &&
+            vertices[i][axis] < Math.max(p[axis], q[axis]),
+        );
+        between.sort(
+          (a, b) =>
+            (vertices[a][axis] - vertices[b][axis]) *
+            Math.sign(q[axis] - p[axis]),
+        );
+        perimeter.push(...between);
+      }
+      if (perimeter.length === 3) faces.push(triangle);
+      else {
+        const center = vertices.length;
+        vertices.push(
+          new Vector2(
+            triangle.reduce((sum, i) => sum + vertices[i].x, 0) / 3,
+            triangle.reduce((sum, i) => sum + vertices[i].y, 0) / 3,
+          ),
+        );
+        for (let i = 0; i < perimeter.length; i++)
+          faces.push([
+            center,
+            perimeter[i],
+            perimeter[(i + 1) % perimeter.length],
+          ]);
+      }
+    }
+    const offset = positions.length / 3;
+    for (const z of [0, thickness])
+      for (const p of vertices) positions.push(p.x, p.y, z);
+    const n = vertices.length;
+    for (const [a, b, c] of faces) {
+      indices.push(
+        offset + c,
+        offset + b,
+        offset + a,
+        offset + n + a,
+        offset + n + b,
+        offset + n + c,
+      );
+    }
+    let start = 0;
+    for (const loop of [outline, ...inner]) {
+      for (let i = 0; i < loop.length; i++) {
+        const a = offset + start + i;
+        const b = offset + start + ((i + 1) % loop.length);
+        indices.push(a, b, b + n, a, b + n, a + n);
+      }
+      start += loop.length;
+    }
   }
+
   return {
     positions: new Float32Array(positions),
     indices: new Uint32Array(indices),
   };
+}
+
+/** Each piece lies flat at the origin, in millimeters, ready for a slicer. */
+export function printParts(masks: WallMask[], s: BoxSettings) {
+  validateBox(s);
+  if (
+    masks.length !== 4 ||
+    FACES.some(
+      (face) => masks.filter((mask) => mask.face === face).length !== 1,
+    )
+  )
+    throw new Error("Faltan paneles de la caja o hay paneles duplicados.");
+  return PRINT_PARTS.map((part) => {
+    const panel: WallMask =
+      part.id === "front"
+        ? {
+            face: "top",
+            span: s.width,
+            depth: s.height,
+            columns: 1,
+            rows: 1,
+            cells: new Uint8Array(1),
+          }
+        : printableMask(masks.find((mask) => mask.face === part.id)!);
+    return {
+      ...part,
+      ...panelMesh(panel, s.thickness),
+      width: panel.span * 10,
+    };
+  });
+}
+
+export function printMesh(masks: WallMask[], s: BoxSettings): PrintMesh {
+  const parts = printParts(masks, s);
+  const positions = new Float32Array(
+    parts.reduce((sum, part) => sum + part.positions.length, 0),
+  );
+  const indices = new Uint32Array(
+    parts.reduce((sum, part) => sum + part.indices.length, 0),
+  );
+  let positionOffset = 0,
+    indexOffset = 0,
+    origin = 0;
+  for (const part of parts) {
+    positions.set(part.positions, positionOffset);
+    for (let i = 0; i < part.positions.length; i += 3)
+      positions[positionOffset + i] += origin;
+    for (let i = 0; i < part.indices.length; i++)
+      indices[indexOffset + i] = part.indices[i] + positionOffset / 3;
+    positionOffset += part.positions.length;
+    indexOffset += part.indices.length;
+    origin += part.width + 12;
+  }
+  return { positions, indices };
 }

@@ -40,7 +40,7 @@ export default function ShadowViewer({
     controls.target.copy(target);
     controls.enableDamping = true;
     controls.minDistance = size * 0.6;
-    controls.maxDistance = size * 5;
+    controls.maxDistance = Math.max(size * 5, settings.radius * 4);
     scene.add(new THREE.AmbientLight(0xffffff, 1.4));
     const key = new THREE.DirectionalLight(0xffe8ba, 2);
     key.position.set(settings.width, settings.height, settings.depth * 2);

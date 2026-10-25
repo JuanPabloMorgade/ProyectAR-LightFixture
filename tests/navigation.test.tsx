@@ -40,6 +40,10 @@ test("la navegación indica la ruta activa sin marcar las demás", () => {
     </Shell>,
   );
 
+  const logo = screen.getByRole("img", { name: "ProyectAR" });
+  expect(decodeURIComponent(logo.getAttribute("src") ?? "")).toContain(
+    "/assets/Logo-ProyectAR.png",
+  );
   const nav = screen.getByRole("navigation", { name: "Navegación principal" });
   expect(
     within(nav)
