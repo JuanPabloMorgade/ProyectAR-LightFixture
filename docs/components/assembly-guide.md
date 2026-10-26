@@ -29,7 +29,7 @@ El ZIP agrega el nombre del proyecto como prefijo de los cinco nombres indicados
 
 La cámara permite arrastrar para girar, usar rueda o gesto de dos dedos para acercar y utilizar botones para girar o centrar la vista. Al cambiar de paso adapta el encuadre. Con `prefers-reduced-motion: reduce`, las piezas se ubican directamente sin animación de desplazamiento.
 
-Los botones `Anterior`, `Siguiente`, `Reiniciar` y los ocho pasos permiten recorrer la guía; `Finalizar` la cierra. El modal nativo usa un portal en `document.body`, bloquea el scroll de fondo, mantiene Tab dentro de sus botones y se cierra con Escape, el botón de cierre o un clic en el fondo exterior. Al cerrarse devuelve el foco al botón que lo abrió.
+Los botones `Anterior`, `Siguiente`, `Reiniciar` y los ocho pasos permiten recorrer la guía; `Finalizar` la cierra. Usa los componentes compartidos `Modal`, `ModalHeader`, `ModalFooter` y `Button`. El diálogo nativo se muestra en la capa superior del navegador, bloquea el scroll de fondo, mantiene Tab dentro de sus controles y se cierra con Escape, el botón de cierre o un clic en el fondo exterior. Al cerrarse devuelve el foco al botón que lo abrió. Esta lógica se comparte con el recorte de imágenes.
 
 ## Ciclo de vida y límites
 

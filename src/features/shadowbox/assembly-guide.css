@@ -1,7 +1,7 @@
 .assembly-open { align-self: flex-start; margin-top: 14px; }
 .assembly-dialog { width: min(1120px, calc(100vw - 40px)); max-height: calc(100dvh - 40px); padding: 0; border: 1px solid #664780; border-radius: 24px; background: #181021; color: var(--ink); box-shadow: 0 30px 120px #000a; overflow: auto; }
 .assembly-dialog::backdrop { background: #08070dcc; backdrop-filter: blur(8px); }
-.assembly-header { padding: 24px 28px 20px; display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; }
+.assembly-header { margin-bottom: 0; padding: 24px 28px 20px; display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; }
 .assembly-header h2 { margin: 10px 0 8px; font-size: 26px; letter-spacing: -.6px; }
 .assembly-header p { margin: 0; color: var(--muted); font-size: 13px; overflow-wrap: anywhere; }
 .assembly-close, .assembly-camera button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; border: 1px solid #604175; border-radius: 12px; background: #24172f; color: var(--ink); min-height: 40px; padding: 10px; }
@@ -28,7 +28,7 @@
 .assembly-file span { display: block; font-size: 10px; color: var(--muted); letter-spacing: 1px; margin-bottom: 9px; }
 .assembly-file strong { font-size: 12px; font-weight: 500; overflow-wrap: anywhere; line-height: 1.6; }
 .assembly-instructions .assembly-note { color: var(--muted); font-size: 11px; line-height: 1.7; }
-.assembly-footer { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 20px 28px; position: sticky; bottom: 0; z-index: 2; background: #181021; border-top: 1px solid var(--line); }
+.assembly-footer { margin-top: 0; display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 20px 28px; position: sticky; bottom: 0; z-index: 2; background: #181021; border-top: 1px solid var(--line); }
 .assembly-footer > div { display: flex; gap: 8px; }
 .assembly-restart { display: inline-flex; gap: 7px; align-items: center; border: 0; background: transparent; color: var(--muted); padding: 10px 0; font-size: 12px; }
 .assembly-error { position: absolute; inset: 40% 24px auto; text-align: center; color: var(--error); line-height: 1.7; }

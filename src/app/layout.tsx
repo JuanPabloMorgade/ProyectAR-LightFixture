@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
+import '../components/ui/ui.css';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -9,6 +10,9 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
+  icons: {
+    icon: '/assets/favicon.ico',
+  },
   title: 'ProyectAR — Diseñá con luz',
   description: 'Creá cuadros de sombra y litofanías para imprimir en 3D.',
 };

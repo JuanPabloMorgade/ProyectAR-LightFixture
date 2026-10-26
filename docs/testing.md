@@ -19,6 +19,8 @@ npx vitest run tests/assembly-guide.test.tsx tests/shadow-editor.test.tsx
 
 ## Cobertura automática
 
+`tests/ui.test.tsx` cubre la base compartida: etiquetas y descripciones accesibles, errores, referencias a controles nativos, valores numéricos vacíos y decimales, selects, textarea, checkbox, rango, archivos, botones en carga, modales con inputs en el ciclo de foco y tablas con encabezados semánticos. Las pruebas de ambos editores verifican la integración de estos componentes.
+
 | Archivo                         | Comportamiento verificado                                                                                                                                                                                                      |
 | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `tests/shadowbox.test.mjs`      | Proyección de ida y vuelta, marcos, mejora de fidelidad en Alto frente a la grilla anterior, tratamiento común de partes sueltas, cierre y volumen de mallas y límite de triángulos del caso de prueba.                        |

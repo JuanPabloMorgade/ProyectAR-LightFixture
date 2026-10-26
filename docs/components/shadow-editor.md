@@ -8,6 +8,7 @@ Es el editor cliente de cuadros de sombra. No recibe props. Ofrece presets, pinc
 
 - Guarda ajustes de `BoxSettings`, nombre, imagen objetivo, pestaña, herramientas de dibujo, recorte, proyectos disponibles, mensajes, formato y progreso de exportación y apertura de la guía en estado React. El formato de descarga y el paso de armado no se guardan en el JSON del proyecto.
 - Usa refs para los canvas, entradas de archivo, trazos del puntero y el worker de exportación.
+- Los campos, botones y modales usan [componentes UI compartidos](ui.md). `NumberField` contiene valor y unidad; `SelectField` y `TextField` generan etiquetas asociadas. El modal de recorte comparte el cierre, foco y bloqueo de scroll con la guía de armado.
 - `artwork.ts` genera presets, carga imágenes y aplica el recorte; `engine.ts` valida medidas, produce máscaras, simula la proyección, genera SVG y construye la malla.
 - [ShadowViewer](shadow-viewer.md) renderiza la vista 3D; `src/features/lithophane/mesh.ts` serializa la malla como STL binario.
 
