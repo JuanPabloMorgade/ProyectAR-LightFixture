@@ -4,6 +4,7 @@ import { ArrowLeft, ArrowRight, Check, RotateCcw } from "lucide-react";
 import { PRINT_PARTS, type BoxSettings, type WallMask } from "./engine";
 import { ASSEMBLY_STEPS } from "./assembly";
 import AssemblyViewer from "./assembly-viewer";
+import type { Fabrication } from "./fabrication";
 import { Button, Modal, ModalHeader, ModalFooter } from "@/components/ui";
 import "./assembly-guide.css";
 
@@ -13,12 +14,14 @@ export default function AssemblyGuide({
   masks,
   simulation,
   onClose,
+  fabrication,
 }: {
   name: string;
   settings: BoxSettings;
   masks: WallMask[];
   simulation: Uint8ClampedArray;
   onClose: () => void;
+  fabrication?: Fabrication;
 }) {
   const [step, setStep] = useState(0);
   const current = ASSEMBLY_STEPS[step];
@@ -65,6 +68,7 @@ export default function AssemblyGuide({
           masks={masks}
           simulation={simulation}
           step={step}
+          fabrication={fabrication}
         />
         <div className="assembly-instructions">
           <div aria-live="polite" aria-atomic="true">
@@ -72,7 +76,13 @@ export default function AssemblyGuide({
               PASO {step + 1} DE {ASSEMBLY_STEPS.length}
             </span>
             <h3>{current.title}</h3>
-            <p>{current.description}</p>
+            <p>
+              {fabrication && step === 1
+                ? "Identificá la pieza 05: imprimí la cara exterior contra la cama y los soportes cilíndricos hacia arriba. Los soportes quedan hacia el interior al armar."
+                : fabrication && step === 6
+                  ? `Colocá ${fabrication.ledCount} LED(s) en los asientos, con las cabezas expuestas hacia la pared. Pasá las patas por los conductos de la tapa; comprobá la polaridad y la limitación de corriente. Fijá con un punto de adhesivo si el ajuste queda suelto.`
+                  : current.description}
+            </p>
             {part && (
               <div className="assembly-file">
                 <span>PIEZA DEL ARCHIVO</span>
@@ -99,8 +109,9 @@ export default function AssemblyGuide({
             )}
           </div>
           <p className="assembly-note">
-            Guía de orientación. Las piezas no tienen encastres: probá el ajuste
-            antes de fijarlas. La esfera representa la posición de la luz.
+            {fabrication
+              ? `${fabrication.joints ? "Las lengüetas entran en las ranuras de la tapa; alterná los dientes entre paredes. Son guías de armado, sin traba." : "Encastres desactivados: presentá los bordes planos antes de fijarlos."} Probá la holgura antes del montaje definitivo. La simulación usa una fuente central; varios LEDs pueden desplazar las sombras.`
+              : "Guía de orientación. Las piezas no tienen encastres: probá el ajuste antes de fijarlas. La esfera representa la posición de la luz."}
           </p>
         </div>
       </div>

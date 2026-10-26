@@ -129,12 +129,16 @@ test("el botón abre el proyecto actual, restaura el foco y permite volver a abr
   fireEvent.change(screen.getByRole("spinbutton", { name: /Ancho/ }), {
     target: { value: "21" },
   });
-  fireEvent.click(screen.getByRole("tab", { name: "Vista 3D" }));
+  fireEvent.change(screen.getByRole("combobox", { name: "Cantidad de LEDs" }), {
+    target: { value: "3" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Vista 3D" }));
   const trigger = screen.getByRole("button", { name: "Ver guía de armado" });
   trigger.focus();
   fireEvent.click(trigger);
   expect(screen.getByText(/Mi retrato · 21/)).toBeTruthy();
   expect(viewer.mock.lastCall![0].settings.width).toBe(21);
+  expect(viewer.mock.lastCall![0].fabrication.ledCount).toBe(3);
   expect(viewer.mock.lastCall![0].masks).toHaveLength(4);
   const previousMasks = viewer.mock.lastCall![0].masks;
   fireEvent.click(screen.getByRole("button", { name: "Siguiente" }));

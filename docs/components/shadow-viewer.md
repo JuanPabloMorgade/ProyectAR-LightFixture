@@ -8,4 +8,4 @@ Es un componente cliente. En un efecto crea el renderizador WebGL, escena, cáma
 
 El alejamiento máximo de la cámara considera tanto el tamaño de la caja como el radio de proyección, para permitir encuadrar toda la sombra con la rueda del mouse.
 
-Esta vista representa los laterales mediante planos con texturas de las máscaras y la tapa mediante un plano liso. No es la escena de la guía de armado: [AssemblyViewer](assembly-guide.md) usa las mallas con espesor de `printParts`, las mismas que se serializan en los STL. Ambas vistas reciben la simulación del proyecto actual.
+Cuando recibe `fabrication?: Fabrication`, usa las mismas mallas con espesor de `fabricationParts` que el STL y la guía: encastres, conductos y soportes cilíndricos integrados en la tapa. `assemblyMesh` comparte la conversión de mm a cm y la orientación. Muestra de uno a tres marcadores LED según la selección, pero la proyección y los rayos siguen usando una fuente puntual central. Sin `fabrication`, conserva los planos texturados anteriores. Ver [fabricación](shadow-fabrication.md).

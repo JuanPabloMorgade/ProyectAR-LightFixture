@@ -26,26 +26,56 @@
   gap: 8px;
   flex-wrap: wrap;
 }
-.shadow-tabs {
-  display: flex;
-  gap: 6px;
-  margin-bottom: 22px;
-  border-bottom: 1px solid var(--line);
+.shadow-stepper {
+  margin: 0 0 22px;
 }
-.shadow-tabs button {
+.shadow-stepper ol {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.shadow-stepper button {
   display: flex;
   align-items: center;
-  gap: 7px;
-  background: transparent;
-  border: 0;
-  border-bottom: 2px solid transparent;
-  padding: 15px 18px;
+  width: 100%;
+  min-height: 52px;
+  gap: 9px;
+  padding: 10px 14px;
+  border: 1px solid #573a6a;
+  border-radius: 16px;
+  background: #1a1125;
   color: var(--muted);
   font-size: 12px;
+  font-weight: 600;
+  text-align: left;
 }
-.shadow-tabs button.selected {
-  border-color: var(--accent);
-  color: var(--muted);
+.shadow-step-number {
+  display: grid;
+  flex: 0 0 26px;
+  width: 26px;
+  height: 26px;
+  place-items: center;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.shadow-stepper button.selected {
+  border-color: #a879ff;
+  background: linear-gradient(135deg, #573174, #2f1a42);
+  box-shadow: inset 0 0 0 1px #c7a5ff55, 0 7px 20px #783ce026;
+  color: var(--ink);
+}
+.shadow-stepper button.selected .shadow-step-number {
+  border-color: #d9c0ff;
+  background: var(--action);
+  color: white;
+}
+.shadow-stepper button:focus-visible {
+  outline-offset: 3px;
 }
 .shadow-layout {
   display: grid;
@@ -63,6 +93,9 @@
   padding: 22px;
 }
 .shadow-main {
+  --shadow-content-padding: 28px;
+  background: var(--surface);
+  border-radius: 24px;
   overflow: hidden;
 }
 .shadow-panel-head {
@@ -123,11 +156,19 @@
   line-height: 1.6;
   color: var(--muted);
 }
+.shadow-fabrication-error {
+  padding: 12px;
+  border: 1px solid var(--error);
+  border-radius: 12px;
+  color: var(--error);
+  font-size: 12px;
+  line-height: 1.6;
+}
 .shadow-canvas-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 18px;
-  padding: 20px;
+  padding: 20px var(--shadow-content-padding);
 }
 .shadow-canvas-card {
   min-width: 0;
@@ -173,7 +214,77 @@
   text-align: center;
 }
 .shadow-design-tools {
-  padding: 0 20px 20px;
+  padding: 0 var(--shadow-content-padding) 20px;
+}
+.shadow-step-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  padding: var(--shadow-content-padding);
+}
+.shadow-step-heading {
+  min-width: 0;
+}
+.shadow-step-heading .eyebrow {
+  font-size: 10px;
+  letter-spacing: 1.4px;
+  line-height: 1.6;
+}
+.shadow-step-heading h2 {
+  margin: 10px 0 8px;
+  font-size: clamp(22px, 2vw, 28px);
+  font-weight: 600;
+  letter-spacing: -0.7px;
+  line-height: 1.2;
+}
+.shadow-step-heading p {
+  max-width: 52ch;
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--muted);
+}
+.shadow-step-actions {
+  display: flex;
+  flex-shrink: 0;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.shadow-step-actions .button {
+  min-height: 42px;
+}
+.shadow-design-source {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 18px;
+  padding: 0 var(--shadow-content-padding) 24px;
+  border-bottom: 1px solid var(--line);
+}
+.shadow-design-source > .primary {
+  min-height: 44px;
+  padding-inline: 18px;
+}
+.shadow-example-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+}
+.shadow-example-group > span {
+  width: 100%;
+  color: var(--muted);
+  font-size: 11px;
+}
+.shadow-example-group button {
+  min-height: 34px;
+  padding: 7px 11px;
+  border: 1px solid #573a6a;
+  border-radius: 18px;
+  background: #24172f;
+  color: #d2bde4;
+  font-size: 12px;
 }
 .shadow-tool-row {
   display: flex;
@@ -213,7 +324,7 @@
 }
 .shadow-section-title {
   border-top: 1px solid var(--line);
-  padding: 20px 20px 5px;
+  padding: 20px var(--shadow-content-padding) 5px;
 }
 .shadow-section-title h2 {
   font-size: 13px;
@@ -228,7 +339,7 @@
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 14px;
-  padding: 15px 20px 23px;
+  padding: 15px var(--shadow-content-padding) 23px;
 }
 .shadow-mask-grid article {
   border: 1px solid var(--line);
@@ -274,7 +385,7 @@
   align-items: center;
   gap: 7px;
   margin: 0;
-  padding: 14px 20px;
+  padding: 14px var(--shadow-content-padding);
   border-top: 1px solid var(--line);
   color: var(--muted);
   font-size: 11px;
@@ -288,7 +399,7 @@
   justify-content: space-between;
   align-items: center;
   gap: 20px;
-  padding: 19px 23px;
+  padding: 19px var(--shadow-content-padding);
 }
 .shadow-3d-bar h2 {
   font-size: 13px;
@@ -364,14 +475,7 @@
   color: var(--muted);
 }
 .shadow-math {
-  padding: 42px;
-  max-width: 740px;
-  min-height: 590px;
-}
-.shadow-math h2 {
-  font-size: 27px;
-  font-weight: 600;
-  margin: 18px 0;
+  padding: 0 22px 12px;
 }
 .shadow-math p {
   font-size: 13px;
@@ -395,6 +499,94 @@
   font-size: 13px;
   line-height: 2;
   color: var(--muted);
+}
+.shadow-how-content {
+  padding: 0 var(--shadow-content-padding) var(--shadow-content-padding);
+}
+.shadow-journey {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.shadow-journey li {
+  min-width: 0;
+  padding: 20px 18px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: #ffffff03;
+}
+.shadow-journey-icon {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--accent);
+  margin-bottom: 22px;
+}
+.shadow-journey-icon span {
+  color: var(--muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.shadow-journey h3 {
+  margin: 0 0 10px;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+.shadow-journey p,
+.shadow-how-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.7;
+}
+.shadow-how-note {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 22px 0;
+}
+.shadow-how-note svg {
+  flex-shrink: 0;
+  color: var(--accent);
+}
+.shadow-reference {
+  border: 1px solid var(--line);
+  border-radius: 16px;
+}
+.shadow-reference summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 19px 22px;
+  border-radius: 16px;
+  cursor: pointer;
+  list-style: none;
+  font-size: 14px;
+  font-weight: 500;
+}
+.shadow-reference summary::-webkit-details-marker {
+  display: none;
+}
+.shadow-reference summary small {
+  display: block;
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.6;
+}
+.shadow-reference summary > svg {
+  flex-shrink: 0;
+  color: var(--muted);
+}
+.shadow-reference[open] summary > svg {
+  transform: rotate(180deg);
 }
 
 .shadow-modal {
@@ -447,6 +639,25 @@
 }
 
 @media (max-width: 950px) {
+  .shadow-main {
+    --shadow-content-padding: 22px;
+  }
+  .shadow-step-header {
+    flex-wrap: wrap;
+    gap: 18px;
+  }
+  .shadow-step-actions {
+    margin-left: auto;
+  }
+  .shadow-journey {
+    grid-template-columns: 1fr;
+  }
+  .shadow-journey li {
+    padding: 18px;
+  }
+  .shadow-journey-icon {
+    margin-bottom: 14px;
+  }
   .shadow-workspace {
     padding: 25px 20px;
   }
@@ -459,15 +670,12 @@
   }
   .shadow-canvas-grid {
     gap: 9px;
-    padding: 12px;
-  }
-  .shadow-design-tools,
-  .shadow-mask-grid {
-    padding-left: 12px;
-    padding-right: 12px;
   }
 }
 @media (max-width: 680px) {
+  .shadow-main {
+    --shadow-content-padding: 20px;
+  }
   .shadow-workspace {
     padding: 24px 14px;
   }
@@ -482,13 +690,29 @@
     padding: 10px 7px;
     font-size: 11px;
   }
-  .shadow-tabs {
-    overflow: auto;
+  .shadow-stepper ol {
+    gap: 7px;
   }
-  .shadow-tabs button {
-    flex: none;
-    padding: 13px 12px;
-    white-space: nowrap;
+  .shadow-stepper button {
+    min-height: 48px;
+    gap: 7px;
+    padding: 9px 8px;
+    font-size: 11px;
+  }
+  .shadow-step-number {
+    flex-basis: 23px;
+    width: 23px;
+    height: 23px;
+  }
+  .shadow-step-actions {
+    flex-wrap: wrap;
+    max-width: 100%;
+  }
+  .shadow-design-source {
+    align-items: stretch;
+  }
+  .shadow-design-source > .primary {
+    width: 100%;
   }
   .shadow-layout {
     grid-template-columns: 1fr;
@@ -524,10 +748,6 @@
   .shadow-3d-footer .button {
     width: 100%;
   }
-  .shadow-math {
-    padding: 23px;
-    min-height: auto;
-  }
   .shadow-equation {
     grid-template-columns: 1fr;
   }
@@ -535,15 +755,12 @@
 
 /* Astra surfaces share the application's semantic tokens. Drawing and mask
    canvases keep their image data intact; only their surrounding UI changes. */
-.shadow-sidebar, .shadow-main, .shadow-modal {
+.shadow-sidebar, .shadow-modal {
   border-radius: 24px;
   background: linear-gradient(150deg, #20132b, #15101e);
 }
 .shadow-header h1 { font-weight: 650; }
-.shadow-header p, .shadow-math p { font-size: 14px; line-height: 1.7; }
-.shadow-tabs { gap: 8px; padding-bottom: 12px; flex-wrap: wrap; }
-.shadow-tabs button { border: 1px solid transparent; border-radius: 24px; padding: 12px 18px; font-size: 13px; }
-.shadow-tabs button.selected { color: var(--ink); background: #3b2054; border-color: #785099; }
+.shadow-header p { font-size: 14px; line-height: 1.7; }
 
 
 
@@ -574,16 +791,13 @@
 @media (max-width: 680px) {
   .shadow-header-actions .button { font-size: 12px; min-height: 44px; }
 
-  .shadow-tabs { overflow: visible; }
-  .shadow-tabs button { flex: 1; padding: 12px 9px; }
   .shadow-mask-grid { grid-template-columns: 1fr; }
   .shadow-mask-grid canvas { height: 150px; }
 }
 
 
 /* Cuadros de sombra: same Astra section treatment as the lamp editor. */
-.shadow-sidebar,
-.shadow-main {
+.shadow-sidebar {
   background: linear-gradient(150deg, #20132b, #15101e);
   border: 1px solid var(--line);
   border-radius: 24px;
@@ -600,12 +814,10 @@
 .shadow-section-title h2,
 .shadow-3d-bar h2,
 .shadow-3d-footer strong,
-.shadow-mask-grid strong,
-.shadow-math h2 {
+.shadow-mask-grid strong {
   color: var(--ink);
 }
 .shadow-3d-bar {
-  background: #20132b;
   border-bottom: 1px solid var(--line);
 }
 .shadow-three-stage {
@@ -613,7 +825,7 @@
 }
 .shadow-3d-footer,
 .shadow-status {
-  background: #17101f;
+  background: transparent;
 }
 .shadow-3d-footer {
   border-top: 1px solid var(--line);
@@ -621,11 +833,6 @@
 
 
 
-.shadow-tabs button.selected {
-  color: var(--ink);
-  background: #4b2868;
-  border-color: #785099;
-}
 .shadow-canvas-card,
 .shadow-mask-grid article,
 .shadow-equation {
