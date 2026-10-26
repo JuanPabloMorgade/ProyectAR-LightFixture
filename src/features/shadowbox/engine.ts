@@ -260,7 +260,7 @@ export function simulatedImage(
 
 type Point = [number, number];
 type Edge = { from: Point; to: Point; dir: number };
-function boundaryLoops(mask: WallMask): Point[][] {
+export function boundaryLoops(mask: WallMask): Point[][] {
   const { columns: w, rows: h, cells } = mask;
   const at = (x: number, y: number) =>
     x >= 0 && x < w && y >= 0 && y < h && cells[y * w + x] === 1;
@@ -342,7 +342,12 @@ export const PRINT_PARTS = [
 
 type PrintMesh = { positions: Float32Array; indices: Uint32Array };
 
-function panelMesh(panel: WallMask, thickness: number): PrintMesh {
+export function panelMesh(
+  panel: WallMask,
+  thickness: number,
+  xs?: number[],
+  ys?: number[],
+): PrintMesh {
   const positions: number[] = [],
     indices: number[] = [];
   // Triangulate the actual outlines, rather than tessellating every solid
@@ -352,8 +357,8 @@ function panelMesh(panel: WallMask, thickness: number): PrintMesh {
     loop.map(
       ([x, y]) =>
         new Vector2(
-          (x * panel.span * 10) / panel.columns,
-          (y * panel.depth * 10) / panel.rows,
+          xs ? xs[x] : (x * panel.span * 10) / panel.columns,
+          ys ? ys[y] : (y * panel.depth * 10) / panel.rows,
         ),
     ),
   );

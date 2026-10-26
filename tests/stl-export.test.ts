@@ -1,6 +1,7 @@
 import { expect, test } from "vitest";
 import { crc32 } from "node:zlib";
 import { buildSTLExport } from "../src/features/shadowbox/stl-export";
+import { defaultFabrication, fabricationParts } from "../src/features/shadowbox/fabrication";
 import {
   defaultBox,
   IMAGE_SIZE,
@@ -133,4 +134,36 @@ test("el ZIP contiene cinco STL nombrados, con geometría local a escala y una g
   expect(combined.mime).toBe("model/stl");
   expect(single.triangles).toBe(totalTriangles);
   expect(single.max[0]).toBeCloseTo(180 + 180 + 120 + 120 + 180 + 4 * 12, 4);
+});
+
+test("el ZIP del prototipo conserva las cinco piezas e incluye soportes LED y su guía", () => {
+  const settings = { ...defaultBox, detail: 96 };
+  const fabrication = { ...defaultFabrication, ledCount: 3 as const };
+  const masks = masksFromImage(new Uint8ClampedArray(IMAGE_SIZE * IMAGE_SIZE * 4), settings);
+  const output = buildSTLExport({ settings, masks, fabrication, mode: "separate", name: "LEDs" });
+  const files = readZip(output.buffer);
+  expect(files).toHaveLength(6);
+  const parts = fabricationParts(masks, settings, fabrication);
+  let triangles = 0;
+  parts.forEach((part, i) => {
+    expect(files[i].name).toBe(`LEDs-${part.filename}.stl`);
+    const stl = readSTL(files[i].data);
+    expect(stl.min).toEqual([0, 0, 0]);
+    expect(stl.max[0]).toBeCloseTo(152);
+    expect(stl.points).toEqual(Array.from(part.indices, n => Array.from(part.positions.slice(n * 3, n * 3 + 3))));
+    if (part.id === "front") expect(stl.max[2]).toBeCloseTo(5.8);
+    else expect(stl.max[1]).toBeCloseTo(61);
+    triangles += stl.triangles;
+  });
+  const guide = new TextDecoder().decode(files[5].data);
+  expect(guide).toContain("3 alojamiento(s)");
+  expect(guide).toContain("reborde 5.2 mm, altura 5 mm");
+  expect(guide).toContain("Holgura diametral: 0.25 mm");
+  expect(guide).toContain("51 mm");
+  expect(guide).toContain("lengüetas");
+  expect(guide).toContain("fuente puntual central");
+  const combined = buildSTLExport({ settings, masks, fabrication, mode: "combined", name: "LEDs" });
+  const single = readSTL(new Uint8Array(combined.buffer));
+  expect(single.triangles).toBe(triangles);
+  expect(single.max[0]).toBeCloseTo(5 * 152 + 4 * 12);
 });

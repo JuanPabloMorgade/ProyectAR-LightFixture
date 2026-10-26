@@ -12,6 +12,7 @@ import {
   FileDown,
   Check,
   Trash2,
+  ChevronDown,
 } from "lucide-react";
 import {
   IMAGE_SIZE,
@@ -33,6 +34,13 @@ import {
 } from "./artwork";
 import ShadowViewer from "./viewer";
 import AssemblyGuide from "./assembly-guide";
+import {
+  defaultFabrication,
+  fabricationMasks,
+  ledLayout,
+  validateFabrication,
+  type Fabrication,
+} from "./fabrication";
 import {
   Button,
   Input,
@@ -56,6 +64,7 @@ type Project = {
   name: string;
   settings: BoxSettings;
   image: string;
+  fabrication?: Fabrication;
 };
 type Crop = {
   image: HTMLImageElement;
@@ -66,6 +75,7 @@ type Crop = {
   threshold: number;
   invert: boolean;
 };
+type ShadowStep = "how" | "design" | "three";
 const prefix = "proyectar:shadow:v2:",
   legacyPrefix = "shadowbox.design.";
 const labels: Record<Face, string> = {
@@ -121,6 +131,7 @@ function checkProject(data: unknown): Project {
   )
     throw new Error("El archivo no es un proyecto válido de ProyectAR.");
   validateBox(p.settings);
+  if (p.fabrication !== undefined) validateFabrication(p.fabrication);
   return p;
 }
 function readOld(raw: string, name: string): Project {
@@ -190,6 +201,7 @@ export default function ShadowEditor() {
     artModel = useRef<HTMLCanvasElement | null>(null),
     simCanvas = useRef<HTMLCanvasElement>(null),
     cropCanvas = useRef<HTMLCanvasElement>(null),
+    stepButtons = useRef<Array<HTMLButtonElement | null>>([]),
     uploadInput = useRef<HTMLInputElement>(null),
     importInput = useRef<HTMLInputElement>(null),
     exportJob = useRef<Worker | null>(null),
@@ -202,9 +214,16 @@ export default function ShadowEditor() {
       panY: number;
     } | null>(null);
   const [settings, setSettings] = useState<BoxSettings>(defaultBox),
+    [fabrication, setFabrication] = useState<Fabrication>(defaultFabrication),
+    [fabricationDrafts, setFabricationDrafts] = useState<
+      Partial<Record<keyof Fabrication, string>>
+    >({}),
+    [numberDrafts, setNumberDrafts] = useState<
+      Partial<Record<keyof BoxSettings, string>>
+    >({}),
     [name, setName] = useState("Mi cuadro de sombra"),
     [target, setTarget] = useState<Uint8ClampedArray | null>(null),
-    [tab, setTab] = useState<"design" | "three" | "math">("design"),
+    [step, setStep] = useState<ShadowStep>("how"),
     [brush, setBrush] = useState(18),
     [erase, setErase] = useState(false),
     [crop, setCrop] = useState<Crop | null>(null),
@@ -216,18 +235,39 @@ export default function ShadowEditor() {
     [exportMode, setExportMode] = useState<STLExportMode>("combined"),
     [assemblyOpen, setAssemblyOpen] = useState(false),
     [showRays, setShowRays] = useState(false);
+  const steps = [
+    { id: "how" as const, number: 1, label: "Cómo funciona", Icon: Sun },
+    {
+      id: "design" as const,
+      number: 2,
+      label: "Diseñador de patrones",
+      Icon: PenLine,
+    },
+    { id: "three" as const, number: 3, label: "Vista 3D", Icon: Box },
+  ];
   const masks = useMemo(() => {
     if (!target) return [];
     try {
-      return masksFromImage(target, settings);
+      return fabricationMasks(masksFromImage(target, settings), settings, {
+        joints: fabrication.joints,
+        clearance: fabrication.clearance,
+      });
     } catch {
       return [];
     }
-  }, [target, settings]);
+  }, [target, settings, fabrication.joints, fabrication.clearance]);
   const simulation = useMemo(
     () => (masks.length === 4 ? simulatedImage(masks, settings) : null),
     [masks, settings],
   );
+  const fabricationError = useMemo(() => {
+    try {
+      ledLayout(settings, fabrication);
+      return "";
+    } catch (e) {
+      return e instanceof Error ? e.message : "Revisá el soporte LED.";
+    }
+  }, [settings, fabrication]);
   function commit() {
     const source = art.current || artModel.current;
     if (!source) return;
@@ -268,9 +308,9 @@ export default function ShadowEditor() {
     };
   }, []);
   useEffect(() => {
-    if (tab === "design" && art.current && artModel.current)
+    if (step === "design" && art.current && artModel.current)
       art.current.getContext("2d")!.drawImage(artModel.current, 0, 0);
-  }, [tab]);
+  }, [step]);
   useEffect(() => {
     if (!simulation || !simCanvas.current) return;
     const c = simCanvas.current;
@@ -280,7 +320,7 @@ export default function ShadowEditor() {
       0,
       0,
     );
-  }, [simulation, tab]);
+  }, [simulation, step]);
   useEffect(() => {
     if (!crop || !cropCanvas.current) return;
     const c = cropCanvas.current;
@@ -338,10 +378,13 @@ export default function ShadowEditor() {
   async function loadProject(project: Project) {
     validateBox(project.settings);
     setSettings(project.settings);
+    setNumberDrafts({});
+    setFabrication(project.fabrication ?? { ...defaultFabrication });
+    setFabricationDrafts({});
     setName(project.name);
     await loadImage(project.image);
     setMessage(`Proyecto «${project.name}» abierto.`);
-    setTab("design");
+    setStep("design");
   }
   function currentProject(): Project {
     return {
@@ -349,11 +392,13 @@ export default function ShadowEditor() {
       name: name.trim() || "Mi cuadro",
       settings,
       image: artModel.current!.toDataURL("image/png"),
+      fabrication,
     };
   }
   function save() {
     try {
       validateBox(settings);
+      validateFabrication(fabrication);
       const p = currentProject();
       localStorage.setItem(prefix + p.name, JSON.stringify(p));
       setStored(scanProjects());
@@ -411,7 +456,7 @@ export default function ShadowEditor() {
     }
   }
   async function exportSTL() {
-    if (masks.length !== 4 || exportJob.current) return;
+    if (masks.length !== 4 || exportJob.current || fabricationError) return;
     setWorking(true);
     setError("");
     let worker: Worker;
@@ -453,6 +498,7 @@ export default function ShadowEditor() {
       masks,
       mode: exportMode,
       name: safeName(name),
+      fabrication,
     });
   }
   const number = (
@@ -470,8 +516,50 @@ export default function ShadowEditor() {
       min={min}
       max={max}
       step={step}
-      value={settings[key]}
-      onChange={(e) => change(key, Number(e.target.value))}
+      value={numberDrafts[key] ?? String(settings[key])}
+      onChange={(e) => {
+        const text = e.currentTarget.value;
+        setNumberDrafts((drafts) => ({ ...drafts, [key]: text }));
+        if (text !== "" && Number.isFinite(Number(text)))
+          change(key, Number(text));
+      }}
+      onBlur={() => {
+        setNumberDrafts((drafts) => {
+          const next = { ...drafts };
+          delete next[key];
+          return next;
+        });
+      }}
+    />
+  );
+  const fabricationNumber = (
+    key: "ledDiameter" | "flangeDiameter" | "ledHeight" | "clearance",
+    label: string,
+    min: number,
+    max: number,
+  ) => (
+    <NumberField
+      label={label}
+      unit="mm"
+      min={min}
+      max={max}
+      step={0.05}
+      value={fabricationDrafts[key] ?? String(fabrication[key])}
+      onChange={(e) => {
+        const text = e.currentTarget.value;
+        setFabricationDrafts((drafts) => ({ ...drafts, [key]: text }));
+        if (text !== "" && Number.isFinite(Number(text))) {
+          setFabrication((f) => ({ ...f, [key]: Number(text) }));
+          setMessage("");
+        }
+      }}
+      onBlur={() =>
+        setFabricationDrafts((drafts) => {
+          const next = { ...drafts };
+          delete next[key];
+          return next;
+        })
+      }
     />
   );
   return (
@@ -540,31 +628,45 @@ export default function ShadowEditor() {
           />
         </div>
       </div>
-      <div
-        className="shadow-tabs"
-        role="tablist"
-        aria-label="Secciones del editor"
-      >
-        {(
-          [
-            ["design", "Diseñador de patrones", PenLine],
-            ["three", "Vista 3D", Box],
-            ["math", "Cómo funciona", Sun],
-          ] as const
-        ).map(([id, label, Icon]) => (
-          <Button
-            variant="unstyled"
-            key={id}
-            role="tab"
-            aria-selected={tab === id}
-            className={tab === id ? "selected" : ""}
-            onClick={() => setTab(id)}
-          >
-            <Icon size={16} />
-            {label}
-          </Button>
-        ))}
-      </div>
+      <nav className="shadow-stepper" aria-label="Recorrido del editor">
+        <ol>
+          {steps.map(({ id, number, label, Icon }, index) => (
+            <li key={id}>
+              <Button
+                variant="unstyled"
+                ref={(button) => {
+                  stepButtons.current[index] = button;
+                }}
+                className={step === id ? "selected" : ""}
+                aria-current={step === id ? "step" : undefined}
+                onClick={() => setStep(id)}
+                onKeyDown={(event) => {
+                  const targetIndex =
+                    event.key === "ArrowRight"
+                      ? (index + 1) % steps.length
+                      : event.key === "ArrowLeft"
+                        ? (index - 1 + steps.length) % steps.length
+                        : event.key === "Home"
+                          ? 0
+                          : event.key === "End"
+                            ? steps.length - 1
+                            : null;
+                  if (targetIndex === null) return;
+                  event.preventDefault();
+                  setStep(steps[targetIndex].id);
+                  stepButtons.current[targetIndex]?.focus();
+                }}
+              >
+                <span className="shadow-step-number" aria-hidden="true">
+                  {number}
+                </span>
+                <Icon size={16} aria-hidden="true" />
+                <span>{label}</span>
+              </Button>
+            </li>
+          ))}
+        </ol>
+      </nav>
       <div className="shadow-layout">
         <aside className="shadow-sidebar">
           <div className="shadow-panel-head">
@@ -646,10 +748,118 @@ export default function ShadowEditor() {
             Las partes sin unión al marco se eliminan tanto en la proyección
             estimada como en los archivos exportados.
           </p>
+          <div className="shadow-divider" />
+          <div className="shadow-panel-head">
+            <h2>Luz y armado</h2>
+            <span>03</span>
+          </div>
+          <SelectField
+            label="Cantidad de LEDs"
+            value={fabrication.ledCount}
+            options={[
+              { value: 1, label: "1 LED · centrado" },
+              { value: 2, label: "2 LEDs" },
+              { value: 3, label: "3 LEDs" },
+            ]}
+            onChange={(e) => {
+              setFabrication((f) => ({
+                ...f,
+                ledCount: Number(e.target.value) as Fabrication["ledCount"],
+              }));
+              setMessage("");
+            }}
+          />
+          <div className="shadow-two">
+            {fabricationNumber("ledDiameter", "Diámetro del LED", 3, 10)}
+            {fabricationNumber("flangeDiameter", "Diámetro del reborde", 3, 13)}
+            {fabricationNumber("ledHeight", "Altura del LED", 2, 15)}
+            {fabricationNumber("clearance", "Holgura de ajuste", 0.1, 0.8)}
+          </div>
+          <Checkbox
+            label="Encastres de armado"
+            checked={fabrication.joints}
+            onChange={(e) => {
+              setFabrication((f) => ({ ...f, joints: e.target.checked }));
+              setMessage("");
+            }}
+          />
+          <p className="shadow-help">
+            La tapa incluye los soportes cilíndricos y los conductos para las
+            patas. Las cabezas quedan expuestas hacia la pared.
+          </p>
+          <p className="shadow-help">
+            La holgura es total: se suma al diámetro del alojamiento y al ancho
+            de las ranuras. Probá el ajuste antes de fijar.
+          </p>
+          {fabrication.ledCount > 1 && (
+            <p className="shadow-help">
+              La proyección sigue estimada desde una fuente central. Varios LEDs
+              pueden producir sombras desplazadas.
+            </p>
+          )}
+          {fabricationError && (
+            <p className="shadow-fabrication-error" role="alert">
+              {fabricationError}
+            </p>
+          )}
         </aside>
         <section className="shadow-main">
-          {tab === "design" && (
+          {step === "design" && (
             <>
+              <header className="shadow-step-header">
+                <div className="shadow-step-heading">
+                  <div className="eyebrow">PASO 2 · DISEÑADOR DE PATRONES</div>
+                  <h2>Dale forma a tu diseño</h2>
+                  <p>
+                    Cargá una imagen, probá un ejemplo o dibujá sobre el lienzo.
+                  </p>
+                </div>
+                <div className="shadow-step-actions">
+                  <Button variant="secondary" onClick={() => setStep("how")}>
+                    Atrás
+                  </Button>
+                  <Button variant="primary" onClick={() => setStep("three")}>
+                    Siguiente
+                  </Button>
+                </div>
+              </header>
+              <div className="shadow-design-source">
+                <Button
+                  variant="primary"
+                  onClick={() => uploadInput.current?.click()}
+                >
+                  <Upload size={16} />
+                  Cargar imagen
+                </Button>
+                <div className="shadow-example-group">
+                  <span>O probá con un ejemplo</span>
+                  {(
+                    [
+                      ["rays", "Rayos"],
+                      ["flower", "Flor"],
+                      ["stars", "Estrellas"],
+                      ["letters", "Texto"],
+                    ] as const
+                  ).map(([id, label]) => (
+                    <Button
+                      variant="unstyled"
+                      key={id}
+                      onClick={() => preset(id)}
+                    >
+                      {label}
+                    </Button>
+                  ))}
+                </div>
+                <FileInput
+                  ref={uploadInput}
+                  hidden
+                  accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                  onChange={(e) => {
+                    void onPhoto(e.target.files?.[0]);
+                    e.target.value = "";
+                  }}
+                />
+              </div>
               <div className="shadow-canvas-grid">
                 <article className="shadow-canvas-card">
                   <div className="shadow-card-top">
@@ -704,42 +914,6 @@ export default function ShadowEditor() {
                 </article>
               </div>
               <div className="shadow-design-tools">
-                <div className="shadow-tool-row">
-                  <span>Empezá con un patrón</span>
-                  {(
-                    [
-                      ["rays", "Rayos"],
-                      ["flower", "Flor"],
-                      ["stars", "Estrellas"],
-                      ["letters", "Texto"],
-                    ] as const
-                  ).map(([id, label]) => (
-                    <Button
-                      variant="unstyled"
-                      key={id}
-                      onClick={() => preset(id)}
-                    >
-                      {label}
-                    </Button>
-                  ))}
-                  <Button
-                    variant="unstyled"
-                    onClick={() => uploadInput.current?.click()}
-                  >
-                    <Upload size={14} />
-                    Cargar imagen
-                  </Button>
-                  <FileInput
-                    ref={uploadInput}
-                    hidden
-
-                    accept="image/png,image/jpeg,image/webp,image/svg+xml"
-                    onChange={(e) => {
-                      void onPhoto(e.target.files?.[0]);
-                      e.target.value = "";
-                    }}
-                  />
-                </div>
                 <div className="shadow-tool-row">
                   <span>Pincel</span>
                   <Button
@@ -814,8 +988,20 @@ export default function ShadowEditor() {
               </div>
             </>
           )}
-          {tab === "three" && (
+          {step === "three" && (
             <>
+              <header className="shadow-step-header">
+                <div className="shadow-step-heading">
+                  <div className="eyebrow">PASO 3 · VISTA 3D</div>
+                  <h2>Revisá tu cuadro en 3D</h2>
+                  <p>Explorá el modelo y descargá las piezas para imprimir.</p>
+                </div>
+                <div className="shadow-step-actions">
+                  <Button variant="secondary" onClick={() => setStep("design")}>
+                    Volver al diseño
+                  </Button>
+                </div>
+              </header>
               <div className="shadow-3d-bar">
                 <div>
                   <h2>La caja, desde todos los ángulos</h2>
@@ -828,15 +1014,16 @@ export default function ShadowEditor() {
                 />
               </div>
               <div className="shadow-three-stage">
-                {simulation && masks.length === 4 ? (
+                {simulation && masks.length === 4 && !fabricationError ? (
                   <ShadowViewer
                     settings={settings}
                     masks={masks}
                     simulation={simulation}
                     rays={showRays}
+                    fabrication={fabrication}
                   />
                 ) : (
-                  <span>Preparando la vista 3D…</span>
+                  <span>{fabricationError || "Preparando la vista 3D…"}</span>
                 )}
               </div>
               <div className="shadow-3d-footer">
@@ -845,7 +1032,8 @@ export default function ShadowEditor() {
                     {settings.width} × {settings.height} × {settings.depth} cm
                   </strong>
                   <span>
-                    Cuatro paredes y una tapa frontal lisa, a escala real.
+                    Cuatro paredes y una tapa con {fabrication.ledCount}{" "}
+                    soporte(s) LED, a escala real.
                   </span>
                   <span>
                     Izquierda y derecha mirando la caja de frente, desde la
@@ -855,7 +1043,9 @@ export default function ShadowEditor() {
                     variant="unstyled"
                     type="button"
                     className="button secondary assembly-open"
-                    disabled={!simulation || masks.length !== 4}
+                    disabled={
+                      !simulation || masks.length !== 4 || !!fabricationError
+                    }
                     onClick={() => setAssemblyOpen(true)}
                   >
                     <Box size={17} /> Ver guía de armado
@@ -882,7 +1072,9 @@ export default function ShadowEditor() {
                   </span>
                   <Button
                     variant="primary"
-                    disabled={working || masks.length !== 4}
+                    disabled={
+                      working || masks.length !== 4 || !!fabricationError
+                    }
                     onClick={() => void exportSTL()}
                   >
                     <Download size={17} />
@@ -896,39 +1088,112 @@ export default function ShadowEditor() {
               </div>
             </>
           )}
-          {tab === "math" && (
-            <div className="shadow-math">
-              <div className="eyebrow">REFERENCIA DE PROYECCIÓN</div>
-              <h2>La geometría detrás de la luz</h2>
-              <p>
-                La pared está en <code>z = 0</code>. La lámpara está a{" "}
-                <code>
-                  c ={" "}
-                  {((settings.depth * settings.lightPercent) / 100).toFixed(2)}{" "}
-                  cm
-                </code>{" "}
-                de ella. Cada abertura lateral deja pasar un rayo hacia un punto
-                de la pared.
-              </p>
-              <div className="shadow-equation">
-                <span>De abertura a pared</span>
-                <code>
-                  escala = c / (c − z)
-                  <br />X = lado × escala
-                  <br />Y = posición × escala
-                </code>
+          {step === "how" && (
+            <>
+              <header className="shadow-step-header">
+                <div className="shadow-step-heading">
+                  <div className="eyebrow">PASO 1 · CÓMO FUNCIONA</div>
+                  <h2>De una imagen a un cuadro de luz</h2>
+                  <p>
+                    Elegí un diseño, ajustá la caja y prepará las piezas para
+                    imprimir.
+                  </p>
+                </div>
+                <div className="shadow-step-actions">
+                  <Button variant="primary" onClick={() => setStep("design")}>
+                    Siguiente
+                  </Button>
+                </div>
+              </header>
+              <div className="shadow-how-content">
+                <ol
+                  className="shadow-journey"
+                  aria-label="Cómo crear tu cuadro"
+                >
+                  <li>
+                    <div className="shadow-journey-icon">
+                      <Upload size={21} aria-hidden="true" />
+                      <span>01</span>
+                    </div>
+                    <h3>Elegí tu imagen</h3>
+                    <p>
+                      Cargá una imagen propia o probá uno de los ejemplos para
+                      empezar.
+                    </p>
+                  </li>
+                  <li>
+                    <div className="shadow-journey-icon">
+                      <PenLine size={21} aria-hidden="true" />
+                      <span>02</span>
+                    </div>
+                    <h3>Hacé tuyo el diseño</h3>
+                    <p>
+                      Dibujá, borrá y ajustá las medidas mientras ves la
+                      proyección estimada.
+                    </p>
+                  </li>
+                  <li>
+                    <div className="shadow-journey-icon">
+                      <Box size={21} aria-hidden="true" />
+                      <span>03</span>
+                    </div>
+                    <h3>Llevalo a la impresión</h3>
+                    <p>
+                      Revisá el modelo 3D, descargá las piezas y seguí la guía
+                      de armado.
+                    </p>
+                  </li>
+                </ol>
+                <p className="shadow-how-note">
+                  <Sun size={18} aria-hidden="true" />
+                  Podés explorar todos los pasos y volver a tu diseño cuando
+                  quieras.
+                </p>
+                <details className="shadow-reference">
+                  <summary>
+                    <span>
+                      La geometría detrás de la luz
+                      <small>Conocé cómo se calcula la proyección.</small>
+                    </span>
+                    <ChevronDown size={18} aria-hidden="true" />
+                  </summary>
+                  <div className="shadow-math">
+                    <p>
+                      La pared está en <code>z = 0</code>. La lámpara está a{" "}
+                      <code>
+                        c ={" "}
+                        {(
+                          (settings.depth * settings.lightPercent) /
+                          100
+                        ).toFixed(2)}{" "}
+                        cm
+                      </code>{" "}
+                      de ella. Cada abertura lateral deja pasar un rayo hacia un
+                      punto de la pared.
+                    </p>
+                    <div className="shadow-equation">
+                      <span>De abertura a pared</span>
+                      <code>
+                        escala = c / (c − z)
+                        <br />X = lado × escala
+                        <br />Y = posición × escala
+                      </code>
+                    </div>
+                    <p>
+                      Cuanto más cerca esté una abertura de la luz, más lejos se
+                      proyectará el punto. Las aberturas que quedarían a la
+                      altura de la lámpara se excluyen porque no iluminan la
+                      pared.
+                    </p>
+                    <p>
+                      La simulación supone una fuente puntual. En una pieza real
+                      influyen el tamaño del LED, su ubicación, el material y la
+                      superficie de la pared.
+                    </p>
+                  </div>
+                </details>
               </div>
-              <p>
-                Cuanto más cerca esté una abertura de la luz, más lejos se
-                proyectará el punto. Las aberturas que quedarían a la altura de
-                la lámpara se excluyen porque no iluminan la pared.
-              </p>
-              <p>
-                La simulación supone una fuente puntual. En una pieza real
-                influyen el tamaño del LED, su ubicación, el material y la
-                superficie de la pared.
-              </p>
-            </div>
+            </>
           )}
           {error ? (
             <p className="shadow-status error" role="alert">
@@ -952,6 +1217,7 @@ export default function ShadowEditor() {
           settings={settings}
           masks={masks}
           simulation={simulation}
+          fabrication={fabrication}
           onClose={() => setAssemblyOpen(false)}
         />
       )}

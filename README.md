@@ -29,7 +29,7 @@ Las máscaras de corte usan una grilla de precisión configurable. Equilibrado d
 
 Los SVG siguen contornos poligonales y el STL triangula esos contornos y extruye sus bordes para evitar caras innecesarias en los interiores planos. La proyección y las exportaciones aplican el mismo tratamiento de partes sueltas y contactos diagonales. La simulación supone una fuente de luz puntual y no modela el tamaño de la luz ni la oclusión por el espesor de las paredes. Verificá el STL en un slicer y probá una pieza física antes de fabricar.
 
-En los cuadros, la tapa frontal lisa mira hacia la habitación y el lado abierto hacia la pared. Las piezas actuales no incluyen encastres ni soporte de luz. La guía 3D explica la orientación y presentación de las piezas; no garantiza el ajuste de las uniones ni un ancho mínimo imprimible.
+En los cuadros, la cara exterior de la tapa mira hacia la habitación y el lado abierto hacia la pared. La tapa incorpora soportes para 1, 2 o 3 LEDs, con conductos para las patas; las paredes ofrecen encastres guiados opcionales. El panel Luz y armado ajusta medidas y holgura. La guía 3D explica el montaje del prototipo; el ajuste requiere una impresión de prueba. La proyección sigue estimada desde una fuente puntual central. Ver [fabricación](docs/components/shadow-fabrication.md).
 
 La lámpara exporta el panel, sin base, tapa, portalámparas ni encastres. Los proyectos se guardan en este navegador y pueden perderse si se borran sus datos: exportá JSON para conservar una copia.
 

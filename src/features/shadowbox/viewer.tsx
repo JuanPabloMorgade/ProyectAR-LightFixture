@@ -3,17 +3,26 @@ import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { IMAGE_SIZE, type BoxSettings, type WallMask } from "./engine";
+import {
+  fabricationParts,
+  assemblyMesh,
+  ledLayout,
+  type Fabrication,
+} from "./fabrication";
+import { assemblyPosition } from "./assembly";
 
 export default function ShadowViewer({
   settings,
   masks,
   simulation,
   rays,
+  fabrication,
 }: {
   settings: BoxSettings;
   masks: WallMask[];
   simulation: Uint8ClampedArray;
   rays: boolean;
+  fabrication?: Fabrication;
 }) {
   const host = useRef<HTMLDivElement>(null),
     [error, setError] = useState("");
@@ -57,78 +66,112 @@ export default function ShadowViewer({
     const disposables: (
       THREE.BufferGeometry | THREE.Material | THREE.Texture
     )[] = [bulb.geometry, bulb.material as THREE.Material];
-    const wallColor = new THREE.Color("#b4c4c5");
-    for (const wall of masks) {
-      const cv = document.createElement("canvas");
-      cv.width = wall.columns;
-      cv.height = wall.rows;
-      const cx = cv.getContext("2d")!,
-        im = cx.createImageData(wall.columns, wall.rows);
-      for (let y = 0; y < wall.rows; y++)
-        for (let x = 0; x < wall.columns; x++) {
-          const cut = wall.cells[y * wall.columns + x];
-          const p = ((wall.rows - 1 - y) * wall.columns + x) * 4;
-          im.data[p] = 255;
-          im.data[p + 1] = 255;
-          im.data[p + 2] = 255;
-          im.data[p + 3] = cut ? 0 : 255;
-        }
-      cx.putImageData(im, 0, 0);
-      const texture = new THREE.CanvasTexture(cv);
-      texture.magFilter = THREE.NearestFilter;
-      texture.minFilter = THREE.LinearFilter;
-      const geometry = new THREE.PlaneGeometry(wall.span, settings.depth);
-      const basis =
-        wall.face === "top" || wall.face === "bottom"
-          ? new THREE.Matrix4().makeBasis(
-              new THREE.Vector3(1, 0, 0),
-              new THREE.Vector3(0, 0, 1),
-              new THREE.Vector3(0, -1, 0),
-            )
-          : new THREE.Matrix4().makeBasis(
-              new THREE.Vector3(0, 1, 0),
-              new THREE.Vector3(0, 0, 1),
-              new THREE.Vector3(1, 0, 0),
-            );
-      geometry.applyMatrix4(basis);
-      const material = new THREE.MeshStandardMaterial({
-        color: wallColor,
-        side: THREE.DoubleSide,
-        transparent: true,
-        map: texture,
-        alphaTest: 0.5,
-        roughness: 0.88,
-      });
-      const mesh = new THREE.Mesh(geometry, material);
-      mesh.position.set(
-        wall.face === "left"
-          ? -settings.width / 2
-          : wall.face === "right"
-            ? settings.width / 2
-            : 0,
-        wall.face === "bottom"
-          ? -settings.height / 2
-          : wall.face === "top"
-            ? settings.height / 2
-            : 0,
-        settings.depth / 2,
-      );
-      scene.add(mesh);
-      disposables.push(geometry, material, texture);
+    if (fabrication) {
+      const layout = ledLayout(settings, fabrication);
+      bulb.scale.setScalar(0.25 / 0.55);
+      bulb.position.x = layout.centers[0] / 10;
+      for (const x of layout.centers.slice(1)) {
+        const extra = new THREE.Mesh(bulb.geometry, bulb.material);
+        extra.scale.copy(bulb.scale);
+        extra.position.set(x / 10, 0, bulb.position.z);
+        scene.add(extra);
+      }
     }
-    const lidGeometry = new THREE.PlaneGeometry(
-        settings.width,
-        settings.height,
-      ),
-      lidMaterial = new THREE.MeshStandardMaterial({
-        color: "#40565a",
-        roughness: 0.9,
-        side: THREE.DoubleSide,
-      });
-    const lid = new THREE.Mesh(lidGeometry, lidMaterial);
-    lid.position.z = settings.depth;
-    scene.add(lid);
-    disposables.push(lidGeometry, lidMaterial);
+    if (!fabrication) {
+      const wallColor = new THREE.Color("#b4c4c5");
+      for (const wall of masks) {
+        const cv = document.createElement("canvas");
+        cv.width = wall.columns;
+        cv.height = wall.rows;
+        const cx = cv.getContext("2d")!,
+          im = cx.createImageData(wall.columns, wall.rows);
+        for (let y = 0; y < wall.rows; y++)
+          for (let x = 0; x < wall.columns; x++) {
+            const cut = wall.cells[y * wall.columns + x];
+            const p = ((wall.rows - 1 - y) * wall.columns + x) * 4;
+            im.data[p] = 255;
+            im.data[p + 1] = 255;
+            im.data[p + 2] = 255;
+            im.data[p + 3] = cut ? 0 : 255;
+          }
+        cx.putImageData(im, 0, 0);
+        const texture = new THREE.CanvasTexture(cv);
+        texture.magFilter = THREE.NearestFilter;
+        texture.minFilter = THREE.LinearFilter;
+        const geometry = new THREE.PlaneGeometry(wall.span, settings.depth);
+        const basis =
+          wall.face === "top" || wall.face === "bottom"
+            ? new THREE.Matrix4().makeBasis(
+                new THREE.Vector3(1, 0, 0),
+                new THREE.Vector3(0, 0, 1),
+                new THREE.Vector3(0, -1, 0),
+              )
+            : new THREE.Matrix4().makeBasis(
+                new THREE.Vector3(0, 1, 0),
+                new THREE.Vector3(0, 0, 1),
+                new THREE.Vector3(1, 0, 0),
+              );
+        geometry.applyMatrix4(basis);
+        const material = new THREE.MeshStandardMaterial({
+          color: wallColor,
+          side: THREE.DoubleSide,
+          transparent: true,
+          map: texture,
+          alphaTest: 0.5,
+          roughness: 0.88,
+        });
+        const mesh = new THREE.Mesh(geometry, material);
+        mesh.position.set(
+          wall.face === "left"
+            ? -settings.width / 2
+            : wall.face === "right"
+              ? settings.width / 2
+              : 0,
+          wall.face === "bottom"
+            ? -settings.height / 2
+            : wall.face === "top"
+              ? settings.height / 2
+              : 0,
+          settings.depth / 2,
+        );
+        scene.add(mesh);
+        disposables.push(geometry, material, texture);
+      }
+      const lidGeometry = new THREE.PlaneGeometry(
+          settings.width,
+          settings.height,
+        ),
+        lidMaterial = new THREE.MeshStandardMaterial({
+          color: "#40565a",
+          roughness: 0.9,
+          side: THREE.DoubleSide,
+        });
+      const lid = new THREE.Mesh(lidGeometry, lidMaterial);
+      lid.position.z = settings.depth;
+      scene.add(lid);
+      disposables.push(lidGeometry, lidMaterial);
+    } else {
+      for (const part of fabricationParts(masks, settings, fabrication)) {
+        const meshData = assemblyMesh(part, settings, fabrication);
+        const origin = assemblyPosition(part.id, settings, false);
+        const geometry = new THREE.BufferGeometry();
+        geometry.setAttribute(
+          "position",
+          new THREE.BufferAttribute(meshData.positions, 3),
+        );
+        geometry.setIndex(new THREE.BufferAttribute(meshData.indices, 1));
+        geometry.computeVertexNormals();
+        const material = new THREE.MeshStandardMaterial({
+          color: part.id === "front" ? 0x40565a : 0xb4c4c5,
+          roughness: 0.88,
+          side: THREE.DoubleSide,
+        });
+        const mesh = new THREE.Mesh(geometry, material);
+        mesh.position.set(...origin);
+        scene.add(mesh);
+        disposables.push(geometry, material);
+      }
+    }
     const projection = document.createElement("canvas");
     projection.width = IMAGE_SIZE;
     projection.height = IMAGE_SIZE;
@@ -216,7 +259,7 @@ export default function ShadowViewer({
       renderer.dispose();
       renderer.domElement.remove();
     };
-  }, [settings, masks, simulation, rays]);
+  }, [settings, masks, simulation, rays, fabrication]);
   return (
     <div
       ref={host}

@@ -7,10 +7,15 @@ import { RotateCcw, RotateCw, Scan } from "lucide-react";
 import {
   IMAGE_SIZE,
   PRINT_PARTS,
-  printParts,
   type BoxSettings,
   type WallMask,
 } from "./engine";
+import {
+  fabricationParts,
+  assemblyMesh,
+  ledLayout,
+  type Fabrication,
+} from "./fabrication";
 import { ASSEMBLY_STEPS, PLACEMENT_ORDER, assemblyPosition } from "./assembly";
 
 type Props = {
@@ -18,6 +23,7 @@ type Props = {
   masks: WallMask[];
   simulation: Uint8ClampedArray;
   step: number;
+  fabrication?: Fabrication;
 };
 
 export default function AssemblyViewer({
@@ -25,6 +31,7 @@ export default function AssemblyViewer({
   masks,
   simulation,
   step,
+  fabrication,
 }: Props) {
   const host = useRef<HTMLDivElement>(null);
   const labels = useRef<HTMLDivElement>(null);
@@ -74,53 +81,58 @@ export default function AssemblyViewer({
       const light = new THREE.DirectionalLight(0xffeed6, 3);
       light.position.set(size, size * 2, size * 3);
       scene.add(light);
-      const pieces = printParts(masks, settings).map((part) => {
-        // Use the actual exported mesh, converted from mm to scene centimeters.
-        const positions = new Float32Array(part.positions.length);
-        for (let i = 0; i < positions.length; i += 3) {
-          const x = part.positions[i] / 10,
-            y = part.positions[i + 1] / 10;
-          const z = part.positions[i + 2] / 10 - settings.thickness / 20;
-          const point =
-            part.id === "front"
-              ? [x - settings.width / 2, y - settings.height / 2, z]
-              : part.id === "top" || part.id === "bottom"
-                ? [x - settings.width / 2, -z, y - settings.depth / 2]
-                : [z, x - settings.height / 2, y - settings.depth / 2];
-          positions.set(point, i);
-        }
-        const geometry = new THREE.BufferGeometry();
-        geometry.setAttribute(
-          "position",
-          new THREE.BufferAttribute(positions, 3),
-        );
-        geometry.setIndex(new THREE.BufferAttribute(part.indices, 1));
-        geometry.computeVertexNormals();
-        const material = new THREE.MeshStandardMaterial({
-          color: 0xb9cad0,
-          roughness: 0.65,
-          side: THREE.DoubleSide,
-          transparent: true,
-        });
-        const mesh = new THREE.Mesh(geometry, material);
-        mesh.position.set(...assemblyPosition(part.id, settings, true));
-        scene.add(mesh);
-        resources.push(geometry, material);
-        return {
-          id: part.id,
-          mesh,
-          material,
-          target: mesh.position.clone(),
-          label: labels.current?.querySelector<HTMLElement>(
-            `[data-piece="${part.id}"]`,
-          ),
-        };
-      });
-      const bulbGeometry = new THREE.SphereGeometry(size * 0.035, 20, 16);
+      const pieces = fabricationParts(masks, settings, fabrication).map(
+        (part) => {
+          // Use the actual exported mesh, converted from mm to scene centimeters.
+          const meshData = assemblyMesh(part, settings, fabrication);
+          const geometry = new THREE.BufferGeometry();
+          geometry.setAttribute(
+            "position",
+            new THREE.BufferAttribute(meshData.positions, 3),
+          );
+          geometry.setIndex(new THREE.BufferAttribute(meshData.indices, 1));
+          geometry.computeVertexNormals();
+          const material = new THREE.MeshStandardMaterial({
+            color: 0xb9cad0,
+            roughness: 0.65,
+            side: THREE.DoubleSide,
+            transparent: true,
+          });
+          const mesh = new THREE.Mesh(geometry, material);
+          mesh.position.set(...assemblyPosition(part.id, settings, true));
+          scene.add(mesh);
+          resources.push(geometry, material);
+          return {
+            id: part.id,
+            mesh,
+            material,
+            target: mesh.position.clone(),
+            label: labels.current?.querySelector<HTMLElement>(
+              `[data-piece="${part.id}"]`,
+            ),
+          };
+        },
+      );
+      const bulbGeometry = new THREE.SphereGeometry(
+        fabrication ? 0.25 : size * 0.035,
+        20,
+        16,
+      );
       const bulbMaterial = new THREE.MeshBasicMaterial({ color: 0xffd080 });
       const bulb = new THREE.Mesh(bulbGeometry, bulbMaterial);
       bulb.position.z = (settings.depth * settings.lightPercent) / 100;
       scene.add(bulb);
+      const bulbs = [bulb];
+      if (fabrication) {
+        const { centers } = ledLayout(settings, fabrication);
+        bulb.position.x = centers[0] / 10;
+        for (const x of centers.slice(1)) {
+          const extra = new THREE.Mesh(bulbGeometry, bulbMaterial);
+          extra.position.set(x / 10, 0, bulb.position.z);
+          scene.add(extra);
+          bulbs.push(extra);
+        }
+      }
       resources.push(bulbGeometry, bulbMaterial);
 
       const canvas = document.createElement("canvas");
@@ -188,7 +200,9 @@ export default function AssemblyViewer({
           if (part.label) part.label.hidden = !(next === 0 || active);
           if (reduceMotion) part.mesh.position.copy(part.target);
         }
-        bulb.visible = next >= 6;
+        bulbs.forEach((b) => {
+          b.visible = next >= 6;
+        });
         wall.visible = next === 7;
         reset();
       };
@@ -248,7 +262,7 @@ export default function AssemblyViewer({
       return;
     }
     return dispose;
-  }, [settings, masks, simulation]);
+  }, [settings, masks, simulation, fabrication]);
   useEffect(() => {
     api.current?.setStep(step);
   }, [step]);
@@ -263,7 +277,10 @@ export default function AssemblyViewer({
       >
         {PRINT_PARTS.map((part) => (
           <span key={part.id} data-piece={part.id}>
-            {part.filename.slice(0, 2)} · {part.label}
+            {part.filename.slice(0, 2)} ·{" "}
+            {fabrication && part.id === "front"
+              ? "Tapa con soporte LED"
+              : part.label}
           </span>
         ))}
       </div>
