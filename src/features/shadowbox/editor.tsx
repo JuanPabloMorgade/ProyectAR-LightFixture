@@ -33,6 +33,21 @@ import {
 } from "./artwork";
 import ShadowViewer from "./viewer";
 import AssemblyGuide from "./assembly-guide";
+import {
+  Button,
+  Input,
+  TextField,
+  NumberField,
+  Select,
+  SelectField,
+  RangeField,
+  Checkbox,
+  FileInput,
+  FormField,
+  Modal,
+  ModalHeader,
+  ModalFooter,
+} from "@/components/ui";
 import type { STLExportMode, STLExportResult } from "./stl-export";
 import "./shadowbox.css";
 
@@ -448,20 +463,16 @@ export default function ShadowEditor() {
     step: number,
     unit: string,
   ) => (
-    <label className="shadow-field" key={key}>
-      {label}
-      <span>
-        <input
-          type="number"
-          value={settings[key]}
-          min={min}
-          max={max}
-          step={step}
-          onChange={(e) => change(key, Number(e.target.value))}
-        />
-        <small>{unit}</small>
-      </span>
-    </label>
+    <NumberField
+      key={key}
+      label={label}
+      unit={unit}
+      min={min}
+      max={max}
+      step={step}
+      value={settings[key]}
+      onChange={(e) => change(key, Number(e.target.value))}
+    />
   );
   return (
     <div className="shadow-workspace">
@@ -475,8 +486,8 @@ export default function ShadowEditor() {
           </p>
         </div>
         <div className="shadow-header-actions">
-          <button
-            className="button secondary"
+          <Button
+            variant="secondary"
             onClick={() =>
               download(
                 JSON.stringify(currentProject()),
@@ -487,22 +498,22 @@ export default function ShadowEditor() {
           >
             <FileDown size={16} />
             Exportar proyecto
-          </button>
-          <button
-            className="button secondary"
+          </Button>
+          <Button
+            variant="secondary"
             onClick={() => importInput.current?.click()}
           >
             <FolderOpen size={16} />
             Importar
-          </button>
-          <button className="button primary" onClick={save}>
+          </Button>
+          <Button variant="primary" onClick={save}>
             <Save size={16} />
             Guardar
-          </button>
-          <input
+          </Button>
+          <FileInput
             hidden
             ref={importInput}
-            type="file"
+
             accept=".json,application/json"
             onChange={async (e) => {
               const file = e.target.files?.[0];
@@ -541,7 +552,8 @@ export default function ShadowEditor() {
             ["math", "Cómo funciona", Sun],
           ] as const
         ).map(([id, label, Icon]) => (
-          <button
+          <Button
+            variant="unstyled"
             key={id}
             role="tab"
             aria-selected={tab === id}
@@ -550,7 +562,7 @@ export default function ShadowEditor() {
           >
             <Icon size={16} />
             {label}
-          </button>
+          </Button>
         ))}
       </div>
       <div className="shadow-layout">
@@ -559,45 +571,50 @@ export default function ShadowEditor() {
             <h2>Tu diseño</h2>
             <span>01</span>
           </div>
-          <label className="shadow-field">
-            Nombre
-            <input
-              value={name}
-              maxLength={100}
-              onChange={(e) => setName(e.target.value)}
-            />
-          </label>
-          <div className="shadow-saved">
-            <label htmlFor="shadow-saved-design">Diseños guardados</label>
-            <div>
-              <select
-                id="shadow-saved-design"
-                value={selected}
-                onChange={(e) => setSelected(e.target.value)}
-              >
-                <option value="">Elegir diseño…</option>
-                {stored.map((item) => (
-                  <option value={item.id} key={item.id}>
-                    {item.label}
-                  </option>
-                ))}
-              </select>
-              <button
-                onClick={openSelected}
-                disabled={!selected}
-                aria-label="Abrir diseño guardado"
-              >
-                <FolderOpen size={16} />
-              </button>
-              <button
-                onClick={removeSelected}
-                disabled={!selected}
-                aria-label="Eliminar diseño guardado"
-              >
-                <Trash2 size={16} />
-              </button>
-            </div>
-          </div>
+          <TextField
+            label="Nombre"
+            value={name}
+            maxLength={100}
+            onChange={(e) => setName(e.target.value)}
+          />
+          <FormField
+            label="Diseños guardados"
+            id="shadow-saved-design"
+            fieldClassName="shadow-saved"
+          >
+            {(controlProps) => (
+              <div>
+                <Select
+                  {...controlProps}
+                  value={selected}
+                  onChange={(e) => setSelected(e.target.value)}
+                >
+                  <option value="">Elegir diseño…</option>
+                  {stored.map((item) => (
+                    <option value={item.id} key={item.id}>
+                      {item.label}
+                    </option>
+                  ))}
+                </Select>
+                <Button
+                  variant="unstyled"
+                  onClick={openSelected}
+                  disabled={!selected}
+                  aria-label="Abrir diseño guardado"
+                >
+                  <FolderOpen size={16} />
+                </Button>
+                <Button
+                  variant="unstyled"
+                  onClick={removeSelected}
+                  disabled={!selected}
+                  aria-label="Eliminar diseño guardado"
+                >
+                  <Trash2 size={16} />
+                </Button>
+              </div>
+            )}
+          </FormField>
           <div className="shadow-divider" />
           <div className="shadow-panel-head">
             <h2>Geometría</h2>
@@ -612,17 +629,16 @@ export default function ShadowEditor() {
             {number("margin", "Margen de corte", 0, 10, 1, "mm")}
             {number("thickness", "Espesor", 0.6, 12, 0.2, "mm")}
           </div>
-          <label className="shadow-field">
-            Detalle
-            <select
-              value={settings.detail}
-              onChange={(e) => change("detail", Number(e.target.value))}
-            >
-              <option value={96}>Borrador</option>
-              <option value={160}>Equilibrado</option>
-              <option value={224}>Alto</option>
-            </select>
-          </label>
+          <SelectField
+            label="Detalle"
+            value={settings.detail}
+            onChange={(e) => change("detail", Number(e.target.value))}
+            options={[
+              { value: 96, label: "Borrador" },
+              { value: 160, label: "Equilibrado" },
+              { value: 224, label: "Alto" },
+            ]}
+          />
           <p className="shadow-help">
             Todas las medidas de exportación se convierten a milímetros.
           </p>
@@ -698,18 +714,25 @@ export default function ShadowEditor() {
                       ["letters", "Texto"],
                     ] as const
                   ).map(([id, label]) => (
-                    <button key={id} onClick={() => preset(id)}>
+                    <Button
+                      variant="unstyled"
+                      key={id}
+                      onClick={() => preset(id)}
+                    >
                       {label}
-                    </button>
+                    </Button>
                   ))}
-                  <button onClick={() => uploadInput.current?.click()}>
+                  <Button
+                    variant="unstyled"
+                    onClick={() => uploadInput.current?.click()}
+                  >
                     <Upload size={14} />
                     Cargar imagen
-                  </button>
-                  <input
+                  </Button>
+                  <FileInput
                     ref={uploadInput}
                     hidden
-                    type="file"
+
                     accept="image/png,image/jpeg,image/webp,image/svg+xml"
                     onChange={(e) => {
                       void onPhoto(e.target.files?.[0]);
@@ -719,19 +742,21 @@ export default function ShadowEditor() {
                 </div>
                 <div className="shadow-tool-row">
                   <span>Pincel</span>
-                  <button
+                  <Button
+                    variant="unstyled"
                     className={!erase ? "active" : ""}
                     onClick={() => setErase(false)}
                   >
                     Dibujar
-                  </button>
-                  <button
+                  </Button>
+                  <Button
+                    variant="unstyled"
                     className={erase ? "active" : ""}
                     onClick={() => setErase(true)}
                   >
                     Borrar
-                  </button>
-                  <input
+                  </Button>
+                  <Input
                     type="range"
                     min="4"
                     max="58"
@@ -740,7 +765,8 @@ export default function ShadowEditor() {
                     aria-label="Tamaño del pincel"
                   />
                   <small>{brush}px</small>
-                  <button
+                  <Button
+                    variant="unstyled"
                     onClick={() => {
                       setArtwork(presetArt("rays"));
                       setMessage("Patrón restablecido.");
@@ -748,7 +774,7 @@ export default function ShadowEditor() {
                   >
                     <RotateCcw size={14} />
                     Reiniciar
-                  </button>
+                  </Button>
                 </div>
               </div>
               <div className="shadow-section-title">
@@ -765,7 +791,8 @@ export default function ShadowEditor() {
                   <article key={mask.face}>
                     <div>
                       <strong>Panel {labels[mask.face].toLowerCase()}</strong>
-                      <button
+                      <Button
+                        variant="unstyled"
                         onClick={() =>
                           download(
                             maskSVG(mask),
@@ -776,7 +803,7 @@ export default function ShadowEditor() {
                       >
                         <Download size={13} />
                         SVG
-                      </button>
+                      </Button>
                     </div>
                     <MaskPreview mask={mask} />
                     <small>
@@ -794,14 +821,11 @@ export default function ShadowEditor() {
                   <h2>La caja, desde todos los ángulos</h2>
                   <p>Arrastrá para girar · Rueda para acercar y alejar</p>
                 </div>
-                <label>
-                  <input
-                    type="checkbox"
-                    checked={showRays}
-                    onChange={(e) => setShowRays(e.target.checked)}
-                  />
-                  Mostrar rayos
-                </label>
+                <Checkbox
+                  label="Mostrar rayos"
+                  checked={showRays}
+                  onChange={(e) => setShowRays(e.target.checked)}
+                />
               </div>
               <div className="shadow-three-stage">
                 {simulation && masks.length === 4 ? (
@@ -827,37 +851,37 @@ export default function ShadowEditor() {
                     Izquierda y derecha mirando la caja de frente, desde la
                     habitación.
                   </span>
-                  <button
+                  <Button
+                    variant="unstyled"
                     type="button"
                     className="button secondary assembly-open"
                     disabled={!simulation || masks.length !== 4}
                     onClick={() => setAssemblyOpen(true)}
                   >
                     <Box size={17} /> Ver guía de armado
-                  </button>
+                  </Button>
                 </div>
                 <div className="shadow-export">
-                  <label className="field">
-                    Formato de descarga
-                    <select
-                      value={exportMode}
-                      disabled={working}
-                      onChange={(e) =>
-                        setExportMode(e.target.value as STLExportMode)
-                      }
-                      aria-describedby="shadow-export-description"
-                    >
-                      <option value="combined">Un STL con las 5 piezas</option>
-                      <option value="separate">Piezas separadas · ZIP</option>
-                    </select>
-                  </label>
+                  <SelectField
+                    label="Formato de descarga"
+                    value={exportMode}
+                    disabled={working}
+                    onChange={(e) =>
+                      setExportMode(e.target.value as STLExportMode)
+                    }
+                    aria-describedby="shadow-export-description"
+                    options={[
+                      { value: "combined", label: "Un STL con las 5 piezas" },
+                      { value: "separate", label: "Piezas separadas · ZIP" },
+                    ]}
+                  />
                   <span id="shadow-export-description">
                     {exportMode === "combined"
                       ? "Las cinco piezas, una al lado de la otra en un solo archivo."
                       : "Cinco archivos STL numerados y una guía para identificar las piezas."}
                   </span>
-                  <button
-                    className="button primary"
+                  <Button
+                    variant="primary"
                     disabled={working || masks.length !== 4}
                     onClick={() => void exportSTL()}
                   >
@@ -867,7 +891,7 @@ export default function ShadowEditor() {
                       : exportMode === "combined"
                         ? "Descargar STL · 5 piezas"
                         : "Descargar ZIP · 5 STL"}
-                  </button>
+                  </Button>
                 </div>
               </div>
             </>
@@ -932,111 +956,95 @@ export default function ShadowEditor() {
         />
       )}
       {crop && (
-        <div className="shadow-modal-backdrop" role="presentation">
+        <Modal
+          className="shadow-modal"
+          aria-label="Recortar imagen"
+          onClose={() => setCrop(null)}
+        >
+          <ModalHeader
+            title="Prepará tu imagen"
+            onClose={() => setCrop(null)}
+            closeLabel="Cerrar recorte de imagen"
+            description="Mové y acercá la imagen. El círculo indica el área que se proyectará."
+          />
           <div
-            className="shadow-modal"
-            role="dialog"
-            aria-modal="true"
-            aria-label="Recortar imagen"
+            className="shadow-crop-stage"
+            onPointerDown={(e) => {
+              e.currentTarget.setPointerCapture(e.pointerId);
+              panOrigin.current = {
+                x: e.clientX,
+                y: e.clientY,
+                panX: crop.panX,
+                panY: crop.panY,
+              };
+            }}
+            onPointerMove={(e) => {
+              const start = panOrigin.current;
+              if (start)
+                setCrop(
+                  (c) =>
+                    c && {
+                      ...c,
+                      panX: start.panX + (e.clientX - start.x) / 160,
+                      panY: start.panY + (e.clientY - start.y) / 160,
+                    },
+                );
+            }}
+            onPointerUp={() => {
+              panOrigin.current = null;
+            }}
           >
-            <h2>Prepará tu imagen</h2>
-            <p>
-              Mové y acercá la imagen. El círculo indica el área que se
-              proyectará.
-            </p>
-            <div
-              className="shadow-crop-stage"
-              onPointerDown={(e) => {
-                e.currentTarget.setPointerCapture(e.pointerId);
-                panOrigin.current = {
-                  x: e.clientX,
-                  y: e.clientY,
-                  panX: crop.panX,
-                  panY: crop.panY,
-                };
-              }}
-              onPointerMove={(e) => {
-                const start = panOrigin.current;
-                if (start)
-                  setCrop(
-                    (c) =>
-                      c && {
-                        ...c,
-                        panX: start.panX + (e.clientX - start.x) / 160,
-                        panY: start.panY + (e.clientY - start.y) / 160,
-                      },
-                  );
-              }}
-              onPointerUp={() => {
-                panOrigin.current = null;
+            <canvas ref={cropCanvas} />
+            <div className="shadow-crop-ring" />
+          </div>
+          <RangeField
+            label="Zoom"
+            min={1}
+            max={3}
+            step={0.05}
+            value={crop.zoom}
+            onChange={(e) => setCrop({ ...crop, zoom: Number(e.target.value) })}
+          />
+          <RangeField
+            label="Umbral"
+            min={20}
+            max={235}
+            value={crop.threshold}
+            onChange={(e) =>
+              setCrop({ ...crop, threshold: Number(e.target.value) })
+            }
+          />
+          <Checkbox
+            label="Invertir claros y oscuros"
+            checked={crop.invert}
+            onChange={(e) => setCrop({ ...crop, invert: e.target.checked })}
+          />
+          <ModalFooter className="shadow-modal-actions">
+            <Button variant="secondary" onClick={() => setCrop(null)}>
+              Cancelar
+            </Button>
+            <Button
+              variant="primary"
+              onClick={() => {
+                setArtwork(
+                  rasterizeCrop(
+                    crop.image,
+                    crop.zoom,
+                    crop.panX,
+                    crop.panY,
+                    crop.threshold,
+                    crop.invert,
+                  ),
+                );
+                setName(crop.filename.replace(/\.[^.]+$/, "").slice(0, 100));
+                setCrop(null);
+                setMessage("Imagen aplicada al diseño.");
               }}
             >
-              <canvas ref={cropCanvas} />
-              <div className="shadow-crop-ring" />
-            </div>
-            <label>
-              Zoom
-              <input
-                type="range"
-                min="1"
-                max="3"
-                step="0.05"
-                value={crop.zoom}
-                onChange={(e) =>
-                  setCrop({ ...crop, zoom: Number(e.target.value) })
-                }
-              />
-            </label>
-            <label>
-              Umbral
-              <input
-                type="range"
-                min="20"
-                max="235"
-                value={crop.threshold}
-                onChange={(e) =>
-                  setCrop({ ...crop, threshold: Number(e.target.value) })
-                }
-              />
-            </label>
-            <label className="shadow-checkbox">
-              <input
-                type="checkbox"
-                checked={crop.invert}
-                onChange={(e) => setCrop({ ...crop, invert: e.target.checked })}
-              />
-              Invertir claros y oscuros
-            </label>
-            <div className="shadow-modal-actions">
-              <button
-                className="button secondary"
-                onClick={() => setCrop(null)}
-              >
-                Cancelar
-              </button>
-              <button
-                className="button primary"
-                onClick={() => {
-                  setArtwork(
-                    rasterizeCrop(
-                      crop.image,
-                      crop.zoom,
-                      crop.panX,
-                      crop.panY,
-                      crop.threshold,
-                      crop.invert,
-                    ),
-                  );
-                  setName(crop.filename.replace(/\.[^.]+$/, "").slice(0, 100));
-                  setCrop(null);
-                  setMessage("Imagen aplicada al diseño.");
-                }}
-              >
-                Aplicar imagen
-              </button>
-            </div>
-          </div>
-        </div>
+              Aplicar imagen
+            </Button>
+          </ModalFooter>
+        </Modal>
       )}
     </div>
   );
