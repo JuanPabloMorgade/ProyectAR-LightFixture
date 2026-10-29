@@ -1,4 +1,5 @@
 "use client";
+import { isWallMount } from "./enclosure-config";
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { Button } from "@/components/ui/button";
@@ -6,22 +7,29 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { RotateCcw, RotateCw, Scan } from "lucide-react";
 import {
   IMAGE_SIZE,
+  sourceDistance,
   PRINT_PARTS,
   type BoxSettings,
   type WallMask,
 } from "./engine";
+import { ledLayout, type Fabrication } from "./fabrication";
+import { previewParts, previewMesh } from "./preview-model";
 import {
-  fabricationParts,
-  assemblyMesh,
-  ledLayout,
-  type Fabrication,
-} from "./fabrication";
-import { ASSEMBLY_STEPS, PLACEMENT_ORDER, assemblyPosition } from "./assembly";
+  assemblySequence,
+  assemblyPlacement,
+  assemblyPosition,
+} from "./assembly";
+import { hasEnclosure } from "./enclosure";
+import { isCob } from "./cob";
+import { isModular } from "./modular";
+import { modularVisuals } from "./modular-visuals";
+import { cobVisuals } from "./cob-visuals";
 
 type Props = {
   settings: BoxSettings;
   masks: WallMask[];
   simulation: Uint8ClampedArray;
+  artwork?: Uint8ClampedArray;
   step: number;
   fabrication?: Fabrication;
 };
@@ -30,6 +38,7 @@ export default function AssemblyViewer({
   settings,
   masks,
   simulation,
+  artwork,
   step,
   fabrication,
 }: Props) {
@@ -55,6 +64,8 @@ export default function AssemblyViewer({
       );
       return;
     }
+    const { steps, lightStep, resultStep } = assemblySequence(fabrication);
+    const separated = hasEnclosure(fabrication);
     const resources: { dispose: () => void }[] = [];
     let observer: ResizeObserver | undefined;
     const scene = new THREE.Scene();
@@ -81,10 +92,10 @@ export default function AssemblyViewer({
       const light = new THREE.DirectionalLight(0xffeed6, 3);
       light.position.set(size, size * 2, size * 3);
       scene.add(light);
-      const pieces = fabricationParts(masks, settings, fabrication).map(
+      const pieces = previewParts(masks, settings, fabrication, artwork).map(
         (part) => {
           // Use the actual exported mesh, converted from mm to scene centimeters.
-          const meshData = assemblyMesh(part, settings, fabrication);
+          const meshData = previewMesh(part, settings, fabrication);
           const geometry = new THREE.BufferGeometry();
           geometry.setAttribute(
             "position",
@@ -120,18 +131,34 @@ export default function AssemblyViewer({
       );
       const bulbMaterial = new THREE.MeshBasicMaterial({ color: 0xffd080 });
       const bulb = new THREE.Mesh(bulbGeometry, bulbMaterial);
-      bulb.position.z = (settings.depth * settings.lightPercent) / 100;
+      bulb.position.z = sourceDistance(settings);
       scene.add(bulb);
       const bulbs = [bulb];
-      if (fabrication) {
+      if (fabrication && !isCob(fabrication) && !isModular(fabrication)) {
         const { centers } = ledLayout(settings, fabrication);
-        bulb.position.x = centers[0] / 10;
-        for (const x of centers.slice(1)) {
+        bulb.position.x = centers[0][0] / 10;
+        bulb.position.y = centers[0][1] / 10;
+        for (const [x, y] of centers.slice(1)) {
           const extra = new THREE.Mesh(bulbGeometry, bulbMaterial);
-          extra.position.set(x / 10, 0, bulb.position.z);
+          extra.position.set(x / 10, y / 10, bulb.position.z);
           scene.add(extra);
           bulbs.push(extra);
         }
+      }
+      const cob =
+        fabrication && isCob(fabrication)
+          ? cobVisuals(settings, fabrication, resources)
+          : undefined;
+      if (cob) pieces.find((p) => p.id === "front")!.mesh.add(cob.group);
+      const modular =
+        fabrication && isModular(fabrication)
+          ? modularVisuals(settings, fabrication, resources)
+          : undefined;
+      if (modular) {
+        if (isWallMount(fabrication)) {
+          modular.position.z = (settings.wallOffset ?? 0) + settings.depth;
+          scene.add(modular);
+        } else pieces.find((p) => p.id === "front")!.mesh.add(modular);
       }
       resources.push(bulbGeometry, bulbMaterial);
 
@@ -163,20 +190,28 @@ export default function AssemblyViewer({
       scene.add(wall);
       resources.push(texture, wallGeometry, wallMaterial);
       const reset = () => {
-        const final = currentStep.current === 7;
+        const final = currentStep.current === resultStep;
+        const rearAccess =
+          isWallMount(fabrication) &&
+          currentStep.current === 2 &&
+          steps[2].part === "battery-cover";
         const extent = final
           ? Math.max(size * 1.3, settings.radius * 1.2)
           : size * (currentStep.current === 0 ? 1.6 : 0.85);
-        // Fit both portrait and landscape viewports; keep the box front-facing.
+        // Show the rear battery door during its assembly step.
         const distance =
           extent /
           Math.tan(THREE.MathUtils.degToRad(19)) /
           Math.min(camera.aspect, 1);
-        controls.target.set(0, 0, final ? 0 : settings.depth / 2);
+        controls.target.set(0, 0, final || rearAccess ? 0 : settings.depth / 2);
         camera.position
           .copy(controls.target)
           .add(
-            new THREE.Vector3(0.65, 0.6, 1)
+            new THREE.Vector3(
+              final || rearAccess ? 0.08 : 0.65,
+              final || rearAccess ? 0.04 : 0.6,
+              rearAccess ? -1 : 1,
+            )
               .normalize()
               .multiplyScalar(distance),
           );
@@ -184,14 +219,26 @@ export default function AssemblyViewer({
       };
       const setStep = (next: number) => {
         for (const part of pieces) {
-          const placed = next > PLACEMENT_ORDER.indexOf(part.id);
-          const active = ASSEMBLY_STEPS[next].part === part.id;
-          part.mesh.visible = next === 0 || placed;
-          part.target.set(...assemblyPosition(part.id, settings, !placed));
+          const extra = ["post", "head", "battery-cover"].includes(part.id);
+          const placed = next >= assemblyPlacement(part.id, fabrication);
+          const active =
+            steps[next].part === part.id || (extra && next === lightStep);
+          const headFrame =
+            isWallMount(fabrication) &&
+            isModular(fabrication) &&
+            next === lightStep &&
+            part.id === "front";
+          part.mesh.visible = next === 0 || placed || active || headFrame;
+          part.target.set(
+            ...assemblyPosition(part.id, settings, !(placed || headFrame)),
+          );
           part.material.color.set(active ? 0xb388ff : 0xb9cad0);
           part.material.emissive.set(active ? 0x321853 : 0x000000);
           part.material.opacity =
-            next === 6 && part.id === "front"
+            (next === lightStep && part.id === "front") ||
+            (separated &&
+              (next === 2 || next === lightStep) &&
+              part.id === "electronics")
               ? 0.14
               : next === 0 || placed
                 ? 1
@@ -201,9 +248,17 @@ export default function AssemblyViewer({
           if (reduceMotion) part.mesh.position.copy(part.target);
         }
         bulbs.forEach((b) => {
-          b.visible = next >= 6;
+          b.visible =
+            next >= lightStep && !cob && (!separated || next === lightStep);
         });
-        wall.visible = next === 7;
+        if (cob) {
+          cob.emitters.visible = next >= lightStep;
+          cob.group.visible = !separated || next === lightStep;
+        }
+        if (modular)
+          modular.visible =
+            next >= lightStep && (!separated || next === lightStep);
+        wall.visible = next === resultStep;
         reset();
       };
       api.current = {
@@ -262,7 +317,7 @@ export default function AssemblyViewer({
       return;
     }
     return dispose;
-  }, [settings, masks, simulation, fabrication]);
+  }, [settings, masks, simulation, fabrication, artwork]);
   useEffect(() => {
     api.current?.setStep(step);
   }, [step]);
@@ -275,12 +330,38 @@ export default function AssemblyViewer({
         aria-hidden="true"
         hidden={!!error}
       >
-        {PRINT_PARTS.map((part) => (
+        {(fabrication && (isModular(fabrication) || hasEnclosure(fabrication))
+          ? previewParts(masks, settings, fabrication, artwork)
+          : PRINT_PARTS
+        ).map((part) => (
           <span key={part.id} data-piece={part.id}>
             {part.filename.slice(0, 2)} ·{" "}
-            {fabrication && part.id === "front"
-              ? "Tapa con soporte LED"
-              : part.label}
+            {hasEnclosure(fabrication)
+              ? {
+                  top: "Superior",
+                  bottom: "Inferior",
+                  left: "Izquierda",
+                  right: "Derecha",
+                  front: isWallMount(fabrication)
+                    ? "Embellecedor"
+                    : "Placa de luz",
+                  base: "Base de pared",
+                  separator: "Tapa electrónica",
+                  post: "Poste",
+                  head: "Cabezal",
+                  electronics: "Electrónica",
+                  face: "Tapa exterior",
+                  "battery-cover": "Tapita",
+                }[part.id]
+              : fabrication && part.id === "front"
+                ? hasEnclosure(fabrication)
+                  ? "Placa portaluces"
+                  : isModular(fabrication)
+                    ? "Base modular"
+                    : isCob(fabrication)
+                      ? "Tapa con rebajes COB"
+                      : "Tapa con soporte LED"
+                : part.label}
           </span>
         ))}
       </div>

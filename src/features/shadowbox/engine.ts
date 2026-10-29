@@ -12,6 +12,12 @@ export type BoxSettings = {
   thickness: number;
   margin: number;
   detail: number;
+  /** cm from projection wall to the first edge of the optical panels. */
+  wallOffset?: number;
+  /** Derived rear-span correction in cm; may be negative to clear the lid relief. */
+  panelExtension?: number;
+  /** Derived cm removed at the front of a 1 W panel after allowing for the head. */
+  frontTrim?: number;
 };
 export type WallMask = {
   face: Face;
@@ -40,12 +46,16 @@ export function validateBox(s: BoxSettings) {
     s.width > 80 ||
     s.height < 6 ||
     s.height > 100 ||
-    s.depth < 3 ||
-    s.depth > 50 ||
+    s.depth - (s.panelExtension ?? 0) + (s.frontTrim ?? 0) < 3 - 1e-9 ||
+    s.depth - (s.panelExtension ?? 0) + (s.frontTrim ?? 0) > 50 + 1e-9 ||
     s.radius < 15 ||
     s.radius > 150 ||
     s.lightPercent < 10 ||
-    s.lightPercent > 95 ||
+    s.lightPercent > (s.wallOffset === undefined ? 95 : 99.9) ||
+    (s.wallOffset !== undefined && (s.wallOffset < 0 || s.wallOffset > 5.2)) ||
+    (s.panelExtension !== undefined &&
+      (s.panelExtension < -0.2 || s.panelExtension > 5)) ||
+    (s.frontTrim !== undefined && (s.frontTrim < 0 || s.frontTrim > 50)) ||
     s.thickness < 0.6 ||
     s.thickness > 12 ||
     s.margin < 0 ||
@@ -54,6 +64,8 @@ export function validateBox(s: BoxSettings) {
   )
     throw new Error("RevisÃ¡ las dimensiones y el espesor.");
 }
+export const sourceDistance = (s: BoxSettings) =>
+  (s.wallOffset ?? 0) + (s.depth * s.lightPercent) / 100;
 
 export function faceSpan(face: Face, s: BoxSettings) {
   return face === "top" || face === "bottom" ? s.width : s.height;
@@ -65,9 +77,10 @@ export function wallToImage(
   depth: number,
   s: BoxSettings,
 ): [number, number] | null {
-  const bulb = (s.depth * s.lightPercent) / 100;
-  if (depth < 0 || depth >= bulb) return null;
-  const scale = bulb / (bulb - depth);
+  const bulb = sourceDistance(s),
+    wallDepth = (s.wallOffset ?? 0) + depth;
+  if (depth < 0 || wallDepth >= bulb) return null;
+  const scale = bulb / (bulb - wallDepth);
   let x = 0,
     y = 0;
   if (face === "right") {
@@ -109,7 +122,7 @@ export function imageToWall(
   return {
     face,
     u: (horizontal ? y : x) * t,
-    depth: ((s.depth * s.lightPercent) / 100) * (1 - t),
+    depth: sourceDistance(s) * (1 - t) - (s.wallOffset ?? 0),
   };
 }
 
@@ -227,6 +240,7 @@ export function printableMask(mask: WallMask): WallMask {
 export function simulatedImage(
   masks: WallMask[],
   s: BoxSettings,
+  openRear = false,
 ): Uint8ClampedArray {
   const out = new Uint8ClampedArray(IMAGE_SIZE * IMAGE_SIZE * 4);
   const byFace = Object.fromEntries(
@@ -243,11 +257,12 @@ export function simulatedImage(
         const col = Math.floor((p.u / wall.span + 0.5) * wall.columns),
           row = Math.floor((p.depth / wall.depth) * wall.rows);
         lit =
-          col >= 0 &&
-          col < wall.columns &&
-          row >= 0 &&
-          row < wall.rows &&
-          !!wall.cells[row * wall.columns + col];
+          (openRear && p.depth < 0) ||
+          (col >= 0 &&
+            col < wall.columns &&
+            row >= 0 &&
+            row < wall.rows &&
+            !!wall.cells[row * wall.columns + col]);
       }
       const k = (iy * IMAGE_SIZE + ix) * 4;
       out[k] = lit ? 249 : 26;

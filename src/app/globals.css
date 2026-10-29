@@ -13,6 +13,7 @@
   --error: #ffadac;
 }
 * { box-sizing: border-box; }
+* { scrollbar-width: thin; scrollbar-color: #79549c var(--surface); }
 body { margin: 0; background: radial-gradient(ellipse 850px 600px at 50% 0, #41206a40, transparent), var(--bg); color: var(--ink); font-family: var(--font-inter), Arial, Helvetica, sans-serif; font-size: 14px; }
 a { color: inherit; text-decoration: none; }
 button, input, select, textarea { font: inherit; }

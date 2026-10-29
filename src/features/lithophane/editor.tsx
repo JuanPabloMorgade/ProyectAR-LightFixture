@@ -7,7 +7,6 @@ import {
   RotateCcw,
   Sun,
   ImagePlus,
-  Check,
   FolderOpen,
   SlidersHorizontal,
   ArrowDownToLine,
@@ -23,6 +22,9 @@ import {
   Checkbox,
   FileInput,
   SegmentedControl,
+  Toast,
+  ToastViewport,
+  type ToastVariant,
 } from "@/components/ui";
 type Mesh = { positions: Float32Array; indices: Uint32Array };
 type Project = { version: 1; name: string; photo: string; settings: Settings };
@@ -103,9 +105,14 @@ export default function LampEditor() {
     [pixels, setPixels] = useState<ImageData | null>(null),
     [mesh, setMesh] = useState<Mesh | null>(null),
     [busy, setBusy] = useState(true),
-    [notice, setNotice] = useState(""),
+    [notice, updateNotice] = useState(""),
     [error, setError] = useState(""),
     [lit, setLit] = useState(true);
+  const [noticeVariant, setNoticeVariant] = useState<ToastVariant>("success");
+  function setNotice(text: string, variant: ToastVariant = "success") {
+    updateNotice(text);
+    setNoticeVariant(variant);
+  }
   const worker = useRef<Worker | null>(null),
     request = useRef(0),
     photoRequest = useRef(0),
@@ -149,7 +156,7 @@ export default function LampEditor() {
           return;
         }
       } catch {
-        setNotice("No se pudo recuperar el guardado anterior.");
+        setNotice("No se pudo recuperar el guardado anterior.", "warning");
       }
       await applyPhoto(sample());
     }
@@ -229,6 +236,7 @@ export default function LampEditor() {
             } catch {
               setNotice(
                 "No se pudo guardar en este navegador. Usá Exportar proyecto para descargar una copia.",
+                "warning",
               );
             }
           }}
@@ -438,11 +446,6 @@ export default function LampEditor() {
           <div className="status" aria-live="polite">
             {error ? (
               <span className="error">{error}</span>
-            ) : notice ? (
-              <span>
-                <Check size={16} />
-                {notice}
-              </span>
             ) : (
               <span>
                 Vista de luz orientativa. El resultado depende del material, la
@@ -512,6 +515,17 @@ export default function LampEditor() {
           </div>
         </section>
       </div>
+      <ToastViewport>
+        {notice && !error && (
+          <Toast
+            key={notice}
+            title={noticeVariant === "warning" ? "Revisá este aviso" : "Listo"}
+            description={notice}
+            variant={noticeVariant}
+            onDismiss={() => setNotice("")}
+          />
+        )}
+      </ToastViewport>
     </>
   );
 }
