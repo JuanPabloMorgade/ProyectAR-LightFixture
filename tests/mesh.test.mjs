@@ -56,7 +56,22 @@ test("Rechaza parámetros inválidos", () => {
     { ...defaults, min: 4, max: 2 },
     { ...defaults, width: NaN },
     { ...defaults, resolution: 10000 },
+    { ...defaults, resolution: 385 },
     { ...defaults, height: 0 },
   ])
     assert.throws(() => validateSettings(settings));
+});
+
+test("Muy alto acepta 384 puntos en el lado mayor y exporta esa resolución", () => {
+  const settings = { ...defaults, resolution: 384 };
+  const mesh = createMesh(pixels, 2, 2, settings);
+  const cols = 384,
+    rows = 320;
+  assert.equal(mesh.positions.length / 3, 2 * (cols + 1) * (rows + 1));
+  const triangles = 4 * cols * rows + 4 * (cols + rows);
+  assert.equal(mesh.indices.length / 3, triangles);
+  assert.ok(mesh.positions.every(Number.isFinite));
+  const stl = binarySTL(mesh.positions, mesh.indices);
+  assert.equal(new DataView(stl).getUint32(80, true), triangles);
+  assert.equal(stl.byteLength, 84 + triangles * 50);
 });

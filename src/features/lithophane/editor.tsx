@@ -14,6 +14,14 @@ import {
 import { defaults, validateSettings, binarySTL, type Settings } from "./mesh";
 import Viewer from "./viewer";
 import {
+  defaultHousing,
+  hasHousing,
+  type HousingSettings,
+} from "./housing-config";
+import { housingLayout, type HousingPart } from "./housing";
+import { housingZIP } from "./housing-export";
+import { hasPrintStand } from "./print-stand";
+import {
   Button,
   TextField,
   NumberField,
@@ -97,6 +105,7 @@ function validateProject(p: Project) {
   )
     throw new Error("Este archivo no es un proyecto de lámpara de ProyectAR.");
   validateSettings(p.settings);
+  if (hasHousing(p.settings)) housingLayout(p.settings);
 }
 export default function LampEditor() {
   const [settings, setSettings] = useState<Settings>(defaults),
@@ -104,6 +113,11 @@ export default function LampEditor() {
     [photo, setPhoto] = useState(""),
     [pixels, setPixels] = useState<ImageData | null>(null),
     [mesh, setMesh] = useState<Mesh | null>(null),
+    [printPanel, setPrintPanel] = useState<Mesh | null>(null),
+    [printSupport, setPrintSupport] = useState<Mesh | null>(null),
+    [printPreview, setPrintPreview] = useState(false),
+    [housingParts, setHousingParts] = useState<HousingPart[]>([]),
+    [interior, setInterior] = useState(false),
     [busy, setBusy] = useState(true),
     [notice, updateNotice] = useState(""),
     [error, setError] = useState(""),
@@ -134,10 +148,16 @@ export default function LampEditor() {
       if (data.id !== request.current) return;
       setBusy(false);
       if (data.error) {
+        setHousingParts([]);
+        setPrintPanel(null);
+        setPrintSupport(null);
         setError(data.error);
         return;
       }
       setMesh({ positions: data.positions, indices: data.indices });
+      setHousingParts(data.housingParts ?? []);
+      setPrintPanel(data.printPanel ?? null);
+      setPrintSupport(data.printSupport ?? null);
     };
     w.onerror = () => {
       setBusy(false);
@@ -188,10 +208,21 @@ export default function LampEditor() {
     );
     return () => clearTimeout(timer);
   }, [pixels, settings]);
-  const change = (key: keyof Settings, value: number | boolean) => {
+  const change = (
+    key: Exclude<keyof Settings, "housing">,
+    value: number | boolean,
+  ) => {
     setBusy(true);
     setSettings((s) => ({ ...s, [key]: value }));
     setNotice("");
+  };
+  const updateHousing = (patch: Partial<HousingSettings>) => {
+    setBusy(true);
+    setNotice("");
+    setSettings((s) => ({
+      ...s,
+      housing: { ...(s.housing ?? defaultHousing), ...patch },
+    }));
   };
   const project = (): Project => ({ version: 1, name, photo, settings });
   async function upload(file?: File) {
@@ -216,7 +247,16 @@ export default function LampEditor() {
       setError(e instanceof Error ? e.message : "No se pudo abrir la imagen.");
     }
   }
-  const ready = !!mesh && !busy && !error;
+  const boxEnabled = hasHousing(settings);
+  const standEnabled = hasPrintStand(settings);
+  const showStand = standEnabled && printPreview;
+  const housing = settings.housing ?? defaultHousing;
+  const ready =
+    !!mesh &&
+    !busy &&
+    !error &&
+    (!boxEnabled || housingParts.length === 3) &&
+    (!standEnabled || !!printPanel);
   return (
     <>
       <section className="editor-heading">
@@ -347,6 +387,7 @@ export default function LampEditor() {
               { value: 80, label: "Borrador · 80 puntos" },
               { value: 160, label: "Equilibrado · 160 puntos" },
               { value: 256, label: "Alto · 256 puntos" },
+              { value: 384, label: "Muy alto · 384 puntos" },
             ]}
           />
           <Checkbox
@@ -354,6 +395,82 @@ export default function LampEditor() {
             checked={settings.invert}
             onChange={(e) => change("invert", e.target.checked)}
           />
+          <div className="control-section lamp-housing-controls">
+            <h3>Preparación de impresión</h3>
+            <Checkbox
+              label="Exportar de pie con soporte removible"
+              checked={standEnabled}
+              onChange={(e) => change("printStand", e.target.checked)}
+            />
+            <p className="field-hint">
+              Base baja con contactos finos, incluida en el STL del panel.
+              Agrega 3 mm al alto de impresión. Sirve para las tres formas.
+            </p>
+            {standEnabled && (
+              <p className="field-hint">
+                Al terminar, cortá los contactos al ras del borde inferior y
+                retiralos antes de montar la foto. Probá la separación con tu
+                material y altura de capa; evitá arrancar el soporte.
+              </p>
+            )}
+          </div>
+          <div className="control-section lamp-housing-controls">
+            <h3>Caja para iluminación</h3>
+            <Checkbox
+              label="Generar caja trasera"
+              checked={boxEnabled}
+              disabled={settings.angle === 180}
+              onChange={(e) => updateHousing({ enabled: e.target.checked })}
+            />
+            {settings.angle === 180 ? (
+              <p className="field-hint">
+                La caja está disponible para Plano y Curvo. Semicírculo conserva
+                el panel independiente.
+              </p>
+            ) : boxEnabled ? (
+              <>
+                <div className="two-fields">
+                  <NumberField
+                    label="Espacio para la luz"
+                    unit="mm"
+                    min={12}
+                    max={80}
+                    step={1}
+                    value={housing.depth}
+                    onChange={(e) =>
+                      updateHousing({ depth: Number(e.target.value) })
+                    }
+                  />
+                  <NumberField
+                    label="Holgura de encastre"
+                    unit="mm"
+                    min={0.1}
+                    max={0.6}
+                    step={0.05}
+                    value={housing.clearance}
+                    onChange={(e) =>
+                      updateHousing({ clearance: Number(e.target.value) })
+                    }
+                  />
+                </div>
+                <p className="field-hint">
+                  Cuatro piezas: foto, caja, marco y tapa desmontable. Paredes
+                  de 2,4 mm y salida inferior para cable de 4 mm. El marco cubre
+                  2 mm del borde de la foto.
+                </p>
+                <p className="field-hint">
+                  En Curvo, la profundidad sigue el radio del panel. La caja
+                  debe dejar espacio para tu iluminación; tapas y marco agregan
+                  espesor exterior. No incluye LED ni fuente.
+                </p>
+              </>
+            ) : (
+              <p className="field-hint">
+                Sumá una caja del mismo perfil que la foto, con marco de
+                sujeción y tapa trasera para acceder a la luz.
+              </p>
+            )}
+          </div>
           <Button
             variant="unstyled"
             className="text-button"
@@ -381,17 +498,47 @@ export default function LampEditor() {
               <Sun size={16} />
               {lit ? "Luz encendida" : "Material"}
             </Button>
+            {standEnabled && (
+              <Checkbox
+                label="Ver soporte de impresión"
+                checked={printPreview}
+                onChange={(e) => setPrintPreview(e.target.checked)}
+              />
+            )}
+            {boxEnabled && !showStand && (
+              <Checkbox
+                label="Ver interior de la caja"
+                checked={interior}
+                onChange={(e) => setInterior(e.target.checked)}
+              />
+            )}
           </div>
           <div className={"preview-stage " + (lit ? "illuminated" : "")}>
             {mesh ? (
-              <Viewer {...mesh} lit={lit} />
+              <Viewer
+                {...mesh}
+                lit={lit}
+                housingParts={
+                  boxEnabled && !showStand ? housingParts : undefined
+                }
+                printSupport={
+                  showStand ? (printSupport ?? undefined) : undefined
+                }
+                interior={interior}
+              />
             ) : (
               <div className="loading">Preparando tu diseño…</div>
             )}
             <span className="stage-caption">
-              Arrastrá para girar · Rueda para acercar
+              {showStand
+                ? "Soporte removible en violeta · Retiralo después de imprimir"
+                : "Arrastrá para girar · Rueda para acercar"}
             </span>
-            {busy && <span className="calculating">Generando relieve…</span>}
+            {busy && (
+              <span className="calculating">
+                {boxEnabled ? "Generando panel y caja…" : "Generando relieve…"}
+              </span>
+            )}
           </div>
           <div className="preview-meta">
             <div>
@@ -409,7 +556,12 @@ export default function LampEditor() {
             <div>
               <span>MALLA</span>
               <strong>
-                {mesh ? (mesh.indices.length / 3).toLocaleString("es-AR") : "—"}{" "}
+                {mesh
+                  ? (
+                      (standEnabled && printPanel ? printPanel : mesh).indices
+                        .length / 3
+                    ).toLocaleString("es-AR")
+                  : "—"}{" "}
                 triángulos
               </strong>
             </div>
@@ -417,20 +569,44 @@ export default function LampEditor() {
           <div className="export-bar">
             <div>
               <h3>Tu próxima impresión empieza acá.</h3>
-              <p>Panel cerrado en milímetros · STL binario</p>
+              <p>
+                {boxEnabled
+                  ? `Panel${standEnabled ? " con soporte" : ""}, caja, marco y tapa · ZIP con 4 STL y guía`
+                  : standEnabled
+                    ? "Panel de pie con soporte removible · STL binario"
+                    : "Panel cerrado en milímetros · STL binario"}
+              </p>
             </div>
             <Button
               variant="primary"
               disabled={!ready}
               onClick={() => {
                 try {
-                  download(
-                    binarySTL(mesh!.positions, mesh!.indices),
-                    `${name.replace(/[^a-zA-Z0-9áéíóúñ_-]/g, "_") || "litofania"}.stl`,
-                    "model/stl",
-                  );
+                  const filename =
+                    name.replace(/[^a-zA-Z0-9áéíóúñ_-]/g, "_") || "litofania";
+                  const photoMesh = standEnabled ? printPanel! : mesh!;
+                  if (boxEnabled)
+                    download(
+                      housingZIP(
+                        mesh!,
+                        housingParts,
+                        settings,
+                        filename,
+                        photoMesh,
+                      ),
+                      `${filename}-kit-litofania.zip`,
+                      "application/zip",
+                    );
+                  else
+                    download(
+                      binarySTL(photoMesh.positions, photoMesh.indices),
+                      `${filename}.stl`,
+                      "model/stl",
+                    );
                   setNotice(
-                    "STL generado. Abrilo en tu slicer para preparar la impresión.",
+                    boxEnabled
+                      ? "Kit generado: 4 STL y guía de armado en el ZIP."
+                      : "STL generado. Abrilo en tu slicer para preparar la impresión.",
                   );
                 } catch {
                   setError(
@@ -440,12 +616,14 @@ export default function LampEditor() {
               }}
             >
               <Download size={18} />
-              Descargar STL
+              {boxEnabled ? "Descargar kit · 4 STL" : "Descargar STL"}
             </Button>
           </div>
           <div className="status" aria-live="polite">
             {error ? (
-              <span className="error">{error}</span>
+              <span className="error" role="alert">
+                {error}
+              </span>
             ) : (
               <span>
                 Vista de luz orientativa. El resultado depende del material, la
@@ -508,9 +686,13 @@ export default function LampEditor() {
           <div className="print-note">
             <strong>Para tu primera prueba</strong>
             <p>
-              Usá un material translúcido y una luz LED. Esta versión genera el
-              panel de la lámpara; la base y los encastres se diseñan por
-              separado. Probá una pieza pequeña para calibrar el contraste.
+              Usá un material translúcido para la foto y una luz LED.{" "}
+              {boxEnabled
+                ? "Imprimí la caja y sus tapas en material opaco. Los cierres son guiados, sin pestillo: probá la holgura y una fijación removible. En Curvo, revisá los soportes en el laminador."
+                : "Podés generar una caja trasera para Plano y Curvo desde los ajustes."}{" "}
+              Probá una pieza pequeña para calibrar el contraste. La vista
+              iluminada aproxima el relieve; no representa la distribución de la
+              luz instalada.
             </p>
           </div>
         </section>

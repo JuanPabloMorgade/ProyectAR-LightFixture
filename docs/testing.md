@@ -42,6 +42,8 @@ npx vitest run tests/assembly-guide.test.tsx tests/shadow-editor.test.tsx
 | `tests/artwork.test.ts` | Archivos de imagen y limpieza de contenido activo en SVG. |
 | `tests/navigation.test.tsx` | Rutas, navegación y contenido compartido. |
 | `tests/mesh.test.mjs` | Geometría y STL de litofanías. |
+| `tests/lamp-housing.test.ts` | Caja de litofanías plana/curva: sólidos cerrados, holguras, cable, orientación de impresión, límites, panel independiente y ZIP de cuatro piezas. |
+| `tests/lamp-print-stand.test.ts` | Soporte removible en las tres formas: sólido conectado y cerrado, orientación vertical, contactos, separación, conservación de la foto y detalle de 384 puntos. |
 | `tests/lamp-editor.test.tsx` | Flujo del editor de litofanías con dependencias de navegador simuladas. |
 
 Las pruebas de interfaz usan jsdom y sustituyen canvas, imágenes, workers o visores. No renderizan WebGL ni validan la apariencia del CSS, los gestos o la distribución real del scroll. Los casos COB, LEDs individuales, cajas anteriores y exportaciones de cinco piezas verifican compatibilidad; no representan opciones disponibles en el editor actual.

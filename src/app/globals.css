@@ -144,6 +144,10 @@ main { min-height: calc(100vh - 165px); }
 .print-note { padding: 18px 24px; background: #110c1a; border-top: 1px solid var(--line); }
 .print-note strong { font-size: 12px; color: #d1b3eb; }
 .print-note p { font-size: 12px; color: var(--muted); line-height: 1.7; margin: 7px 0 0; }
+.lamp-housing-controls { margin-top: 22px; padding-top: 20px; border-top: 1px solid var(--line); }
+.lamp-housing-controls h3 { margin: 0 0 14px; font-size: 14px; color: var(--ink); }
+.lamp-housing-controls .two-fields { margin-top: 16px; }
+.lamp-workspace .preview-toolbar { flex-wrap: wrap; gap: 14px; }
 @media (min-width: 1550px) { .preview-stage { height: 540px; } }
 @media (max-width: 1400px) { .site-header { margin: 16px 24px 0; } }
 @media (max-width: 1000px) { .site-header { gap: 20px; padding: 12px 20px; } nav { gap: 18px; } .local-badge { display: none; } .home { padding: 32px 24px; } .lamp-workspace { padding: 0 20px 30px; grid-template-columns: 260px minmax(0, 1fr); gap: 14px; } .editor-heading { padding: 28px 20px; } .preview-stage { height: 430px; } }
