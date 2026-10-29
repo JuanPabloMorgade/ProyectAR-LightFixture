@@ -1,4 +1,44 @@
+import { isWallMount, wallPanelStart } from "./enclosure-config";
+import { wallMountLayout, wallMountParts, wallMountPoint } from "./wallmount";
+import { wallFrontMesh } from "./wall-front";
+import {
+  wallSeatTabs,
+  wallSeatFit,
+  WALL_BASE_FLOOR,
+  WALL_SEAT_ENTRY,
+  WALL_SEAT_RAIL,
+} from "./wall-seat";
 import { ShapeUtils, Vector2 } from "three";
+import {
+  hasEnclosure,
+  validateEnclosure,
+  enclosureLayout,
+  enclosureParts,
+  enclosurePoint,
+  cablePassage,
+  type EnclosureSettings,
+  type EnclosurePartId,
+} from "./enclosure";
+import { solidMesh, type Bounds } from "./solid-mesh";
+import { layeredPanelMesh } from "./layered-panel";
+import {
+  isModular,
+  modularLayout,
+  modularLid,
+  modularParts,
+  modularPoint,
+  validateModular,
+  defaultModular,
+  type ModularSettings,
+  type ModularPartId,
+} from "./modular";
+import {
+  cobLayout,
+  isCob,
+  validateCob,
+  defaultCob,
+  type CobSettings,
+} from "./cob";
 import {
   boundaryLoops,
   panelMesh,
@@ -13,7 +53,11 @@ import {
 
 /** Millimeters, except LED count. Kept separate from optical settings. */
 export type Fabrication = {
-  ledCount: 1 | 2 | 3;
+  illumination?: "individual" | "cob" | "modular";
+  cob?: CobSettings;
+  modular?: ModularSettings;
+  enclosure?: EnclosureSettings;
+  ledCount: 6 | 9 | 10 | 12;
   ledDiameter: number;
   flangeDiameter: number;
   ledHeight: number;
@@ -21,7 +65,7 @@ export type Fabrication = {
   joints: boolean;
 };
 export const defaultFabrication: Fabrication = {
-  ledCount: 1,
+  ledCount: 6,
   ledDiameter: 5,
   flangeDiameter: 5.2,
   ledHeight: 5,
@@ -30,8 +74,16 @@ export const defaultFabrication: Fabrication = {
 };
 export function validateFabrication(f: Fabrication) {
   if (
+    f?.illumination !== undefined &&
+    !["individual", "cob", "modular"].includes(f.illumination)
+  )
+    throw new Error("Elegí un tipo de iluminación válido.");
+  if (isCob(f)) validateCob(f.cob ?? defaultCob);
+  if (isModular(f)) validateModular(f.modular ?? defaultModular);
+  if (f?.enclosure !== undefined) validateEnclosure(f.enclosure);
+  if (
     !f ||
-    ![1, 2, 3].includes(f.ledCount) ||
+    ![6, 9, 10, 12].includes(f.ledCount) ||
     typeof f.joints !== "boolean" ||
     ![f.ledDiameter, f.flangeDiameter, f.ledHeight, f.clearance].every(
       Number.isFinite,
@@ -47,15 +99,40 @@ export function validateFabrication(f: Fabrication) {
   )
     throw new Error("Revisá las medidas del LED y la holgura de impresión.");
 }
+export function lightingLayout(s: BoxSettings, f: Fabrication) {
+  validateFabrication(f);
+  const layout = isModular(f)
+    ? modularLayout(s, f)
+    : isCob(f)
+      ? cobLayout(s, f)
+      : ledLayout(s, f);
+  if (isWallMount(f)) {
+    wallMountLayout(s, f);
+  } else if (hasEnclosure(f)) {
+    enclosureLayout(s, f);
+    cablePassage(s, f);
+  }
+  return layout;
+}
 export function ledLayout(s: BoxSettings, f: Fabrication) {
   validateBox(s);
   validateFabrication(f);
-  const pocketRadius = (f.flangeDiameter + f.clearance) / 2;
+  // Extra diametral allowance only for the LED seats, not the box joints.
+  const pocketRadius = (f.flangeDiameter + f.clearance + 0.2) / 2;
   const outerRadius = pocketRadius + 1.5;
   const pitch = outerRadius * 2 + 1;
-  const centers = Array.from(
-    { length: f.ledCount },
-    (_, i) => (i - (f.ledCount - 1) / 2) * pitch,
+  const rows = { 6: [3, 3], 9: [3, 3, 3], 10: [3, 4, 3], 12: [4, 4, 4] }[
+    f.ledCount
+  ];
+  // Keep the sources compact around the optical axis. Stagger the ten-LED
+  // array with equal nearest-neighbor spacing; rotate for portrait lids.
+  const rowPitch = f.ledCount === 10 ? (pitch * Math.sqrt(3)) / 2 : pitch;
+  const centers = rows.flatMap((count, row) =>
+    Array.from({ length: count }, (_, col): [number, number] => {
+      const x = (col - (count - 1) / 2) * pitch;
+      const y = (row - (rows.length - 1) / 2) * rowPitch;
+      return s.width >= s.height ? [x, y] : [y, x];
+    }),
   );
   const tip = (s.depth * 10 * s.lightPercent) / 100;
   const floor = s.depth * 10 + s.thickness / 2 - tip - f.ledHeight;
@@ -65,8 +142,11 @@ export function ledLayout(s: BoxSettings, f: Fabrication) {
       "No hay altura para el soporte: bajá la posición de luz o aumentá la profundidad.",
     );
   if (
-    outerRadius + Math.abs(centers[0]) + 3 >= s.width * 5 ||
-    outerRadius + 3 >= s.height * 5
+    centers.some(
+      ([x, y]) =>
+        outerRadius + Math.abs(x) + 3 >= s.width * 5 ||
+        outerRadius + Math.abs(y) + 3 >= s.height * 5,
+    )
   )
     throw new Error("Los LEDs no entran en la tapa con estas medidas.");
   if (f.joints && s.thickness < 1.2)
@@ -86,7 +166,16 @@ export function ledLayout(s: BoxSettings, f: Fabrication) {
 type Point = [number, number];
 type Mesh = { positions: Float32Array; indices: Uint32Array };
 export type FabricatedPart = Mesh & {
-  id: "top" | "bottom" | "left" | "right" | "front";
+  id:
+    | "top"
+    | "bottom"
+    | "left"
+    | "right"
+    | "front"
+    | ModularPartId
+    | EnclosurePartId
+    | "base"
+    | "separator";
   filename: string;
   label: string;
   width: number;
@@ -160,25 +249,38 @@ function jointWall(raw: WallMask, s: BoxSettings, f: Fabrication): Mesh {
   const span = mask.span * 10,
     depth = s.depth * 10,
     end = depth - t / 2 - c / 2;
-  const length = span + t;
+  const mounted = isWallMount(f);
+  const length = span + (f.joints ? t : 0);
+  const extra = f.joints ? t / 2 : 0;
+  const cornerWidth = (f.joints ? t : t / 2) + c / 2;
+  const rearTabs = mounted && f.joints ? wallSeatTabs(span) : [];
+  const rearY = mounted ? WALL_BASE_FLOOR + c / 2 - wallPanelStart(f) : 0;
   const fingers = 5,
     segment = end / fingers;
   const xs = axis([
     0,
     length,
-    t + c / 2,
-    length - t - c / 2,
+    cornerWidth,
+    length - cornerWidth,
     ...Array.from(
       { length: mask.columns + 1 },
-      (_, i) => t / 2 + (span * i) / mask.columns,
+      (_, i) => extra + (span * i) / mask.columns,
     ),
     ...tabs(span)
       .flat()
       .map((v) => v + t / 2),
+    ...rearTabs.flatMap(([a, b]) => [
+      a + extra - c / 2,
+      b + extra + c / 2,
+      a + extra - c / 2 - WALL_SEAT_ENTRY,
+      b + extra + c / 2 + WALL_SEAT_ENTRY,
+    ]),
   ]);
   const ys = axis([
     0,
+    ...(mounted ? [rearY, rearY + 0.6, -0.3, WALL_SEAT_RAIL] : []),
     end,
+    ...(!f.joints ? [depth] : []),
     depth + t / 2,
     ...Array.from(
       { length: mask.rows + 1 },
@@ -190,6 +292,18 @@ function jointWall(raw: WallMask, s: BoxSettings, f: Fabrication): Mesh {
   ]);
   const horizontal = mask.face === "top" || mask.face === "bottom";
   const shape = grid(xs, ys, (x, y) => {
+    if (y < 0) {
+      return horizontal || (x > cornerWidth && x < length - cornerWidth);
+    }
+    if (!f.joints) {
+      if (y > depth) return false;
+      const col = Math.min(
+        mask.columns - 1,
+        Math.floor((x / span) * mask.columns),
+      );
+      const row = Math.min(mask.rows - 1, Math.floor((y / depth) * mask.rows));
+      return y < WALL_SEAT_RAIL || !mask.cells[row * mask.columns + col];
+    }
     if (y > end) return inTabs(x - t / 2, span);
     const corner = x < t + c / 2 || x > length - t - c / 2;
     if (corner) {
@@ -205,9 +319,24 @@ function jointWall(raw: WallMask, s: BoxSettings, f: Fabrication): Mesh {
       Math.max(0, Math.floor(((x - t / 2) / span) * mask.columns)),
     );
     const row = Math.min(mask.rows - 1, Math.floor((y / depth) * mask.rows));
-    return !mask.cells[row * mask.columns + col];
+    return (
+      (mounted && y < WALL_SEAT_RAIL) || !mask.cells[row * mask.columns + col]
+    );
   });
-  return panelMesh(shape, t, xs, ys);
+  if (!rearTabs.length) return panelMesh(shape, t, xs, ys);
+  const fit = wallSeatFit(t, c);
+  const ix = new Map(xs.slice(0, -1).map((a, i) => [(a + xs[i + 1]) / 2, i]));
+  const iy = new Map(ys.slice(0, -1).map((a, i) => [(a + ys[i + 1]) / 2, i]));
+  return layeredPanelMesh(xs, ys, axis([0, t - fit.groove, t]), (x, y, z) => {
+    if (shape.cells[iy.get(y)! * shape.columns + ix.get(x)!]) return false;
+    if (y >= -0.3) return true;
+    const allowance = c / 2 + (y < rearY + 0.6 ? WALL_SEAT_ENTRY : 0);
+    const groove = rearTabs.some(
+      ([a, b]) => x > a + extra - allowance && x < b + extra + allowance,
+    );
+    // All four STL panels print with their grooves facing up.
+    return !groove || z < t - fit.groove;
+  });
 }
 
 /** Surfaces share exact circular rings, including the plate/tube interface. */
@@ -289,8 +418,7 @@ function circle(x: number, y: number, radius: number): Point[] {
   });
 }
 function ledLid(s: BoxSettings, f: Fabrication): Mesh {
-  const layout = ledLayout(s, f),
-    t = s.thickness,
+  const t = s.thickness,
     c = f.clearance;
   const w = s.width * 10,
     h = s.height * 10;
@@ -341,14 +469,77 @@ function ledLid(s: BoxSettings, f: Fabrication): Mesh {
     ...shape,
     cells: shape.cells.map((v) => 1 - v),
   }).map((loop) => loop.map(([x, y]) => [xs[x], ys[y]] as Point))[0];
-  const wires = layout.centers.map((x) =>
-    circle(width / 2 + x, height / 2, layout.wireRadius),
+  if (isWallMount(f)) return wallFrontMesh(s, f, outline);
+  if (isModular(f)) return modularLid(s, f, outline);
+  if (isCob(f)) {
+    const layout = cobLayout(s, f);
+    const rectangle = (r: {
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+    }): Point[] => {
+      const x = width / 2 + r.x,
+        y = height / 2 + r.y;
+      return [
+        [x - r.width / 2, y - r.height / 2],
+        [x + r.width / 2, y - r.height / 2],
+        [x + r.width / 2, y + r.height / 2],
+        [x - r.width / 2, y + r.height / 2],
+      ];
+    };
+    const recesses = layout.footprints.flatMap(({ pocket, marker }) => [
+      { loop: rectangle(pocket), floor: layout.floor },
+      {
+        loop: rectangle(marker),
+        floor: t - Math.min(0.2, (f.cob ?? defaultCob).recessDepth),
+      },
+    ]);
+    if (hasEnclosure(f)) {
+      const p = cablePassage(s, f),
+        a = p.size / 2;
+      const cuts: Bounds[] = recesses.map(({ loop, floor }) => [
+        loop[0][0],
+        loop[1][0],
+        loop[0][1],
+        loop[2][1],
+        floor,
+        t,
+      ]);
+      cuts.push([
+        width / 2 + p.x - a,
+        width / 2 + p.x + a,
+        height / 2 + p.y - a,
+        height / 2 + p.y + a,
+        0,
+        t,
+      ]);
+      return solidMesh([], cuts, outline, t);
+    }
+    const mesh = new MeshBuilder();
+    mesh.surface(outline, [], 0, false);
+    mesh.wall(outline, 0, t);
+    mesh.surface(
+      outline,
+      recesses.map(({ loop }) => [...loop].reverse()),
+      t,
+      true,
+    );
+    for (const { loop, floor } of recesses) {
+      mesh.surface(loop, [], floor, true);
+      mesh.wall([...loop].reverse(), floor, t);
+    }
+    return mesh.mesh();
+  }
+  const layout = ledLayout(s, f);
+  const wires = layout.centers.map(([x, y]) =>
+    circle(width / 2 + x, height / 2 + y, layout.wireRadius),
   );
-  const outsides = layout.centers.map((x) =>
-    circle(width / 2 + x, height / 2, layout.outerRadius),
+  const outsides = layout.centers.map(([x, y]) =>
+    circle(width / 2 + x, height / 2 + y, layout.outerRadius),
   );
-  const pockets = layout.centers.map((x) =>
-    circle(width / 2 + x, height / 2, layout.pocketRadius),
+  const pockets = layout.centers.map(([x, y]) =>
+    circle(width / 2 + x, height / 2 + y, layout.pocketRadius),
   );
   const mesh = new MeshBuilder();
   mesh.surface(
@@ -378,37 +569,62 @@ export function fabricationParts(
   masks: WallMask[],
   s: BoxSettings,
   f?: Fabrication,
+  artwork?: Uint8ClampedArray,
 ): FabricatedPart[] {
   if (!f) return printParts(masks, s);
-  ledLayout(s, f);
+  lightingLayout(s, f);
   if (
     masks.length !== 4 ||
     FACES.some((face) => masks.filter((m) => m.face === face).length !== 1)
   )
     throw new Error("Faltan paneles de la caja o hay paneles duplicados.");
   const supported = fabricationMasks(masks, s, f);
-  return PRINT_PARTS.map((part) => {
+  const parts: FabricatedPart[] = PRINT_PARTS.map((part) => {
     const mask = supported.find((m) => m.face === part.id);
     return {
       ...part,
+      ...(hasEnclosure(f) && part.id === "front"
+        ? {
+            filename: isWallMount(f)
+              ? "05-embellecedor"
+              : "05-placa-portaluces",
+          }
+        : {}),
       ...(part.id === "front"
         ? ledLid(s, f)
-        : f.joints
+        : f.joints || isWallMount(f)
           ? jointWall(mask!, s, f)
           : panelMesh(printableMask(mask!), s.thickness)),
       width:
         (part.id === "front" ? s.width : mask!.span) * 10 +
         (f.joints ? s.thickness : 0),
-      label: part.id === "front" ? "Tapa frontal con soporte LED" : part.label,
+      label:
+        part.id === "front"
+          ? isWallMount(f)
+            ? "Marco embellecedor frontal abierto"
+            : hasEnclosure(f)
+              ? isModular(f)
+                ? "Placa portaluces con alojamiento de poste"
+                : "Placa portaluces con rebajes COB"
+              : isModular(f)
+                ? "Base modular con alojamiento de poste"
+                : isCob(f)
+                  ? "Tapa frontal con rebajes COB"
+                  : "Tapa frontal con soporte LED"
+          : part.label,
     };
   });
+  if (isWallMount(f)) return [...parts, ...wallMountParts(s, f, artwork)];
+  const litParts = isModular(f) ? [...parts, ...modularParts(s, f)] : parts;
+  return hasEnclosure(f) ? [...litParts, ...enclosureParts(s, f)] : litParts;
 }
 export function fabricationMesh(
   masks: WallMask[],
   s: BoxSettings,
   f?: Fabrication,
+  artwork?: Uint8ClampedArray,
 ): Mesh {
-  const parts = fabricationParts(masks, s, f);
+  const parts = fabricationParts(masks, s, f, artwork);
   const positions: number[] = [],
     indices: number[] = [];
   let origin = 0;
@@ -437,16 +653,43 @@ export function fabricationPoint(
   z: number,
   s: BoxSettings,
   f?: Fabrication,
+  wallLayout?: ReturnType<typeof wallMountLayout>,
 ): [number, number, number] {
   const extra = f?.joints ? s.thickness / 10 : 0;
   const thickness = s.thickness / 10;
+  if (f && isWallMount(f)) {
+    if (["base", "separator", "post", "head", "battery-cover"].includes(part))
+      return wallMountPoint(
+        part as Parameters<typeof wallMountPoint>[0],
+        x,
+        y,
+        z,
+        s,
+        f,
+        wallLayout,
+      );
+    if (part === "front")
+      return [
+        x / 10 - (s.width + extra) / 2,
+        y / 10 - (s.height + extra) / 2,
+        z / 10 - thickness / 2,
+      ];
+  }
+  if (f && (part === "electronics" || part === "face"))
+    return enclosurePoint(part, x, y, z, s, f);
+  if (f && (part === "post" || part === "head" || part === "battery-cover")) {
+    const [px, py, pz] = modularPoint(part, x, y, z, s, f);
+    return [px / 10, py / 10, thickness / 2 - pz / 10];
+  }
   if (part === "front")
     return [
       x / 10 - (s.width + extra) / 2,
       y / 10 - (s.height + extra) / 2,
       f ? thickness / 2 - z / 10 : z / 10 - thickness / 2,
     ];
-  const normal = z / 10 - thickness / 2;
+  const reverseWall =
+    f && isWallMount(f) && (part === "bottom" || part === "right");
+  const normal = (reverseWall ? s.thickness - z : z) / 10 - thickness / 2;
   return part === "top" || part === "bottom"
     ? [x / 10 - (s.width + extra) / 2, -normal, y / 10 - s.depth / 2]
     : [normal, x / 10 - (s.height + extra) / 2, y / 10 - s.depth / 2];
@@ -458,6 +701,7 @@ export function assemblyMesh(
   f?: Fabrication,
 ): Mesh {
   const positions = new Float32Array(part.positions.length);
+  const wallLayout = f && isWallMount(f) ? wallMountLayout(s, f) : undefined;
   for (let i = 0; i < positions.length; i += 3)
     positions.set(
       fabricationPoint(
@@ -467,12 +711,18 @@ export function assemblyMesh(
         part.positions[i + 2],
         s,
         f,
+        wallLayout,
       ),
       i,
     );
   const indices = part.indices.slice();
   // The lid faces inward; reflection reverses winding as well as its Z axis.
-  if (f && part.id === "front")
+  if (
+    f &&
+    (isWallMount(f)
+      ? ["separator", "bottom", "right"].includes(part.id)
+      : ["front", "post", "head", "face"].includes(part.id))
+  )
     for (let i = 0; i < indices.length; i += 3)
       [indices[i + 1], indices[i + 2]] = [indices[i + 2], indices[i + 1]];
   return { positions, indices };

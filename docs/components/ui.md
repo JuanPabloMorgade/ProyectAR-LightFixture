@@ -23,6 +23,7 @@ Los componentes contienen presentación, HTML accesible y comportamiento común.
 | `Modal`, `ModalHeader`, `ModalFooter` | Contenedor nativo con foco, cierre y bloqueo de scroll compartidos.                                     |
 | `SegmentedControl`                    | Grupo de botones de selección única, con valores string o number y estado `aria-pressed`.               |
 | `Table` y subcomponentes              | Tabla HTML con región horizontal desplazable, caption y encabezados semánticos.                         |
+| `Toast`, `ToastViewport`              | Avisos flotantes con variantes, cierre, duración y acción opcional.                                     |
 
 Los controles aceptan props HTML tipadas y referencias de React 19. Los campos etiquetados generan un ID con `useId` o usan el `id` recibido; conectan `description` y `error` mediante `aria-describedby`, y marcan errores con `aria-invalid`. `fieldClassName` modifica el contenedor; `className` modifica el control.
 
@@ -131,6 +132,28 @@ import {
 ```
 
 `Table` requiere `label` para nombrar su región desplazable. `TableHead` usa `scope="col"` por defecto; indicar `scope="row"` para encabezados de fila. También están disponibles `TableFooter` y las props nativas de cada elemento. No incorpora ordenamiento, paginación ni carga de datos. Se deja disponible para próximas pantallas; actualmente los editores no muestran tablas de datos ni áreas de texto.
+
+## Toast
+
+Los avisos comparten la superficie violeta, bordes, tipografía e iconos del proyecto. `Toast` admite `title`, `description`, `variant` (`success`, `info`, `warning`, `error`), `onDismiss`, `duration` en milisegundos y `action: { label, onClick }`. No requiere proveedor ni dependencias nuevas.
+
+```tsx
+import { Toast, ToastViewport } from '@/components/ui';
+
+<ToastViewport>
+  {notice && (
+    <Toast key={notice.id} title="Proyecto guardado"
+      description="Tu diseño está disponible en este navegador."
+      variant="success" onDismiss={() => setNotice(null)} />
+  )}
+</ToastViewport>
+```
+
+Montar un solo viewport por página, fuera de contenedores con recorte o scroll. Cada aviso nuevo debe tener una clave nueva para reiniciar su duración. El editor controla el estado; cerrar el Toast debe retirarlo. Puede contener varios avisos. La acción no cierra automáticamente la notificación.
+
+Información y éxito duran 6 segundos por defecto; advertencias y errores permanecen hasta cerrarse. `duration={0}` desactiva el cierre automático. El temporizador conserva el tiempo restante al pausarse por puntero o foco, y se cancela al desmontar. El componente no mueve el foco: anuncia errores mediante `alert` y el resto mediante `status`. Los iconos y colores diferencian las variantes. Respeta movimiento reducido y adapta ancho y controles al móvil.
+
+Ambos editores usan el Toast para los avisos de operaciones; mantienen errores y validaciones junto al contexto que los produce. `tests/toast.test.tsx` cubre anuncios, cierre, acción, temporizadores, pausa y desmontaje.
 
 ## Integración y verificación
 

@@ -10,43 +10,57 @@ npm run typecheck
 npm run build
 ```
 
-`npm run test:watch` ejecuta Vitest durante la edición. Para revisar una función concreta:
+`npm run test:watch` ejecuta Vitest durante la edición.
+
+`npm run typecheck` también rechaza imports, variables locales y parámetros sin uso mediante `noUnusedLocals` y `noUnusedParameters` en `tsconfig.json`.
+
+Para revisar Cuadros de Sombra por área:
 
 ```sh
-npx vitest run tests/shadowbox.test.mjs tests/stl-export.test.ts
+npx vitest run tests/wallmount.test.ts tests/projection-occlusion.test.ts tests/layered-panel.test.ts tests/preview-model.test.ts
 npx vitest run tests/assembly-guide.test.tsx tests/shadow-editor.test.tsx
 ```
 
 ## Cobertura automática
 
-`tests/ui.test.tsx` cubre la base compartida: etiquetas y descripciones accesibles, errores, referencias a controles nativos, valores numéricos vacíos y decimales, selects, textarea, checkbox, rango, archivos, botones en carga, modales con inputs en el ciclo de foco y tablas con encabezados semánticos. Las pruebas de ambos editores verifican la integración de estos componentes.
+| Archivo | Comportamiento verificado |
+| --- | --- |
+| `tests/shadowbox.test.mjs` | Proyección de ida y vuelta, detalle de recortes, marco, partes sueltas y mallas ópticas. |
+| `tests/wallmount.test.ts` | Montaje vigente: base inicial de 20 mm, perímetro único, ocho guías y ranuras de paredes, tapa de pilas posterior, altura de componentes, anclaje, pasos circulares, relieve y mallas cerradas con normales coherentes. Incluye variantes históricas de la API. |
+| `tests/projection-occlusion.test.ts` | Sombra de piezas opacas, cabezal detrás del emisor, recortes bloqueados, luz que supera la base y coherencia de la simulación. |
+| `tests/light-position.test.ts` | Límites del LED, ajuste de proyectos anteriores y recuperación de ajustes sin acumular desplazamientos. |
+| `tests/layered-panel.test.ts` | Superficies planas con pocos triángulos, agujeros y ranuras por capas, volumen ocupado equivalente a la rejilla y cierre de uniones. |
+| `tests/preview-model.test.ts` | Reutilización entre visores e invalidación al cambiar medidas, holgura, máscaras o imagen del relieve. |
+| `tests/stl-export.test.ts` | STL combinado y ZIP, nombres y cantidades según montaje, CRC, guía, escala y equivalencia de geometría. Conserva casos de cinco piezas de la API anterior. |
+| `tests/fabrication.test.ts` | Encastres y soportes de fabricación, configuraciones válidas e inválidas y compatibilidad con LEDs individuales y COB. |
+| `tests/modular.test.ts` | Generador modular anterior, poste, cabezal, alimentación y separación de componentes. |
+| `tests/enclosure.test.ts` | Caja electrónica anterior, tapas, cables y parámetros de compatibilidad. |
+| `tests/shadow-editor.test.tsx` | Guardado/importación, migración al montaje actual, navegación con teclado, conservación del dibujo, campos numéricos, USB/AAA, descarga vía worker, errores y ausencia de Mostrar rayos. |
+| `tests/assembly-guide.test.tsx` | Doce pasos actuales y secuencias anteriores, identificación de piezas, navegación, foco, restauración del scroll de fondo y reinicio del desplazamiento al cambiar de paso. |
+| `tests/ui.test.tsx` | Etiquetas, errores, campos y controles accesibles, carga, modales, ciclo de foco y tablas. |
+| `tests/toast.test.tsx` | Avisos transitorios y cierre. |
+| `tests/artwork.test.ts` | Archivos de imagen y limpieza de contenido activo en SVG. |
+| `tests/navigation.test.tsx` | Rutas, navegación y contenido compartido. |
+| `tests/mesh.test.mjs` | Geometría y STL de litofanías. |
+| `tests/lamp-editor.test.tsx` | Flujo del editor de litofanías con dependencias de navegador simuladas. |
 
-| Archivo                         | Comportamiento verificado                                                                                                                                                                                                      |
-| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `tests/shadowbox.test.mjs`      | Proyección de ida y vuelta, marcos, mejora de fidelidad en Alto frente a la grilla anterior, tratamiento común de partes sueltas, cierre y volumen de mallas y límite de triángulos del caso de prueba.                        |
-| `tests/stl-export.test.ts`      | Directorio y entradas del ZIP, CRC mediante `node:zlib`, nombres y orden de las cinco piezas, guía de texto, STL binarios, medidas y posición local con una caja rectangular y equivalencia de triángulos entre exportaciones. |
-| `tests/shadow-editor.test.tsx`  | Guardado con medidas editadas, rechazo de proyectos inválidos, selección de exportación, envío al worker, descarga del ZIP, bloqueo de controles y recuperación tras un error.                                                 |
-| `tests/assembly-guide.test.tsx` | Datos del proyecto recibidos por la guía, ocho pasos y archivos asociados, posición de luz, retroceso, reinicio, cierre, ciclo de Tab, restauración de foco y scroll, reapertura y posiciones según medidas.                   |
-| `tests/mesh.test.mjs`           | Geometría y STL de litofanías.                                                                                                                                                                                                 |
-| `tests/lamp-editor.test.tsx`    | Flujo del editor de litofanías con sus dependencias de navegador simuladas.                                                                                                                                                    |
-| `tests/navigation.test.tsx`     | Navegación compartida y contenido de las rutas.                                                                                                                                                                                |
-| `tests/artwork.test.ts`         | Validación de archivos de imagen y eliminación de contenido activo en SVG.                                                                                                                                                     |
-
-Las pruebas de interfaz usan jsdom y sustituyen canvas, imágenes, workers o visores según el caso. En la guía se simulan los métodos del diálogo y el visor 3D: las pruebas verifican el flujo y las entradas, pero no renderizan WebGL ni validan CSS, animaciones, gestos o la gestión nativa del foco del navegador.
+Las pruebas de interfaz usan jsdom y sustituyen canvas, imágenes, workers o visores. No renderizan WebGL ni validan la apariencia del CSS, los gestos o la distribución real del scroll. Los casos COB, LEDs individuales, cajas anteriores y exportaciones de cinco piezas verifican compatibilidad; no representan opciones disponibles en el editor actual.
 
 ## Revisión en navegador
 
-Iniciar con `npm run dev` y abrir `/cuadros`. Para comprobar el build de producción, usar `npm run build` y luego `npm start`. Guardar o exportar el proyecto antes de recargar o cambiar de entorno.
+Iniciar con `npm run dev` y abrir `/cuadros`. Para revisar producción, usar `npm run build` y `npm start`. Guardar o exportar el proyecto antes de recargar.
 
-1. **Controles:** revisar en escritorio y a 390 px de ancho. Abrir selects, recorrer opciones con teclado y editar números. El foco debe rodear el control completo; las unidades no deben superponerse con el valor. Comparar los campos de la misma fila con etiquetas de una y dos líneas. Repetir en `/lamparas`. El menú puede variar según el soporte del navegador para `base-select`.
-2. **Detalle:** abrir una imagen con curvas o diagonales y comparar Borrador, Equilibrado y Alto. La proyección debe actualizarse junto con los cuatro patrones y conservar las medidas. La imagen original permanece en el lienzo; la proyección refleja los recortes fabricables, incluida la eliminación de material suelto.
-3. **Descargas:** en Vista 3D exportar ambos formatos. El STL completo debe contener cinco piezas dispuestas una al lado de la otra. Descomprimir el ZIP y comprobar cinco STL con el nombre del proyecto y los números 01 a 05, más `Guia-de-armado.txt`. Abrir cada STL en un slicer: debe contener su pieza acostada, en milímetros y sin separación manual. Usar una caja rectangular para distinguir paredes de ancho y alto diferentes.
-4. **Guía actual:** con ese diseño abierto, pulsar `Ver guía de armado`. Comprobar el nombre y las medidas, los recortes reales y las etiquetas de las cinco piezas. Recorrer los ocho pasos, retroceder, reiniciar y saltar con los botones de paso. Cada pared debe ocupar su lado y coincidir con el identificador del archivo.
-5. **Luz y resultado:** en el paso 7 comprobar tapa transparente, esfera y distancia de luz. En el paso 8 comprobar la tapa hacia la habitación, la abertura hacia la pared y la proyección del diseño abierto. Girar y centrar la cámara mediante puntero y botones.
-6. **Modal:** recorrer controles con Tab y Mayús+Tab; el fondo debe permanecer inactivo. Cerrar con Escape, el botón de cierre y Finalizar. Confirmar regreso del foco al disparador, restauración del scroll y reapertura en el paso 1. Cerrar, cambiar de diseño o medidas y volver a abrir: debe mostrar el proyecto actualizado.
-7. **Móvil y movimiento reducido:** a 390 × 844 comprobar ausencia de desbordamiento horizontal, textos y etiquetas legibles, navegación inferior accesible y controles táctiles de la cámara. Con movimiento reducido, las piezas deben cambiar de posición sin desplazamiento animado.
-8. **Sin WebGL:** en un entorno sin WebGL, abrir la guía y confirmar un mensaje de error con instrucciones y navegación todavía disponibles. Al cerrar y reabrir no deben acumularse canvas de la guía.
+1. **Cómo funciona:** comprobar recorrido, significado de zonas claras/oscuras, orientación de base y LED, acceso posterior a pilas, 9/10 piezas y explicación de la sombra central. Siguiente debe abrir el diseñador. El desplegable técnico debe funcionar con teclado.
+2. **Controles:** revisar en escritorio y a 390 px. Probar teclado, foco, campos vacíos y decimales, unidades y selects. Repetir en `/lamparas`. El menú puede variar según soporte de `base-select`.
+3. **Detalle y rendimiento:** abrir una imagen con curvas; comparar Borrador, Equilibrado y Alto. Imagen, proyección y cuatro patrones deben actualizarse coherentemente. Entrar en 3D, abrir la guía y cambiar pasos: el modelo calculado se reutiliza. Cambiar medidas o imagen debe invalidarlo sin mostrar una pieza anterior. Los tiempos dependen de imagen, tamaño y equipo; no hay umbral fijo en las pruebas.
+4. **Montaje y sombra:** comprobar base de 20 mm para proyectos nuevos, perímetro único con guías, paredes que bajan por fuera, LED orientado a la pared y marco abierto hacia la habitación. Ver interior debe funcionar; Mostrar rayos debe estar ausente. La base y los tramos cerrados deben bloquear luz en la simulación. El porcentaje de recortes bloqueados mide área de aberturas, no toda la sombra central.
+5. **Descargas:** con 3 AAA comprobar diez STL (01–10) o un STL combinado con diez piezas. En USB comprobar nueve, sin tapa de pilas. El ZIP incluye `Guia-de-armado.txt`. Abrir en laminador: milímetros, una pieza por archivo, normales y geometría cerradas, ranuras de paredes hacia arriba y tapa de pilas con cara exterior lisa en la cama. Revisar también una caja rectangular.
+6. **Guía actual:** recorrer los doce pasos, retroceder, reiniciar y saltar. Verificar identificación de archivos, paso 3 con vista posterior para pilas, paso 10 con cabezal y marco, paso 12 con proyección. El portapilas debe poder retirarse desde atrás sin desmontar las paredes.
+7. **Scroll y modal:** comprobar una sola barra fina y violeta. En escritorio se desplazan las instrucciones, con modelo y botones visibles; en móvil y ventanas bajas se desplaza el cuerpo con modelo e instrucciones. No debe aparecer scroll exterior del diálogo ni desbordamiento horizontal. Cambiar de paso debe volver al inicio del contenido. Probar Tab, Mayús+Tab, desplazamiento de instrucciones por teclado, Escape, cierre y Finalizar; restaurar foco y scroll al salir.
+8. **Móvil y movimiento reducido:** a 390 × 844 comprobar textos, controles táctiles, botones inferiores y modelo usable. Con movimiento reducido, las piezas deben colocarse sin animación. En ventanas bajas comprobar que se pueda llegar al final del texto.
+9. **Persistencia:** importar proyectos antiguos y verificar aviso de adaptación a 1 W, imagen y medidas conservadas, posición LED ajustada solo cuando no cabe y acceso al diseñador. Guardar y reabrir en AAA y USB. Los proyectos existentes conservan la altura de base guardada.
+10. **Sin WebGL:** comprobar mensaje de error con instrucciones y navegación disponibles. Cerrar y reabrir sin acumular canvas o renderizadores.
 
 ## Límites de la verificación
 
-El cierre y volumen comprobados corresponden a las figuras de prueba. No constituyen una garantía para toda imagen importada ni de imprimibilidad de sus detalles mínimos. La guía de montaje no incorpora encastres ni soporte de luz. Las pruebas automáticas y la revisión visual no sustituyen una impresión y un montaje físicos; la fuente de luz real, su posición, el material y el espesor pueden cambiar la proyección.
+Las mallas comprobadas corresponden a las figuras de prueba. La guía incluye encastres y soporte de luz, pero no certifica ajuste físico, carga del anclaje ni disipación. La simulación es puntual e incluye piezas impresas; no reproduce emisor real, penumbra, cables o componentes comprados. Se requiere inspección en laminador y un primer montaje físico.

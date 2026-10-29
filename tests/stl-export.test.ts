@@ -1,7 +1,11 @@
 import { expect, test } from "vitest";
 import { crc32 } from "node:zlib";
 import { buildSTLExport } from "../src/features/shadowbox/stl-export";
-import { defaultFabrication, fabricationParts } from "../src/features/shadowbox/fabrication";
+import {
+  defaultFabrication,
+  fabricationParts,
+} from "../src/features/shadowbox/fabrication";
+import { defaultCob } from "../src/features/shadowbox/cob";
 import {
   defaultBox,
   IMAGE_SIZE,
@@ -44,6 +48,70 @@ function readZip(buffer: ArrayBuffer) {
   expect(directory).toBe(end);
   return files;
 }
+
+test("el ZIP COB incluye solo piezas imprimibles y guía de cortes, orientación y paralelo 5 V", () => {
+  const settings = {
+    ...defaultBox,
+    width: 7.7,
+    height: 12.7,
+    depth: 5.85,
+    thickness: 3,
+    detail: 96,
+  };
+  const fabrication = {
+    ...defaultFabrication,
+    illumination: "cob" as const,
+    cob: { ...defaultCob },
+  };
+  const masks = masksFromImage(
+    new Uint8ClampedArray(IMAGE_SIZE * IMAGE_SIZE * 4),
+    settings,
+  );
+  const files = readZip(
+    buildSTLExport({
+      settings,
+      fabrication,
+      masks,
+      mode: "separate",
+      name: "COB",
+    }).buffer,
+  );
+  expect(files).toHaveLength(6);
+  const lid = readSTL(files.find((f) => f.name.includes("05-tapa"))!.data);
+  expect(lid.max[0]).toBeCloseTo(80);
+  expect(lid.max[1]).toBeCloseTo(130);
+  expect(lid.max[2]).toBeCloseTo(3);
+  const guide = new TextDecoder().decode(files[5].data);
+  for (const text of [
+    "Total: 60 mm",
+    "Tramo 1: 30 mm",
+    "Tramo 2: 30 mm",
+    "67.75",
+    "117.75",
+    "paralelo",
+    "+ con +",
+    "− con −",
+    "interruptor en el positivo",
+    "5 V",
+    "no declara W/m",
+    "no polaridad",
+    "56.40",
+    "49.73",
+    "no valida ópticamente",
+  ])
+    expect(guide).toContain(text);
+  expect(guide).not.toContain("alojamiento(s) cilíndrico(s)");
+  const combined = buildSTLExport({
+    settings,
+    fabrication,
+    masks,
+    mode: "combined",
+    name: "COB",
+  });
+  expect(combined.triangles).toBe(
+    files.slice(0, 5).reduce((sum, f) => sum + readSTL(f.data).triangles, 0),
+  );
+});
 
 function readSTL(data: Uint8Array) {
   const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
@@ -138,9 +206,18 @@ test("el ZIP contiene cinco STL nombrados, con geometría local a escala y una g
 
 test("el ZIP del prototipo conserva las cinco piezas e incluye soportes LED y su guía", () => {
   const settings = { ...defaultBox, detail: 96 };
-  const fabrication = { ...defaultFabrication, ledCount: 3 as const };
-  const masks = masksFromImage(new Uint8ClampedArray(IMAGE_SIZE * IMAGE_SIZE * 4), settings);
-  const output = buildSTLExport({ settings, masks, fabrication, mode: "separate", name: "LEDs" });
+  const fabrication = { ...defaultFabrication, ledCount: 12 as const };
+  const masks = masksFromImage(
+    new Uint8ClampedArray(IMAGE_SIZE * IMAGE_SIZE * 4),
+    settings,
+  );
+  const output = buildSTLExport({
+    settings,
+    masks,
+    fabrication,
+    mode: "separate",
+    name: "LEDs",
+  });
   const files = readZip(output.buffer);
   expect(files).toHaveLength(6);
   const parts = fabricationParts(masks, settings, fabrication);
@@ -150,19 +227,30 @@ test("el ZIP del prototipo conserva las cinco piezas e incluye soportes LED y su
     const stl = readSTL(files[i].data);
     expect(stl.min).toEqual([0, 0, 0]);
     expect(stl.max[0]).toBeCloseTo(152);
-    expect(stl.points).toEqual(Array.from(part.indices, n => Array.from(part.positions.slice(n * 3, n * 3 + 3))));
+    expect(stl.points).toEqual(
+      Array.from(part.indices, (n) =>
+        Array.from(part.positions.slice(n * 3, n * 3 + 3)),
+      ),
+    );
     if (part.id === "front") expect(stl.max[2]).toBeCloseTo(5.8);
     else expect(stl.max[1]).toBeCloseTo(61);
     triangles += stl.triangles;
   });
   const guide = new TextDecoder().decode(files[5].data);
-  expect(guide).toContain("3 alojamiento(s)");
+  expect(guide).toContain("12 alojamiento(s)");
   expect(guide).toContain("reborde 5.2 mm, altura 5 mm");
   expect(guide).toContain("Holgura diametral: 0.25 mm");
+  expect(guide).toContain("Diámetro del asiento: 5.65 mm");
   expect(guide).toContain("51 mm");
   expect(guide).toContain("lengüetas");
   expect(guide).toContain("fuente puntual central");
-  const combined = buildSTLExport({ settings, masks, fabrication, mode: "combined", name: "LEDs" });
+  const combined = buildSTLExport({
+    settings,
+    masks,
+    fabrication,
+    mode: "combined",
+    name: "LEDs",
+  });
   const single = readSTL(new Uint8Array(combined.buffer));
   expect(single.triangles).toBe(triangles);
   expect(single.max[0]).toBeCloseTo(5 * 152 + 4 * 12);

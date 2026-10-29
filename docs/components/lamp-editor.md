@@ -7,6 +7,7 @@ Es el editor cliente de litofanías. No recibe props. Permite cargar JPG, PNG o 
 ## Estado y dependencias
 
 - Mantiene ajustes de `Settings`, nombre, foto, píxeles, malla, indicador de cálculo, mensajes de estado y modo de iluminación de la vista.
+- Los avisos de operaciones usan el `Toast` compartido: éxito para guardar, abrir, cargar y exportar; advertencia persistente si falla el almacenamiento local. Los errores de cálculo y validación conservan su lugar junto al visor y el bloqueo correspondiente.
 - Usa refs para entradas de archivo, worker e identificadores de solicitudes. Estos identificadores evitan aplicar resultados de fotos o mallas anteriores a los ajustes vigentes.
 - `mesh.ts` valida parámetros, convierte el brillo en espesor, genera la malla cerrada y serializa el STL. `mesh.worker.ts` calcula la malla fuera del hilo principal; [LampViewer](lamp-viewer.md) la presenta en 3D.
 

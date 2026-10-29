@@ -19,6 +19,137 @@ import {
   IMAGE_SIZE,
 } from "../src/features/shadowbox/engine";
 import { mockCanvasAndImages } from "./browser-mocks";
+import { defaultFabrication } from "../src/features/shadowbox/fabrication";
+import { defaultCob } from "../src/features/shadowbox/cob";
+import { defaultModular } from "../src/features/shadowbox/modular";
+import { currentFabrication } from "../src/features/shadowbox/editor-defaults";
+import { projectionSettings } from "../src/features/shadowbox/projection-settings";
+
+test("la guía nueva monta base, tapitas, tubo y embellecedor en doce pasos", () => {
+  render(
+    <AssemblyGuide
+      name="Pared"
+      settings={projectionSettings(
+        { ...defaultBox, lightPercent: 50 },
+        currentFabrication(),
+      )}
+      masks={[]}
+      simulation={new Uint8ClampedArray(IMAGE_SIZE * IMAGE_SIZE * 4)}
+      fabrication={currentFabrication()}
+      onClose={() => {}}
+    />,
+  );
+  expect(
+    screen.getByRole("button", { name: "Paso 1: Reconocé las 10 piezas" }),
+  ).toBeTruthy();
+  fireEvent.click(
+    screen.getByRole("button", {
+      name: "Paso 2: Presentá la base contra la pared",
+    }),
+  );
+  expect(screen.getByText("06-base-pared.stl")).toBeTruthy();
+  fireEvent.click(
+    screen.getByRole("button", {
+      name: "Paso 3: Instalá las conexiones y cerrá las pilas",
+    }),
+  );
+  expect(screen.getByText("10-tapa-pilas.stl")).toBeTruthy();
+  const instructions = screen.getByRole("region", {
+    name: "Instrucciones del paso",
+  });
+  const body = instructions.parentElement!;
+  instructions.focus();
+  expect(document.activeElement).toBe(instructions);
+  instructions.scrollTop = 250;
+  body.scrollTop = 300;
+  fireEvent.click(
+    screen.getByRole("button", { name: "Paso 4: Colocá la tapa electrónica" }),
+  );
+  expect(screen.getByText("07-tapa-electronica.stl")).toBeTruthy();
+  expect(instructions.scrollTop).toBe(0);
+  expect(body.scrollTop).toBe(0);
+  fireEvent.click(
+    screen.getByRole("button", { name: "Paso 5: Instalá el tubo hueco" }),
+  );
+  expect(screen.getByText("08-tubo-hueco.stl")).toBeTruthy();
+  fireEvent.click(
+    screen.getByRole("button", {
+      name: "Paso 11: Colocá el embellecedor frontal",
+    }),
+  );
+  expect(screen.getByText("05-embellecedor.stl")).toBeTruthy();
+  fireEvent.click(
+    screen.getByRole("button", {
+      name: "Paso 12: Colgá la base y revisá la sombra",
+    }),
+  );
+  expect(screen.getByRole("button", { name: "Finalizar" })).toBeTruthy();
+});
+
+test("guía modular identifica piezas, alimentación y el cabezal sin instrucciones de LEDs múltiples", () => {
+  render(
+    <AssemblyGuide
+      name="Modular"
+      settings={{ ...defaultBox, lightPercent: 50 }}
+      masks={[]}
+      simulation={new Uint8ClampedArray(IMAGE_SIZE * IMAGE_SIZE * 4)}
+      fabrication={{
+        ...defaultFabrication,
+        illumination: "modular",
+        modular: defaultModular,
+      }}
+      onClose={() => {}}
+    />,
+  );
+  expect(
+    screen.getByRole("button", { name: "Paso 1: Reconocé las 8 piezas" }),
+  ).toBeTruthy();
+  fireEvent.click(
+    screen.getByRole("button", {
+      name: "Paso 7: Montá el poste, el cabezal y la luz",
+    }),
+  );
+  expect(screen.getByText(/Alimentación: 3 pilas AAA alcalinas/)).toBeTruthy();
+  expect(screen.getByText(/06-poste-hueco.stl/)).toBeTruthy();
+  expect(screen.getByText(/No conectes USB a las pilas/)).toBeTruthy();
+  expect(screen.queryByText(/Colocá 6 LED/)).toBeNull();
+});
+
+test("la guía COB detalla cortes, extremos, conexión y limitación óptica", () => {
+  render(
+    <AssemblyGuide
+      name="COB"
+      settings={defaultBox}
+      masks={masksFromImage(
+        new Uint8ClampedArray(IMAGE_SIZE * IMAGE_SIZE * 4),
+        defaultBox,
+      )}
+      simulation={new Uint8ClampedArray(IMAGE_SIZE * IMAGE_SIZE * 4)}
+      fabrication={{
+        ...defaultFabrication,
+        illumination: "cob",
+        cob: defaultCob,
+      }}
+      onClose={() => {}}
+    />,
+  );
+  fireEvent.click(
+    screen.getByRole("button", { name: "Paso 7: Ubicá la luz en el interior" }),
+  );
+  expect(screen.getByText(/Total: 60 mm/)).toBeTruthy();
+  expect(screen.getByText(/Tramo 1: 30 mm/)).toBeTruthy();
+  expect(screen.getByText(/interruptor en el positivo/).textContent).toContain(
+    "− con −",
+  );
+  expect(screen.getByText(/no valida ópticamente/)).toBeTruthy();
+  expect(screen.queryByText(/cm · centrada en la caja/)).toBeNull();
+  fireEvent.click(
+    screen.getByRole("button", { name: "Paso 2: Empezá por la tapa frontal" }),
+  );
+  expect(
+    screen.getByText(/Identificá la pieza 05 con rebajes COB/),
+  ).toBeTruthy();
+});
 
 const viewer = vi.hoisted(() => vi.fn());
 vi.mock("../src/features/shadowbox/assembly-viewer", () => ({
@@ -123,14 +254,12 @@ test("la guía recorre las piezas, la posición real de luz y el resultado sin p
 
 test("el botón abre el proyecto actual, restaura el foco y permite volver a abrir desde el inicio", () => {
   render(<ShadowEditor />);
+  fireEvent.click(screen.getByRole("button", { name: "Vista 3D" }));
   fireEvent.change(screen.getByRole("textbox", { name: "Nombre" }), {
     target: { value: "Mi retrato" },
   });
-  fireEvent.change(screen.getByRole("spinbutton", { name: /Ancho/ }), {
+  fireEvent.change(screen.getByRole("spinbutton", { name: "Ancho" }), {
     target: { value: "21" },
-  });
-  fireEvent.change(screen.getByRole("combobox", { name: "Cantidad de LEDs" }), {
-    target: { value: "3" },
   });
   fireEvent.click(screen.getByRole("button", { name: "Vista 3D" }));
   const trigger = screen.getByRole("button", { name: "Ver guía de armado" });
@@ -138,7 +267,7 @@ test("el botón abre el proyecto actual, restaura el foco y permite volver a abr
   fireEvent.click(trigger);
   expect(screen.getByText(/Mi retrato · 21/)).toBeTruthy();
   expect(viewer.mock.lastCall![0].settings.width).toBe(21);
-  expect(viewer.mock.lastCall![0].fabrication.ledCount).toBe(3);
+  expect(viewer.mock.lastCall![0].fabrication.illumination).toBe("modular");
   expect(viewer.mock.lastCall![0].masks).toHaveLength(4);
   const previousMasks = viewer.mock.lastCall![0].masks;
   fireEvent.click(screen.getByRole("button", { name: "Siguiente" }));
@@ -154,7 +283,7 @@ test("el botón abre el proyecto actual, restaura el foco y permite volver a abr
   fireEvent.change(screen.getByRole("textbox", { name: "Nombre" }), {
     target: { value: "Otro diseño" },
   });
-  fireEvent.change(screen.getByRole("spinbutton", { name: /Ancho/ }), {
+  fireEvent.change(screen.getByRole("spinbutton", { name: "Ancho" }), {
     target: { value: "24" },
   });
   fireEvent.click(trigger);

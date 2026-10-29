@@ -6,35 +6,32 @@
 
 En `/cuadros`, el botón `Ver guía de armado` aparece debajo de las medidas del paso `Vista 3D`. Está habilitado cuando hay cuatro máscaras, una simulación y espacio válido para los soportes LED. Abre un modal con las piezas del proyecto actual.
 
-`AssemblyGuide` recibe `name`, `settings`, `masks`, `simulation`, `onClose` y `fabrication?: Fabrication`. Mantiene únicamente el paso activo. Cada apertura empieza en el primer paso y no modifica el proyecto.
+`AssemblyGuide` recibe `name`, `settings`, `masks`, `simulation`, `artwork?`, `onClose` y `fabrication?: Fabrication`. Mantiene el paso activo y referencias para reiniciar el desplazamiento al cambiar de paso. Cada apertura empieza en el primer paso y no modifica el proyecto.
 
 ## Secuencia
 
-| Paso | Acción                                                    | Archivo identificado                                   |
-| ---- | --------------------------------------------------------- | ------------------------------------------------------ |
-| 1    | Reconocer las cinco piezas separadas                      | Las cinco piezas numeradas                             |
-| 2    | Presentar la tapa frontal lisa                            | `05-tapa-frontal.stl`                                  |
-| 3    | Ubicar la pared inferior                                  | `02-pared-inferior.stl`                                |
-| 4    | Ubicar la pared izquierda                                 | `03-pared-izquierda.stl`                               |
-| 5    | Ubicar la pared derecha                                   | `04-pared-derecha.stl`                                 |
-| 6    | Ubicar la pared superior                                  | `01-pared-superior.stl`                                |
-| 7    | Mostrar la luz dentro de la caja con la tapa transparente | Posición calculada con profundidad y porcentaje de luz |
-| 8    | Orientar el cuadro y mostrar la proyección actual         | Tapa hacia la habitación, abertura hacia la pared      |
+El modal conserva encabezado, pasos y botones visibles, con una sola zona de desplazamiento: instrucciones en escritorio; modelo e instrucciones juntos en móvil y ventanas de poca altura. La barra es fina y violeta, compartida con el sistema. Las instrucciones admiten foco de teclado y el desplazamiento vuelve al inicio al cambiar de paso.
 
-El ZIP agrega el nombre del proyecto como prefijo de los cinco nombres indicados. La guía usa los identificadores de `PRINT_PARTS`, compartidos con la exportación, para asociar la pieza resaltada a su archivo. Izquierda y derecha se definen mirando la cara lisa desde la habitación.
+El montaje actual tiene doce etapas definidas por `assemblySequence`: reconocer piezas; presentar la base y anclaje; instalar conexiones y tapita de pilas; cerrar la tapa electrónica; instalar tubo/paso de cables; montar las cuatro paredes; instalar luz; colocar embellecedor; colgar y comprobar la sombra. `assemblyPlacement` comparte esos tiempos con el visor.
+
+En 1 W, el cabezal se monta en dos rebajes posteriores del marco, detrás del LED. El tubo es solo pasacables. La etapa de luz muestra el marco como referencia translúcida en su posición final para identificar el apoyo del puente. La antigua horquilla sobre el tubo se retiró porque obstruía el cono de luz.
+
+Las cuatro paredes bajan por fuera del único perímetro de la base hasta el reborde inferior. Sus ranuras interiores reciben dos nervios finos por lado. No hay canal entre dos paredes de base. La altura inicial es 20 mm y la tapa de pilas queda al ras de la cara posterior. El paso de pilas muestra la cámara desde atrás para revisar ese acceso; se cambia el portapilas descolgando el cuadro sin desmontar los paneles.
+
+Con 3 AAA hay diez archivos: paredes 01–04, marco abierto 05, base 06, tapa electrónica 07, tubo 08, cabezal 09 y tapita de pilas 10. USB elimina la tapita de pilas. COB usa siete piezas, con sus rebajes detrás del perímetro del marco. La base se apoya en Z=0; los paneles se desplazan por `wallOffset`, no así la base. El resultado conserva el frente abierto y muestra la tapa electrónica trasera lisa o con el mismo diseño en relieve. Los lectores históricos sin montaje de pared conservan sus secuencias anteriores.
 
 ## Escena y controles
 
-`AssemblyViewer` genera las piezas con `fabricationParts`, las convierte con `assemblyMesh` y usa las posiciones de `assembly.ts`. Son las mismas mallas que se exportan al STL. Primero muestra todas las piezas separadas; luego anima y destaca la pieza actual. Desde el paso 7 aparecen los marcadores de 1 a 3 LEDs, y desde el paso 8 aparece la proyección. Sin configuración de fabricación conserva las piezas planas anteriores.
+`AssemblyViewer` obtiene las piezas y sus coordenadas mediante `previewParts` y `previewMesh`, de `preview-model.ts`, compartidos con el visor principal. Internamente usan `fabricationParts` y `assemblyMesh`: son las mismas superficies que se exportan al STL. Primero muestra todas las piezas separadas; luego anima y destaca la pieza actual. El paso de pilas mira desde atrás y el paso de luz muestra el LED de 1 W. En la última etapa aparece la proyección sobre la pared, detrás del cuadro con frente abierto. Las variantes COB y sin configuración de fabricación se conservan para compatibilidad y pruebas.
 
 La cámara permite arrastrar para girar, usar rueda o gesto de dos dedos para acercar y utilizar botones para girar o centrar la vista. Al cambiar de paso adapta el encuadre. Con `prefers-reduced-motion: reduce`, las piezas se ubican directamente sin animación de desplazamiento.
 
-Los botones `Anterior`, `Siguiente`, `Reiniciar` y los ocho pasos permiten recorrer la guía; `Finalizar` la cierra. Usa los componentes compartidos `Modal`, `ModalHeader`, `ModalFooter` y `Button`. El diálogo nativo se muestra en la capa superior del navegador, bloquea el scroll de fondo, mantiene Tab dentro de sus controles y se cierra con Escape, el botón de cierre o un clic en el fondo exterior. Al cerrarse devuelve el foco al botón que lo abrió. Esta lógica se comparte con el recorte de imágenes.
+Los botones `Anterior`, `Siguiente`, `Reiniciar` y los pasos de la secuencia permiten recorrer la guía; `Finalizar` la cierra. Usa los componentes compartidos `Modal`, `ModalHeader`, `ModalFooter` y `Button`. El diálogo nativo se muestra en la capa superior del navegador, bloquea el scroll de fondo, mantiene Tab dentro de sus controles y se cierra con Escape, el botón de cierre o un clic en el fondo exterior. Al cerrarse devuelve el foco al botón que lo abrió. Esta lógica se comparte con el recorte de imágenes.
 
 ## Ciclo de vida y límites
 
 Al cambiar medidas, máscaras o simulación, la escena se reconstruye. Al desmontarse desconecta el `ResizeObserver`, detiene el bucle de renderizado y libera controles, geometrías, materiales, textura y renderizador. Si no puede iniciar WebGL o preparar la escena, conserva los textos y la navegación entre pasos con un mensaje de error.
 
-La tapa del prototipo incorpora soportes LED y conductos para sus patas; las paredes usan encastres guiados opcionales, sin traba. Las instrucciones explican la orientación de impresión y el asiento del LED. El ajuste se calibra mediante impresión de prueba. Los marcadores no representan el encapsulado exacto y la proyección sigue estimada desde una única fuente central, incluso con varios LEDs. Ver [fabricación del prototipo](shadow-fabrication.md).
+La electrónica y el alojamiento de pilas están dentro de la base contra la pared. El separador cierra el lado óptico y la tapa de pilas queda al ras en la cara posterior, accesible al descolgar el cuadro. Los pasos explican cableado, guías de las paredes y cierre removible. El ajuste debe calibrarse con una impresión de prueba y la geometría no certifica disipación térmica. La simulación sigue siendo una aproximación puntual. Ver [fabricación](shadow-fabrication.md).
 
 Las pruebas de comportamiento y los recorridos visuales están descritos en [Verificación](../testing.md).

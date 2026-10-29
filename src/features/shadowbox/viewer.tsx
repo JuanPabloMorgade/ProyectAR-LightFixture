@@ -1,29 +1,39 @@
 "use client";
+import { isWallMount } from "./enclosure-config";
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-import { IMAGE_SIZE, type BoxSettings, type WallMask } from "./engine";
 import {
-  fabricationParts,
-  assemblyMesh,
-  ledLayout,
-  type Fabrication,
-} from "./fabrication";
+  IMAGE_SIZE,
+  sourceDistance,
+  type BoxSettings,
+  type WallMask,
+} from "./engine";
+import { ledLayout, type Fabrication } from "./fabrication";
+import { previewParts, previewMesh } from "./preview-model";
 import { assemblyPosition } from "./assembly";
+import { isCob } from "./cob";
+import { isModular } from "./modular";
+import { hasEnclosure } from "./enclosure";
+import { modularVisuals } from "./modular-visuals";
+import { cobVisuals } from "./cob-visuals";
 
 export default function ShadowViewer({
   settings,
   masks,
   simulation,
-  rays,
+  artwork,
+  interior = false,
   fabrication,
 }: {
   settings: BoxSettings;
   masks: WallMask[];
   simulation: Uint8ClampedArray;
-  rays: boolean;
+  artwork?: Uint8ClampedArray;
+  interior?: boolean;
   fabrication?: Fabrication;
 }) {
+  const resetView = useRef<(() => void) | null>(null);
   const host = useRef<HTMLDivElement>(null),
     [error, setError] = useState("");
   useEffect(() => {
@@ -40,8 +50,9 @@ export default function ShadowViewer({
     }
     const scene = new THREE.Scene();
     scene.background = new THREE.Color("#100b18");
-    const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 1000);
+    const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 3000);
     const size = Math.max(settings.width, settings.height, settings.depth);
+    const separated = hasEnclosure(fabrication);
     camera.position.set(size * 1.3, size * 0.85, size * 1.9);
     const target = new THREE.Vector3(0, 0, settings.depth * 0.45);
     camera.lookAt(target);
@@ -49,7 +60,24 @@ export default function ShadowViewer({
     controls.target.copy(target);
     controls.enableDamping = true;
     controls.minDistance = size * 0.6;
-    controls.maxDistance = Math.max(size * 5, settings.radius * 4);
+    controls.maxDistance = Math.max(size * 5, settings.radius * 8);
+    const frame = () => {
+      const distance = Math.max(
+        size * 2.4,
+        (interior ? size : settings.radius * 1.05) /
+          Math.tan(THREE.MathUtils.degToRad(19)) /
+          Math.min(camera.aspect, 1),
+      );
+      camera.position.set(
+        size * (interior ? 0.8 : 0.12),
+        size * (interior ? 0.55 : 0.08),
+        target.z + distance,
+      );
+      controls.target.copy(target);
+      controls.update();
+    };
+    resetView.current = frame;
+    if (separated) frame();
     scene.add(new THREE.AmbientLight(0xffffff, 1.4));
     const key = new THREE.DirectionalLight(0xffe8ba, 2);
     key.position.set(settings.width, settings.height, settings.depth * 2);
@@ -58,25 +86,44 @@ export default function ShadowViewer({
       new THREE.SphereGeometry(0.55, 18, 12),
       new THREE.MeshBasicMaterial({ color: 0xffdc87 }),
     );
-    bulb.position.z = (settings.depth * settings.lightPercent) / 100;
+    bulb.position.z = sourceDistance(settings);
     scene.add(bulb);
     const halo = new THREE.PointLight(0xffd58d, 35, Math.max(size * 3, 30));
     halo.position.copy(bulb.position);
     scene.add(halo);
-    const disposables: (
-      THREE.BufferGeometry | THREE.Material | THREE.Texture
-    )[] = [bulb.geometry, bulb.material as THREE.Material];
-    if (fabrication) {
+    const disposables: { dispose: () => void }[] = [
+      bulb.geometry,
+      bulb.material as THREE.Material,
+    ];
+    if (fabrication && !isCob(fabrication) && !isModular(fabrication)) {
       const layout = ledLayout(settings, fabrication);
       bulb.scale.setScalar(0.25 / 0.55);
-      bulb.position.x = layout.centers[0] / 10;
-      for (const x of layout.centers.slice(1)) {
+      bulb.position.x = layout.centers[0][0] / 10;
+      bulb.position.y = layout.centers[0][1] / 10;
+      for (const [x, y] of layout.centers.slice(1)) {
         const extra = new THREE.Mesh(bulb.geometry, bulb.material);
         extra.scale.copy(bulb.scale);
-        extra.position.set(x / 10, 0, bulb.position.z);
+        extra.position.set(x / 10, y / 10, bulb.position.z);
         scene.add(extra);
       }
     }
+    if (fabrication && isCob(fabrication)) {
+      bulb.visible = false;
+      const cobResources: { dispose: () => void }[] = [];
+      const { group } = cobVisuals(settings, fabrication, cobResources);
+      group.position.z = (settings.wallOffset ?? 0) + settings.depth;
+      group.visible = isWallMount(fabrication) || !separated || interior;
+      scene.add(group);
+      disposables.push(...cobResources);
+    }
+    if (fabrication && isModular(fabrication)) {
+      const hardware = modularVisuals(settings, fabrication, disposables);
+      hardware.position.z = (settings.wallOffset ?? 0) + settings.depth;
+      hardware.visible = isWallMount(fabrication) || !separated || interior;
+      scene.add(hardware);
+      bulb.scale.setScalar(0.25 / 0.55);
+    }
+    if (separated && !interior) bulb.visible = false;
     if (!fabrication) {
       const wallColor = new THREE.Color("#b4c4c5");
       for (const wall of masks) {
@@ -151,8 +198,8 @@ export default function ShadowViewer({
       scene.add(lid);
       disposables.push(lidGeometry, lidMaterial);
     } else {
-      for (const part of fabricationParts(masks, settings, fabrication)) {
-        const meshData = assemblyMesh(part, settings, fabrication);
+      for (const part of previewParts(masks, settings, fabrication, artwork)) {
+        const meshData = previewMesh(part, settings, fabrication);
         const origin = assemblyPosition(part.id, settings, false);
         const geometry = new THREE.BufferGeometry();
         geometry.setAttribute(
@@ -161,13 +208,56 @@ export default function ShadowViewer({
         );
         geometry.setIndex(new THREE.BufferAttribute(meshData.indices, 1));
         geometry.computeVertexNormals();
+        const transparent = separated
+          ? interior &&
+            [
+              "front",
+              "electronics",
+              "base",
+              "separator",
+              "battery-cover",
+            ].includes(part.id)
+          : part.id === "front" &&
+            (isCob(fabrication) || isModular(fabrication));
         const material = new THREE.MeshStandardMaterial({
-          color: part.id === "front" ? 0x40565a : 0xb4c4c5,
+          color:
+            part.id === "face" ||
+            (isWallMount(fabrication) &&
+              ["front", "separator"].includes(part.id))
+              ? 0xe3d9c6
+              : part.id === "front"
+                ? 0x40565a
+                : 0xb4c4c5,
           roughness: 0.88,
           side: THREE.DoubleSide,
+          transparent,
+          opacity: transparent ? 0.14 : 1,
+          depthWrite: !transparent,
         });
         const mesh = new THREE.Mesh(geometry, material);
         mesh.position.set(...origin);
+        if (
+          isWallMount(fabrication) &&
+          part.id === "separator" &&
+          fabrication.enclosure?.front === "design"
+        ) {
+          const edges = new THREE.EdgesGeometry(geometry, 35);
+          const ink = new THREE.LineBasicMaterial({
+            color: 0x5d4d38,
+            transparent: true,
+            opacity: 0.65,
+          });
+          const outline = new THREE.LineSegments(edges, ink);
+          outline.position.z = 0.001;
+          mesh.add(outline);
+          disposables.push(edges, ink);
+        }
+        if (
+          separated &&
+          interior &&
+          (part.id === "face" || part.id === "front")
+        )
+          mesh.visible = false;
         scene.add(mesh);
         disposables.push(geometry, material);
       }
@@ -199,45 +289,6 @@ export default function ShadowViewer({
     projected.position.z = -0.2;
     scene.add(projected);
     disposables.push(projectedGeometry, projectedMaterial, projectedTexture);
-    if (rays) {
-      const points: number[] = [];
-      let count = 0;
-      for (const wall of masks)
-        for (let row = 0; row < wall.rows && count < 42; row += 4)
-          for (let col = 0; col < wall.columns && count < 42; col += 5)
-            if (wall.cells[row * wall.columns + col]) {
-              const u = (col / wall.columns - 0.5) * wall.span,
-                z = (row / wall.rows) * wall.depth;
-              const x =
-                wall.face === "left"
-                  ? -settings.width / 2
-                  : wall.face === "right"
-                    ? settings.width / 2
-                    : wall.face === "top" || wall.face === "bottom"
-                      ? u
-                      : 0;
-              const y =
-                wall.face === "bottom"
-                  ? -settings.height / 2
-                  : wall.face === "top"
-                    ? settings.height / 2
-                    : u;
-              points.push(0, 0, bulb.position.z, x, y, z);
-              count++;
-            }
-      const linesGeo = new THREE.BufferGeometry();
-      linesGeo.setAttribute(
-        "position",
-        new THREE.Float32BufferAttribute(points, 3),
-      );
-      const linesMat = new THREE.LineBasicMaterial({
-        color: 0xffcf77,
-        transparent: true,
-        opacity: 0.28,
-      });
-      scene.add(new THREE.LineSegments(linesGeo, linesMat));
-      disposables.push(linesGeo, linesMat);
-    }
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     el.appendChild(renderer.domElement);
     const observer = new ResizeObserver(() => {
@@ -245,6 +296,7 @@ export default function ShadowViewer({
       renderer.setSize(box.width, box.height);
       camera.aspect = box.width / Math.max(box.height, 1);
       camera.updateProjectionMatrix();
+      if (separated) frame();
     });
     observer.observe(el);
     renderer.setAnimationLoop(() => {
@@ -252,6 +304,7 @@ export default function ShadowViewer({
       renderer.render(scene, camera);
     });
     return () => {
+      resetView.current = null;
       observer.disconnect();
       renderer.setAnimationLoop(null);
       controls.dispose();
@@ -259,13 +312,20 @@ export default function ShadowViewer({
       renderer.dispose();
       renderer.domElement.remove();
     };
-  }, [settings, masks, simulation, rays, fabrication]);
+  }, [settings, masks, simulation, interior, fabrication, artwork]);
   return (
     <div
       ref={host}
       className="shadow-three"
       aria-label="Vista 3D de la caja de sombras"
     >
+      <button
+        type="button"
+        className="shadow-viewer-reset"
+        onClick={() => resetView.current?.()}
+      >
+        Centrar vista frontal
+      </button>
       {error && <p role="alert">{error}</p>}
     </div>
   );

@@ -19,6 +19,7 @@ Esta carpeta describe las rutas y los componentes principales de ProyectAR segú
 - [Componentes UI](components/ui.md): campos, botones, modales, controles segmentados y tablas reutilizables.
 - [ShadowEditor](components/shadow-editor.md): dibujo, máscaras, simulación y exportación de cuadros.
 - [ShadowViewer](components/shadow-viewer.md): vista 3D de cuadros.
+- [Fabricación de cuadros](components/shadow-fabrication.md): base de 20 mm, encastres, tapa posterior, proyección, optimización de mallas y compatibilidad histórica.
 - [Guía 3D de armado](components/assembly-guide.md): modal, pasos, piezas del proyecto actual y escena de montaje.
 - [LampEditor](components/lamp-editor.md): foto, ajustes, proyectos y exportación de litofanías.
 - [LampViewer](components/lamp-viewer.md): vista 3D de litofanías.
