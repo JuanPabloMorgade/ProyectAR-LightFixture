@@ -40,8 +40,16 @@ test("la navegación indica la ruta activa sin marcar las demás", () => {
     </Shell>,
   );
 
-  const logo = screen.getByRole("img", { name: "ProyectAR" });
+  const logo = within(screen.getByRole("banner")).getByRole("img", {
+    name: "ProyectAR",
+  });
   expect(decodeURIComponent(logo.getAttribute("src") ?? "")).toContain(
+    "/assets/Logo-ProyectAR.png",
+  );
+  const footerLogo = within(screen.getByRole("contentinfo")).getByRole("img", {
+    name: "ProyectAR",
+  });
+  expect(decodeURIComponent(footerLogo.getAttribute("src") ?? "")).toContain(
     "/assets/Logo-ProyectAR.png",
   );
   const nav = screen.getByRole("navigation", { name: "Navegación principal" });
