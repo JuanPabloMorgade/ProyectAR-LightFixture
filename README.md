@@ -31,7 +31,7 @@ Los SVG siguen contornos poligonales y el STL triangula los contornos por capas 
 
 En los cuadros, la base con anclaje y pilas apoya contra la pared y mide 20 mm por defecto. Tiene un solo perímetro con guías finas para las ranuras interiores de las paredes. La tapa de pilas queda al ras por detrás; se accede al descolgar el cuadro. El separador electrónico deja pasar el tubo y puede ser liso o incluir el mismo diseño en relieve. El frente hacia la persona es un marco abierto. Luz y armado usa únicamente LED de 1 W (3 AAA o USB); los proyectos anteriores se adaptan al abrirlos e informan el cambio. Las máscaras incluyen la separación de la base. La guía explica montaje, colgado y cableado; ajuste, carga del anclaje y disipación requieren prueba física. Ver [fabricación](docs/components/shadow-fabrication.md).
 
-La lámpara exporta el panel, sin base, tapa, portalámparas ni encastres. Los proyectos se guardan en este navegador y pueden perderse si se borran sus datos: exportá JSON para conservar una copia.
+Las litofanías exportan el panel independiente o, en Plano y Curvo, un kit opcional con caja para iluminación, marco frontal y tapa trasera desmontable. El ZIP incluye cuatro STL y guía; espacio para la luz y holgura son ajustables. Semicírculo conserva el panel independiente. Las tres formas ofrecen [exportación de pie con soporte removible](docs/components/lamp-print-stand.md), activada inicialmente: la base y sus contactos se cortan después de imprimir y se retiran antes del montaje. No se incluyen LED, fuente ni portalámparas específicos. Ver [caja de litofanías](docs/components/lamp-housing.md). Los proyectos se guardan en este navegador y pueden perderse si se borran sus datos: exportá JSON para conservar una copia.
 
 ## Verificación
 

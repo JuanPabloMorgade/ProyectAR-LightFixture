@@ -1,3 +1,5 @@
+import { validateHousing, type HousingSettings } from "./housing-config";
+
 export type Settings = {
   width: number;
   height: number;
@@ -7,6 +9,8 @@ export type Settings = {
   resolution: number;
   contrast: number;
   invert: boolean;
+  housing?: HousingSettings;
+  printStand?: boolean;
 };
 export const defaults: Settings = {
   width: 120,
@@ -17,8 +21,12 @@ export const defaults: Settings = {
   resolution: 160,
   contrast: 1,
   invert: false,
+  printStand: true,
 };
 export function validateSettings(s: Settings) {
+  validateHousing(s.housing);
+  if (s.printStand !== undefined && typeof s.printStand !== 'boolean')
+    throw new Error('Revisá la opción del soporte de impresión.');
   for (const k of [
     'width',
     'height',
@@ -41,7 +49,7 @@ export function validateSettings(s: Settings) {
     s.angle > 180 ||
     !Number.isInteger(s.resolution) ||
     s.resolution < 40 ||
-    s.resolution > 256 ||
+    s.resolution > 384 ||
     s.contrast < 0.5 ||
     s.contrast > 2 ||
     typeof s.invert !== 'boolean'
