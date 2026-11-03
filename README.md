@@ -4,7 +4,7 @@ Estudio web local con Next.js App Router, React y TypeScript para diseñar cuadr
 
 ## Inicio
 
-Usá Node.js 24.22.1 (ver `.nvmrc`).
+Usá Node.js 24.22.2 (ver `.nvmrc`).
 
 ```sh
 npm ci

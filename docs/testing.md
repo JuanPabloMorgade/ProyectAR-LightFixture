@@ -2,7 +2,7 @@
 
 ## Comandos
 
-Con Node.js 24.22.1 y las dependencias instaladas:
+Con Node.js 24.22.2 y las dependencias instaladas:
 
 ```sh
 npm test
