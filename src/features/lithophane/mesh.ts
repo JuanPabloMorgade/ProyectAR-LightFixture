@@ -1,4 +1,11 @@
 import { validateHousing, type HousingSettings } from "./housing-config";
+import {
+  createSphere,
+  DEFAULT_OPENING_DIAMETER,
+  SPHERE_ULTRA_RESOLUTION,
+} from "./sphere";
+
+export const PANEL_ULTRA_RESOLUTION = 448;
 
 export type Settings = {
   width: number;
@@ -11,32 +18,53 @@ export type Settings = {
   invert: boolean;
   housing?: HousingSettings;
   printStand?: boolean;
+  shape?: "panel" | "sphere";
+  /** Legacy cap bore retained only to read previous v1 projects. */
+  sphereLedDiameter?: number;
+  sphereOpeningDiameter?: number;
 };
 export const defaults: Settings = {
   width: 120,
   height: 100,
   min: 0.8,
   max: 3.2,
-  angle: 120,
+  angle: 0,
+  shape: "panel",
   resolution: 160,
   contrast: 1,
   invert: false,
   printStand: true,
 };
 export function validateSettings(s: Settings) {
+  const opening = s.sphereOpeningDiameter ?? DEFAULT_OPENING_DIAMETER;
+  if (!Number.isFinite(opening) || opening < 8 || opening > 30)
+    throw new Error("La abertura para los LED debe medir entre 8 y 30 mm.");
+  if (s.shape === "sphere" && opening + 8 > s.width)
+    throw new Error(
+      `La abertura de ${opening} mm necesita una esfera de al menos ${opening + 8} mm. Aumentá el diámetro de la esfera o reducí la abertura.`,
+    );
+  if (
+    s.sphereLedDiameter !== undefined &&
+    (!Number.isFinite(s.sphereLedDiameter) ||
+      s.sphereLedDiameter < 3 ||
+      s.sphereLedDiameter > 8)
+  )
+    throw new Error("El paso del LED debe medir entre 3 y 8 mm.");
+  if (s.shape !== undefined && s.shape !== "panel" && s.shape !== "sphere")
+    throw new Error("La variante de litofanía no es válida.");
   validateHousing(s.housing);
-  if (s.printStand !== undefined && typeof s.printStand !== 'boolean')
-    throw new Error('Revisá la opción del soporte de impresión.');
+  if (s.printStand !== undefined && typeof s.printStand !== "boolean")
+    throw new Error("Revisá la opción del soporte de impresión.");
   for (const k of [
-    'width',
-    'height',
-    'min',
-    'max',
-    'angle',
-    'resolution',
-    'contrast',
+    "width",
+    "height",
+    "min",
+    "max",
+    "angle",
+    "resolution",
+    "contrast",
   ] as const)
-    if (!Number.isFinite(s[k])) throw new Error('Parámetros inválidos.');
+    if (!Number.isFinite(s[k])) throw new Error("Parámetros inválidos.");
   if (
     s.width < 30 ||
     s.width > 250 ||
@@ -49,13 +77,16 @@ export function validateSettings(s: Settings) {
     s.angle > 180 ||
     !Number.isInteger(s.resolution) ||
     s.resolution < 40 ||
-    s.resolution > 384 ||
+    s.resolution >
+      (s.shape === "sphere"
+        ? SPHERE_ULTRA_RESOLUTION
+        : PANEL_ULTRA_RESOLUTION) ||
     s.contrast < 0.5 ||
     s.contrast > 2 ||
-    typeof s.invert !== 'boolean'
+    typeof s.invert !== "boolean"
   )
     throw new Error(
-      'Revisá las medidas y los espesores: el máximo debe superar al mínimo.',
+      "Revisá las medidas y los espesores: el máximo debe superar al mínimo.",
     );
 }
 export function createMesh(
@@ -70,7 +101,9 @@ export function createMesh(
     imageHeight < 1 ||
     pixels.length !== imageWidth * imageHeight * 4
   )
-    throw new Error('La imagen no es válida.');
+    throw new Error("La imagen no es válida.");
+  if (s.shape === "sphere")
+    return createSphere(pixels, imageWidth, imageHeight, s);
   const cols = Math.max(
     2,
     Math.round((s.resolution * s.width) / Math.max(s.width, s.height)),
@@ -149,7 +182,7 @@ export function binarySTL(
     buffer = new ArrayBuffer(84 + count * 50),
     view = new DataView(buffer);
   new Uint8Array(buffer, 0, 80).set(
-    new TextEncoder().encode('ProyectAR - Litofania - millimeters'),
+    new TextEncoder().encode("ProyectAR - Litofania - millimeters"),
   );
   view.setUint32(80, count, true);
   for (let f = 0; f < count; f++) {

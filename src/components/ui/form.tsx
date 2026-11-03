@@ -1,5 +1,11 @@
 "use client";
-import { useId, type ComponentProps, type ReactNode } from "react";
+import {
+  useEffect,
+  useId,
+  useState,
+  type ComponentProps,
+  type ReactNode,
+} from "react";
 
 export function Input({ className = "", ...props }: ComponentProps<"input">) {
   return <input {...props} className={`ui-control ${className}`} />;
@@ -142,7 +148,29 @@ export function TextField({
   );
 }
 export function NumberField(props: Omit<TextFieldProps, "type">) {
-  return <TextField {...props} type="number" />;
+  const [draft, setDraft] = useState<string>();
+  useEffect(() => setDraft(undefined), [props.value]);
+  // Numeric state cannot represent a temporarily empty field. Keep that draft
+  // in the control instead of sending Number("") === 0 to the model.
+  if (typeof props.value !== "number")
+    return <TextField {...props} type="number" />;
+  return (
+    <TextField
+      {...props}
+      type="number"
+      value={draft ?? String(props.value)}
+      onChange={(event) => {
+        const text = event.target.value;
+        setDraft(text);
+        if (text !== "" && Number.isFinite(event.target.valueAsNumber))
+          props.onChange?.(event);
+      }}
+      onBlur={(event) => {
+        setDraft(undefined);
+        props.onBlur?.(event);
+      }}
+    />
+  );
 }
 export function SelectField({
   label,

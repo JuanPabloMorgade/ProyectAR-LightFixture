@@ -137,6 +137,53 @@ test("números, rango, checkbox y archivo mantienen los eventos y valores nativo
   expect(onFile).toHaveBeenCalledOnce();
 });
 
+test("un campo numérico permite vaciar y reescribir sin enviar cero ni anteponerlo", () => {
+  const changed = vi.fn();
+  function Controls() {
+    const [value, setValue] = useState(120);
+    return (
+      <NumberField
+        label="Diámetro"
+        value={value}
+        onChange={(event) => {
+          changed(Number(event.target.value));
+          setValue(Number(event.target.value));
+        }}
+      />
+    );
+  }
+  render(<Controls />);
+  const input = screen.getByRole("spinbutton", {
+    name: "Diámetro",
+  }) as HTMLInputElement;
+  fireEvent.change(input, { target: { value: "" } });
+  expect(input.value).toBe("");
+  expect(changed).not.toHaveBeenCalled();
+  fireEvent.change(input, { target: { value: "50" } });
+  expect(input.value).toBe("50");
+  expect(changed).toHaveBeenLastCalledWith(50);
+  fireEvent.change(input, { target: { value: "" } });
+  fireEvent.blur(input);
+  expect(input.value).toBe("50");
+  expect(changed).toHaveBeenCalledTimes(1);
+});
+
+test("los valores numéricos conservan decimales y reciben cambios externos", () => {
+  const onChange = vi.fn();
+  const { rerender } = render(
+    <NumberField label="Paso LED" value={5.5} onChange={onChange} />,
+  );
+  const input = screen.getByRole("spinbutton", {
+    name: "Paso LED",
+  }) as HTMLInputElement;
+  fireEvent.change(input, { target: { value: "" } });
+  fireEvent.change(input, { target: { value: "6.2" } });
+  expect(input.value).toBe("6.2");
+  expect(onChange).toHaveBeenCalledTimes(1);
+  rerender(<NumberField label="Paso LED" value={7} onChange={onChange} />);
+  expect(input.value).toBe("7");
+});
+
 test("Button evita envíos accidentales y bloquea acciones durante carga", () => {
   const submit = vi.fn((event: React.FormEvent) => event.preventDefault());
   const click = vi.fn();

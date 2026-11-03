@@ -29,6 +29,8 @@ Los controles aceptan props HTML tipadas y referencias de React 19. Los campos e
 
 ## Campos
 
+Cuando `NumberField` recibe un `value` numérico, permite mantener un borrador vacío al borrar el contenido sin enviar cero al editor. Al escribir un número finito se propaga el cambio; al salir del campo se normaliza el texto o se recupera el valor conservado si seguía vacío. Los valores controlados como texto y los campos sin controlar mantienen sus eventos nativos.
+
 En un componente cliente:
 
 ```tsx
@@ -158,6 +160,8 @@ Ambos editores usan el Toast para los avisos de operaciones; mantienen errores y
 ## Integración y verificación
 
 - Ambos editores usan los campos, entradas de archivo y botones compartidos.
-- La selección de forma de litofanía usa `SegmentedControl`.
+- La variante de litofanía y el nivel de Detalle usan `SelectField`. `SegmentedControl` sigue disponible como control compartido.
 - Recorte de imagen y guía de armado usan `Modal`, `ModalHeader` y `ModalFooter`.
 - `tests/ui.test.tsx` prueba contratos accesibles y eventos; las pruebas de editores y guía comprueban la integración. Los estilos y el comportamiento nativo del diálogo requieren revisión en navegador.
+
+`SavedDesigns` comparte entre los editores el selector de diseños guardados y los botones accesibles Abrir/Eliminar. Recibe items, selección, callbacks y estado busy; la selección y confirmación de borrado pertenecen al hook compartido `useSavedDesigns`, el almacenamiento a `project-storage.ts` y la validación al adaptador de cada sección. Ver [persistencia compartida](saved-designs.md).

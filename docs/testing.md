@@ -38,13 +38,17 @@ npx vitest run tests/assembly-guide.test.tsx tests/shadow-editor.test.tsx
 | `tests/shadow-editor.test.tsx` | Guardado/importación, migración al montaje actual, navegación con teclado, conservación del dibujo, campos numéricos, USB/AAA, descarga vía worker, errores y ausencia de Mostrar rayos. |
 | `tests/assembly-guide.test.tsx` | Doce pasos actuales y secuencias anteriores, identificación de piezas, navegación, foco, restauración del scroll de fondo y reinicio del desplazamiento al cambiar de paso. |
 | `tests/ui.test.tsx` | Etiquetas, errores, campos y controles accesibles, carga, modales, ciclo de foco y tablas. |
-| `tests/toast.test.tsx` | Avisos transitorios y cierre. |
+| `tests/toast.test.tsx` | Prioridad de anuncios, pausa por foco/puntero, cierre manual, acciones y reinicio del temporizador. |
 | `tests/artwork.test.ts` | Archivos de imagen y limpieza de contenido activo en SVG. |
 | `tests/navigation.test.tsx` | Rutas, navegación y contenido compartido. |
-| `tests/mesh.test.mjs` | Geometría y STL de litofanías. |
+| `tests/mesh.test.mjs` | Paneles cerrados y orientados, espesores, validación y STL binario a 384 y Ultra 448 en Plano/Curvo. |
+| `tests/lamp-sphere.test.ts` | Relieve exterior, interior independiente de la foto, polos lisos, cuerpo dentro del diámetro, aberturas, Ultra 640 en ambos ejes y ZIP de dos STL con guía. |
+| `tests/lamp-sphere-cap.test.ts` | Tapa cerrada, ranura y paso libres, tubo de hasta 36 mm, encastre sin intersecciones y orientación; incluye esferas pequeñas con espesor máximo. |
+| `tests/saved-designs.test.tsx` | Aislamiento de datos y selección entre secciones, orden por nombre, actualización, apertura, confirmación de borrado, recuperación opcional, errores y migración segura con limpieza de metadatos. |
+| `tests/lamp-viewer.test.tsx` | Actualización de esfera y tapa conservando vista relativa, geometría nueva y tapa separada; WebGL simulado con OrbitControls reales. |
 | `tests/lamp-housing.test.ts` | Caja de litofanías plana/curva: sólidos cerrados, holguras, cable, orientación de impresión, límites, panel independiente y ZIP de cuatro piezas. |
-| `tests/lamp-print-stand.test.ts` | Soporte removible en las tres formas: sólido conectado y cerrado, orientación vertical, contactos, separación, conservación de la foto y detalle de 384 puntos. |
-| `tests/lamp-editor.test.tsx` | Flujo del editor de litofanías con dependencias de navegador simuladas. |
+| `tests/lamp-print-stand.test.ts` | Soporte conectado y cerrado, orientación, huecos y contactos, conservación de la foto y ausencia de grietas a 384 y Ultra 448 en paneles de 0/120/180 grados. |
+| `tests/lamp-editor.test.tsx` | Inicio predeterminado con cero/uno/varios guardados, apertura manual, importación, compatibilidad anterior, guardado/eliminación, errores, descargas y adaptación Ultra 448/640. Avisos de Imagen/Diseño y reinicio de seis segundos en cargas consecutivas. |
 
 Las pruebas de interfaz usan jsdom y sustituyen canvas, imágenes, workers o visores. No renderizan WebGL ni validan la apariencia del CSS, los gestos o la distribución real del scroll. Los casos COB, LEDs individuales, cajas anteriores y exportaciones de cinco piezas verifican compatibilidad; no representan opciones disponibles en el editor actual.
 
@@ -62,6 +66,17 @@ Iniciar con `npm run dev` y abrir `/cuadros`. Para revisar producción, usar `np
 8. **Móvil y movimiento reducido:** a 390 × 844 comprobar textos, controles táctiles, botones inferiores y modelo usable. Con movimiento reducido, las piezas deben colocarse sin animación. En ventanas bajas comprobar que se pueda llegar al final del texto.
 9. **Persistencia:** importar proyectos antiguos y verificar aviso de adaptación a 1 W, imagen y medidas conservadas, posición LED ajustada solo cuando no cabe y acceso al diseñador. Guardar y reabrir en AAA y USB. Los proyectos existentes conservan la altura de base guardada.
 10. **Sin WebGL:** comprobar mensaje de error con instrucciones y navegación disponibles. Cerrar y reabrir sin acumular canvas o renderizadores.
+
+## Revisión de lámparas
+
+Abrir `/lamparas` en escritorio y a 390 × 844:
+
+1. **Inicio y guardados:** con cero, uno y varios diseños, verificar ejemplo inicial, ajustes predeterminados y selector vacío. Seleccionar no cambia el modelo; la carpeta lo aplica. Guardar dos nombres, actualizar uno, cancelar/confirmar borrado y abrir un guardado anterior. Cuadros y lámparas no deben mezclar sus listas.
+2. **Carga y avisos:** cargar una foto y un JSON; confirmar el mensaje Imagen/Diseño cargado correctamente con la sugerencia de Detalle. Cargar otra imagen mientras el aviso sigue visible: su duración debe reiniciarse. Un archivo inválido debe mostrar error y no un éxito nuevo.
+3. **Detalle:** probar Muy alto y Ultra en Plano/Curvo (448) y esfera (640). Comprobar adaptación entre variantes, guardado y reapertura manual. En esfera de 80 mm, Ultra debe indicar unos 0,20 mm en ambos sentidos. La foto original puede limitar el detalle efectivo.
+4. **Esfera:** inspeccionar relieve exterior en Material y Luz encendida, polos lisos y abertura ajustable. Ver tapa separada debe mostrar el tubo. Cambiar medidas conservando la vista; un error debe mantener el modelo anterior y bloquear la descarga.
+5. **STL y montaje:** abrir los archivos en el laminador. Esfera: cuerpo y tapa, base en Z=0 y tubo hacia arriba. Panel: comprobar soporte removible activado/desactivado; kit de caja con cuatro STL y guía. Verificar escala, normales, transiciones, ranuras y contactos. Los encastres requieren prueba física.
+6. **Accesibilidad y WebGL:** recorrer selector, carpeta, papelera, variantes, Detalle y avisos con teclado; comprobar foco visible, textos y ausencia de desbordamiento. Sin WebGL debe ser posible descargar una malla válida.
 
 ## Límites de la verificación
 

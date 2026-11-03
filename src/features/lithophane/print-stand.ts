@@ -6,13 +6,14 @@ export const STAND_BASE = 1.2;
 export const STAND_GAP = 0.2;
 export const STAND_CONTACT = 0.8;
 export const STAND_MARGIN = 4;
-export const hasPrintStand = (s: Settings) => s.printStand !== false;
+export const hasPrintStand = (s: Settings) => s.shape !== "sphere" && s.printStand !== false;
 type Point = [number, number, number];
 
 /** Prepared from createMesh's indexed grid; all photo faces retain their geometry.
  * Only the bottom boundary is subdivided to join short sacrificial contacts. */
 export function createPrintStand(panel: Mesh, s: Settings) {
   validateSettings(s);
+  if (s.shape === "sphere") throw new Error("El soporte removible es para paneles.");
   const cols = Math.max(
     2,
     Math.round((s.resolution * s.width) / Math.max(s.width, s.height)),

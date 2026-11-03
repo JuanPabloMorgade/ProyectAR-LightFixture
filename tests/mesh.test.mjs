@@ -56,7 +56,7 @@ test("Rechaza parámetros inválidos", () => {
     { ...defaults, min: 4, max: 2 },
     { ...defaults, width: NaN },
     { ...defaults, resolution: 10000 },
-    { ...defaults, resolution: 385 },
+    { ...defaults, resolution: 449 },
     { ...defaults, height: 0 },
   ])
     assert.throws(() => validateSettings(settings));
@@ -75,3 +75,19 @@ test("Muy alto acepta 384 puntos en el lado mayor y exporta esa resolución", ()
   assert.equal(new DataView(stl).getUint32(80, true), triangles);
   assert.equal(stl.byteLength, 84 + triangles * 50);
 });
+
+for (const angle of [0, 120])
+  test(`Ultra de panel acepta 448 puntos y exporta su grilla: ${angle} grados`, () => {
+    const settings = { ...defaults, angle, resolution: 448 };
+    const mesh = createMesh(pixels, 2, 2, settings);
+    const cols = 448,
+      rows = 373;
+    const triangles = 4 * cols * rows + 4 * (cols + rows);
+    assert.equal(mesh.positions.length / 3, 2 * (cols + 1) * (rows + 1));
+    assert.equal(mesh.indices.length / 3, triangles);
+    assert.ok(mesh.positions.every(Number.isFinite));
+    const stl = binarySTL(mesh.positions, mesh.indices);
+    assert.equal(new DataView(stl).getUint32(80, true), triangles);
+    assert.equal(stl.byteLength, 84 + triangles * 50);
+    assert.throws(() => validateSettings({ ...settings, resolution: 640 }));
+  });

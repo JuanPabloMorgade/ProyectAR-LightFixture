@@ -165,10 +165,17 @@
 .shadow-export .ui-field {
   margin: 0;
 }
-.shadow-saved > div > .ui-select {
+.shadow-saved > div > .ui-select,
+.ui-saved-designs > div > .ui-select {
   flex: 1;
   width: 0;
+  white-space: nowrap;
+  overflow: hidden;
 }
+.ui-saved-designs { margin: 22px 0; }
+.ui-saved-designs > label { color: var(--muted); }
+.ui-saved-designs > div { display: flex; gap: 5px; margin-top: 7px; }
+.ui-saved-designs button { width: 38px; flex: none; color: #d3b3f0; background: #2b183c; border: 1px solid #573a6a; border-radius: 9px; display: inline-flex; align-items: center; justify-content: center; }
 .ui-icon-button,
 .ui-button-ghost {
   display: inline-flex;

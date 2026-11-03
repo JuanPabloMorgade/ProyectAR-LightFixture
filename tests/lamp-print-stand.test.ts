@@ -88,9 +88,13 @@ test("stand can be disabled and malformed preferences are rejected", () => {
   ).toThrow();
 });
 
-test.each([0, 120, 180])(
-  "a uniformly thick %s degree photo has no slivers at 384 points",
-  (angle) => {
+test.each(
+  [0, 120, 180].flatMap((angle) =>
+    [384, 448].map((resolution) => ({ angle, resolution })),
+  ),
+)(
+  "a uniformly thick $angle degree photo has no slivers at $resolution points",
+  ({ angle, resolution }) => {
     const s = {
       ...defaults,
       angle,
@@ -98,7 +102,7 @@ test.each([0, 120, 180])(
       height: 30,
       min: 0.6,
       max: 5,
-      resolution: 384,
+      resolution,
     };
     const panel = createMesh(new Uint8ClampedArray([0, 0, 0, 255]), 1, 1, s);
     closed(createPrintStand(panel, s).printMesh);

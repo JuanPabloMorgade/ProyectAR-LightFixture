@@ -11,7 +11,7 @@ export const defaultHousing: HousingSettings = {
   clearance: 0.3,
 };
 export const hasHousing = (s: Settings) =>
-  s.housing?.enabled === true && s.angle < 180;
+  s.shape !== "sphere" && s.housing?.enabled === true && s.angle < 180;
 
 export function validateHousing(h?: HousingSettings) {
   if (h === undefined) return;

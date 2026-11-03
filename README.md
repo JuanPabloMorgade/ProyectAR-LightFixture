@@ -1,6 +1,6 @@
 # ProyectAR
 
-Estudio web local con Next.js App Router, React y TypeScript para diseñar cuadros de sombra y paneles de litofanía imprimibles.
+Estudio web local con Next.js App Router, React y TypeScript para diseñar cuadros de sombra, paneles de litofanía y esferas navideñas imprimibles.
 
 ## Inicio
 
@@ -17,8 +17,8 @@ Abrí http://127.0.0.1:3000. Para producción local: `npm run build` y `npm star
 
 - Cuadros de sombra: presets, pincel y borrador, carga de JPG/PNG/WebP/SVG, recorte circular, medidas de caja y luz, proyección estimada, vista 3D y cuatro patrones SVG. LED de 1 W con nueve piezas (USB) o diez (3 AAA), descargables en un STL combinado o un ZIP con los STL independientes, numerados y nombrados, más una guía de orientación.
 - Guía 3D de armado: doce pasos con las piezas del diseño abierto, movimiento de cada pieza, posición de la luz y orientación final contra la pared. Se abre desde `Vista 3D → Ver guía de armado`.
-- Lámparas: foto JPG/PNG/WebP, panel plano, arco de 120° o semicírculo, medidas en mm, contraste, inversión, espesor mínimo y máximo, vista 3D y STL binario.
-- Guardado local y exportación/importación JSON. El editor nuevo de cuadros abre los diseños guardados por la versión anterior en `localStorage` sin borrarlos.
+- Lámparas: foto JPG/PNG/WebP, Plano, Curvo de 120° y Esferas navideñas con relieve exterior y tapa tubular. Medidas en mm, contraste, inversión, espesores y vista 3D. Ultra ofrece 448 puntos en paneles y 640 en esferas; los paneles de 180° anteriores siguen abriéndose.
+- Guardados locales por nombre y exportación/importación JSON. Ambos editores inician con su ejemplo; para aplicar un diseño hay que seleccionarlo y pulsar la carpeta. Comparten componente, hook y almacenamiento con claves independientes y compatibilidad con versiones anteriores.
 - Las fotos y los modelos se procesan en el navegador; no se envían a un servidor.
 
 ## Alcance y atribución
@@ -31,7 +31,7 @@ Los SVG siguen contornos poligonales y el STL triangula los contornos por capas 
 
 En los cuadros, la base con anclaje y pilas apoya contra la pared y mide 20 mm por defecto. Tiene un solo perímetro con guías finas para las ranuras interiores de las paredes. La tapa de pilas queda al ras por detrás; se accede al descolgar el cuadro. El separador electrónico deja pasar el tubo y puede ser liso o incluir el mismo diseño en relieve. El frente hacia la persona es un marco abierto. Luz y armado usa únicamente LED de 1 W (3 AAA o USB); los proyectos anteriores se adaptan al abrirlos e informan el cambio. Las máscaras incluyen la separación de la base. La guía explica montaje, colgado y cableado; ajuste, carga del anclaje y disipación requieren prueba física. Ver [fabricación](docs/components/shadow-fabrication.md).
 
-Las litofanías exportan el panel independiente o, en Plano y Curvo, un kit opcional con caja para iluminación, marco frontal y tapa trasera desmontable. El ZIP incluye cuatro STL y guía; espacio para la luz y holgura son ajustables. Semicírculo conserva el panel independiente. Las tres formas ofrecen [exportación de pie con soporte removible](docs/components/lamp-print-stand.md), activada inicialmente: la base y sus contactos se cortan después de imprimir y se retiran antes del montaje. No se incluyen LED, fuente ni portalámparas específicos. Ver [caja de litofanías](docs/components/lamp-housing.md). Los proyectos se guardan en este navegador y pueden perderse si se borran sus datos: exportá JSON para conservar una copia.
+Los paneles de litofanía exportan un STL independiente o, en Plano y Curvo, un kit opcional con caja para iluminación, marco frontal y tapa trasera: cuatro STL y guía. Espacio para la luz y holgura son ajustables. Los paneles, incluidos los de 180° anteriores, ofrecen [soporte removible](docs/components/lamp-print-stand.md) inicialmente activado, que se corta después de imprimir. Las [esferas navideñas](docs/components/lamp-sphere.md) exportan cuerpo y tapa en dos STL más guía, con abertura inicial de Ø22 mm y tubo guía de hasta 36 mm. No se incluyen LED, fuente ni portalámparas. Los proyectos se guardan en este navegador y pueden perderse si se borran sus datos: exportá JSON para conservar una copia. Ver [caja de litofanías](docs/components/lamp-housing.md) y [persistencia compartida](docs/components/saved-designs.md).
 
 ## Verificación
 
