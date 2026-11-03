@@ -1,4 +1,5 @@
 import { createMesh } from "./mesh";
+import { createSphereCap } from "./sphere-cap";
 import { createHousingParts } from "./housing";
 import { createPrintStand, hasPrintStand } from "./print-stand";
 self.onmessage = (event) => {
@@ -6,6 +7,8 @@ self.onmessage = (event) => {
   try {
     const mesh = createMesh(pixels, width, height, settings);
     const housingParts = createHousingParts(settings);
+    const sphereCap =
+      settings.shape === "sphere" ? createSphereCap(settings) : null;
     const prepared = hasPrintStand(settings)
       ? createPrintStand(mesh, settings)
       : null;
@@ -14,6 +17,7 @@ self.onmessage = (event) => {
         id,
         ...mesh,
         housingParts,
+        sphereCap,
         printPanel: prepared?.printMesh,
         printSupport: prepared?.support,
       },
@@ -21,6 +25,9 @@ self.onmessage = (event) => {
         transfer: [
           mesh.positions.buffer,
           mesh.indices.buffer,
+          ...(sphereCap
+            ? [sphereCap.positions.buffer, sphereCap.indices.buffer]
+            : []),
           ...(prepared
             ? [
                 prepared.printMesh.positions.buffer,

@@ -1,6 +1,7 @@
 import { solidMesh, type Bounds, type Mesh } from "../shadowbox/solid-mesh";
 import { validateSettings, type Settings } from "./mesh";
 import { defaultHousing, hasHousing } from "./housing-config";
+import { roundOpening, roundOpeningAxes } from "../shadowbox/round-opening";
 
 export type HousingPart = Mesh & {
   id: "body" | "bezel" | "lid";
@@ -85,23 +86,47 @@ export function createHousingParts(s: Settings): HousingPart[] {
   const curveAxes = l.radius
     ? Array.from({ length: 97 }, (_, i) => -l.outerX + (2 * l.outerX * i) / 96)
     : [];
-  const mesh = (boxes: Bounds[], cuts: Bounds[] = []): Mesh => {
-    const source = solidMesh(boxes, cuts, undefined, 0, {
-      xs: curveAxes,
-      ys: [],
+  const wireRadius = 2,
+    wireY = -l.innerY + 10;
+  const mesh = (boxes: Bounds[], cuts: Bounds[] = [], cable = false): Mesh => {
+    const axes = cable
+      ? roundOpeningAxes(0, wireY, [wireRadius, wireRadius + 1, wireRadius + 2])
+      : { xs: [], ys: [] };
+    let source = solidMesh(boxes, cuts, undefined, 0, {
+      xs: [...curveAxes, ...axes.xs],
+      ys: axes.ys,
       minimumGap: 0.05,
     });
+    if (cable) source = roundOpening(source, 0, wireY, wireRadius);
     const positions = new Float32Array(source.positions.length);
-    for (let i = 0; i < positions.length; i += 3)
+    for (let i = 0; i < positions.length; i += 3) {
+      let u = source.positions[i];
+      if (cable && l.radius) {
+        // Keep the rear exit circular and 4 mm wide in assembly coordinates,
+        // even where the curved lid has a smaller radius than the photo.
+        const radialDepth = l.radius + source.positions[i + 2];
+        const fixed = l.innerX - c / 2 - SKIRT;
+        const edge = l.radius * Math.asin(wireRadius / radialDepth);
+        const x = Math.abs(u);
+        // A monotonic transition keeps deep curved lids free of folded faces.
+        if (x < fixed)
+          u =
+            Math.sign(u) *
+            (x <= wireRadius
+              ? l.radius * Math.asin(x / radialDepth)
+              : edge +
+                ((x - wireRadius) * (fixed - edge)) / (fixed - wireRadius));
+      }
       positions.set(
         housingPoint(
-          source.positions[i],
+          u,
           source.positions[i + 1],
           source.positions[i + 2],
           l.radius,
         ),
         i,
       );
+    }
     return { positions, indices: source.indices };
   };
   // Photo enters from the front and rests on this rear shoulder. Bezel is removable.
@@ -116,12 +141,7 @@ export function createHousingParts(s: Settings): HousingPart[] {
       -c / 2,
     ),
   ];
-  const wireHalf = l.radius
-    ? l.radius * Math.asin(2 / (l.radius + l.back + 4))
-    : 2;
-  const body = mesh(bodyBoxes, [
-    [-wireHalf, wireHalf, -l.outerY, -l.innerY, l.back + 4, l.back + 8],
-  ]);
+  const body = mesh(bodyBoxes);
   const bezel = mesh([
     ...ring(
       l.outerX,
@@ -140,17 +160,30 @@ export function createHousingParts(s: Settings): HousingPart[] {
       l.front,
     ),
   ]);
-  const lid = mesh([
-    [-l.outerX, l.outerX, -l.outerY, l.outerY, l.back - w, l.back],
-    ...ring(
-      l.innerX - c / 2,
-      l.innerY - c / 2,
-      l.innerX - c / 2 - SKIRT,
-      l.innerY - c / 2 - SKIRT,
-      l.back,
-      l.back + ENGAGEMENT,
-    ),
-  ]);
+  const lid = mesh(
+    [
+      [-l.outerX, l.outerX, -l.outerY, l.outerY, l.back - w, l.back],
+      ...ring(
+        l.innerX - c / 2,
+        l.innerY - c / 2,
+        l.innerX - c / 2 - SKIRT,
+        l.innerY - c / 2 - SKIRT,
+        l.back,
+        l.back + ENGAGEMENT,
+      ),
+    ],
+    [
+      [
+        -wireRadius,
+        wireRadius,
+        wireY - wireRadius,
+        wireY + wireRadius,
+        l.back - w,
+        l.back,
+      ],
+    ],
+    true,
+  );
   return [
     {
       ...body,
@@ -201,7 +234,7 @@ export function housingGuide(s: Settings) {
     `Panel ${s.width} × ${s.height} mm; arco ${s.angle}°. Profundidad radial de caja ${l.depth} mm; pared ${l.wall} mm; holgura total ${l.clearance} mm.`,
     "01: panel de la foto. 02: caja. 03: marco frontal. 04: tapa trasera.",
     "Colocá la foto desde el frente de la caja, con el relieve hacia la habitación y el dorso hacia la luz. Apoya en el asiento interior. El marco frontal sujeta 2 mm del perímetro y entra con reborde de guiado.",
-    "Instalá la iluminación en la cara interior de la tapa posterior y pasá el cable por la abertura inferior de 4 mm. La tapa tiene un reborde guiado y se retira para acceder a la luz. No se incluyen LED, fuente, conector ni tornillos.",
+    "Instalá la iluminación en la cara interior de la tapa posterior y pasá el cable por el agujero circular de Ø4 mm de esa tapa, cerca del borde inferior. El cable sale hacia atrás. La tapa tiene un reborde guiado y se retira para acceder a la luz. No se incluyen LED, fuente, conector ni tornillos.",
     "Son ajustes guiados sin pestillo. Probá la holgura con tu impresora y usá una fijación removible si hace falta. El marco y la tapa se imprimen separados; no deben fusionarse con el panel.",
     l.radius
       ? "Caja y tapas curvas se entregan orientadas de pie sobre su borde inferior. Revisá apoyos y soportes para los tramos superiores en el laminador."

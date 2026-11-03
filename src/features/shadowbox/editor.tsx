@@ -17,7 +17,6 @@ import {
   PenLine,
   RotateCcw,
   FileDown,
-  Trash2,
   ChevronDown,
 } from "lucide-react";
 import {
@@ -50,15 +49,14 @@ import {
 } from "./fabrication";
 import {
   Button,
+  SavedDesigns,
   Input,
   TextField,
   NumberField,
-  Select,
   SelectField,
   RangeField,
   Checkbox,
   FileInput,
-  FormField,
   Modal,
   ModalHeader,
   ModalFooter,
@@ -67,14 +65,14 @@ import {
 } from "@/components/ui";
 import type { STLExportMode, STLExportResult } from "./stl-export";
 import "./shadowbox.css";
+import {
+  type Project,
+  checkProject,
+  readOld,
+  shadowProjectStorage,
+} from "./projects";
+import { useSavedDesigns } from "@/hooks/use-saved-designs";
 
-type Project = {
-  version: 2;
-  name: string;
-  settings: BoxSettings;
-  image: string;
-  fabrication?: Fabrication;
-};
 type Crop = {
   image: HTMLImageElement;
   filename: string;
@@ -85,8 +83,6 @@ type Crop = {
   invert: boolean;
 };
 type ShadowStep = "how" | "design" | "three";
-const prefix = "proyectar:shadow:v2:",
-  legacyPrefix = "shadowbox.design.";
 const labels: Record<Face, string> = {
   top: "Superior",
   bottom: "Inferior",
@@ -109,77 +105,6 @@ function safeName(name: string) {
       .replace(/[^a-zA-Z0-9_-]+/g, "_")
       .slice(0, 80) || "cuadro"
   );
-}
-function scanProjects() {
-  const result: { id: string; label: string; old: boolean }[] = [];
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i) || "";
-    if (key.startsWith(prefix))
-      result.push({ id: key, label: key.slice(prefix.length), old: false });
-    else if (key.startsWith(legacyPrefix) && !key.endsWith(".meta"))
-      result.push({
-        id: key,
-        label:
-          key.slice(legacyPrefix.length).replace(/\.json$/i, "") +
-          " · versión anterior",
-        old: true,
-      });
-  }
-  return result.sort((a, b) => a.label.localeCompare(b.label));
-}
-function checkProject(data: unknown): Project {
-  const p = data as Project;
-  if (
-    !p ||
-    p.version !== 2 ||
-    typeof p.name !== "string" ||
-    p.name.length > 100 ||
-    typeof p.image !== "string" ||
-    p.image.length > 5_000_000 ||
-    !/^data:image\/png;base64,/.test(p.image)
-  )
-    throw new Error("El archivo no es un proyecto válido de ProyectAR.");
-  validateBox(p.settings);
-  if (p.fabrication !== undefined) {
-    // Projects from the first prototype start at the new six-LED minimum.
-    if ([1, 2, 3].includes(p.fabrication.ledCount))
-      p.fabrication = { ...p.fabrication, ledCount: 6 };
-    validateFabrication(p.fabrication);
-  }
-  return p;
-}
-function readOld(raw: string, name: string): Project {
-  const old = JSON.parse(raw) as {
-    sliders?: Record<string, number>;
-    targetImage?: string;
-  };
-  if (
-    !old.sliders ||
-    typeof old.targetImage !== "string" ||
-    !old.targetImage.startsWith("data:image/png")
-  )
-    throw new Error("El diseño anterior no tiene un formato válido.");
-  const val = (key: string, fallback: number) => {
-    const n = Number(old.sliders![key]);
-    return Number.isFinite(n) ? n : fallback;
-  };
-  const settings: BoxSettings = {
-    width: val("s-W", 15),
-    height: val("s-H", 15),
-    depth: val("s-d", 6),
-    radius: val("d-R", 55),
-    lightPercent: val("s-lightz", defaultEditorBox.lightPercent),
-    thickness: 2,
-    margin: val("d-margin", 3),
-    detail: 160,
-  };
-  validateBox(settings);
-  return {
-    version: 2,
-    name: name.replace(/\.json$/i, ""),
-    settings,
-    image: old.targetImage,
-  };
 }
 function MaskPreview({ mask }: { mask: WallMask }) {
   const canvas = useRef<HTMLCanvasElement>(null);
@@ -243,14 +168,13 @@ export default function ShadowEditor() {
     [brush, setBrush] = useState(18),
     [erase, setErase] = useState(false),
     [crop, setCrop] = useState<Crop | null>(null),
-    [stored, setStored] = useState<ReturnType<typeof scanProjects>>([]),
-    [selected, setSelected] = useState(""),
     [message, setMessage] = useState(""),
     [error, setError] = useState(""),
     [working, setWorking] = useState(false),
     [exportMode, setExportMode] = useState<STLExportMode>("combined"),
     [assemblyOpen, setAssemblyOpen] = useState(false),
     [showInterior, setShowInterior] = useState(false);
+  const designs = useSavedDesigns(shadowProjectStorage);
   const steps = [
     { id: "how" as const, number: 1, label: "Cómo funciona", Icon: Sun },
     {
@@ -354,7 +278,7 @@ export default function ShadowEditor() {
   useEffect(() => {
     setArtwork(presetArt("rays"));
     try {
-      setStored(scanProjects());
+      designs.refresh();
     } catch {
       setMessage("El navegador no permite ver los proyectos guardados.");
     }
@@ -473,27 +397,16 @@ export default function ShadowEditor() {
       validateBox(settings);
       validateFabrication(fabrication);
       const p = currentProject();
-      localStorage.setItem(prefix + p.name, JSON.stringify(p));
-      setStored(scanProjects());
-      setSelected(prefix + p.name);
+      designs.save(p);
       setMessage("Diseño guardado en este navegador.");
       setError("");
     } catch {
       setError("No se pudo guardar. Descargá una copia del proyecto.");
     }
   }
-  function openSelected() {
+  async function openSelected() {
     try {
-      const item = stored.find((p) => p.id === selected);
-      if (!item) throw new Error("Elegí un proyecto.");
-      const raw = localStorage.getItem(item.id);
-      if (!raw) throw new Error("No se encontró el proyecto.");
-      const project = item.old
-        ? readOld(raw, item.label.replace(" · versión anterior", ""))
-        : checkProject(JSON.parse(raw));
-      void loadProject(project).catch(() =>
-        setError("No se pudo abrir la imagen del proyecto."),
-      );
+      await designs.openSelected(loadProject);
     } catch (e) {
       setError(
         e instanceof Error ? e.message : "No se pudo abrir el proyecto.",
@@ -501,14 +414,11 @@ export default function ShadowEditor() {
     }
   }
   function removeSelected() {
-    const item = stored.find((p) => p.id === selected);
-    if (!item || !confirm(`¿Eliminar «${item.label}» de este navegador?`))
-      return;
-    localStorage.removeItem(item.id);
-    if (item.old) localStorage.removeItem(item.id + ".meta");
-    setStored(scanProjects());
-    setSelected("");
-    setMessage("Proyecto eliminado.");
+    try {
+      if (designs.removeSelected()) setMessage("Proyecto eliminado.");
+    } catch {
+      setError("No se pudo eliminar el proyecto.");
+    }
   }
   async function onPhoto(file?: File) {
     if (!file) return;
@@ -753,44 +663,14 @@ export default function ShadowEditor() {
             maxLength={100}
             onChange={(e) => setName(e.target.value)}
           />
-          <FormField
-            label="Diseños guardados"
-            id="shadow-saved-design"
+          <SavedDesigns
+            items={designs.items}
+            selected={designs.selected}
+            onSelect={designs.select}
+            onOpen={() => void openSelected()}
+            onRemove={removeSelected}
             fieldClassName="shadow-saved"
-          >
-            {(controlProps) => (
-              <div>
-                <Select
-                  {...controlProps}
-                  value={selected}
-                  onChange={(e) => setSelected(e.target.value)}
-                >
-                  <option value="">Elegir diseño…</option>
-                  {stored.map((item) => (
-                    <option value={item.id} key={item.id}>
-                      {item.label}
-                    </option>
-                  ))}
-                </Select>
-                <Button
-                  variant="unstyled"
-                  onClick={openSelected}
-                  disabled={!selected}
-                  aria-label="Abrir diseño guardado"
-                >
-                  <FolderOpen size={16} />
-                </Button>
-                <Button
-                  variant="unstyled"
-                  onClick={removeSelected}
-                  disabled={!selected}
-                  aria-label="Eliminar diseño guardado"
-                >
-                  <Trash2 size={16} />
-                </Button>
-              </div>
-            )}
-          </FormField>
+          />
           <div className="shadow-divider" />
           <div className="shadow-panel-head">
             <h2>Geometría</h2>
@@ -1079,7 +959,7 @@ export default function ShadowEditor() {
                   de preparar el armado.
                 </p>
                 <ModularControls
-                  key={selected}
+                  key={designs.selected}
                   settings={opticalSettings}
                   fabrication={fabrication}
                   onChange={(modular) => {
@@ -1094,7 +974,7 @@ export default function ShadowEditor() {
                 />
                 {fabricationNumber("clearance", "Holgura de ajuste", 0.1, 0.8)}
                 <EnclosureControls
-                  key={`enclosure-${selected}`}
+                  key={`enclosure-${designs.selected}`}
                   settings={settings}
                   fabrication={fabrication}
                   onChange={(enclosure) => {

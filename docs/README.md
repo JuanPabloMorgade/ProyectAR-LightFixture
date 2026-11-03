@@ -23,6 +23,8 @@ Esta carpeta describe las rutas y los componentes principales de ProyectAR segú
 - [Guía 3D de armado](components/assembly-guide.md): modal, pasos, piezas del proyecto actual y escena de montaje.
 - [LampEditor](components/lamp-editor.md): foto, ajustes, proyectos y exportación de litofanías.
 - [LampViewer](components/lamp-viewer.md): vista 3D de litofanías.
+- [Esfera navideña y tapa](components/lamp-sphere.md): relieve exterior, cuello, tubo guía, detalle y ZIP de dos STL.
+- [Diseños guardados compartidos](components/saved-designs.md): componente, hook, adaptadores y apertura manual por sección.
 - [Caja trasera de litofanías](components/lamp-housing.md): kit opcional para Plano y Curvo, montaje, holguras y exportación.
 - [Soporte removible de litofanías](components/lamp-print-stand.md): exportación de pie, base, contactos y separación después de imprimir.
 

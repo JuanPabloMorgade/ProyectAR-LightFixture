@@ -4,6 +4,7 @@ import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import type { HousingPart } from "./housing";
 import type { Mesh } from "../shadowbox/solid-mesh";
+import { SPHERE_CAP_TUBE_LENGTH } from "./sphere-cap";
 const NO_HOUSING: HousingPart[] = [];
 export default function Viewer({
   positions,
@@ -12,6 +13,8 @@ export default function Viewer({
   housingParts = NO_HOUSING,
   interior = false,
   printSupport,
+  sphereCap,
+  onError,
 }: {
   positions: Float32Array;
   indices: Uint32Array;
@@ -19,8 +22,13 @@ export default function Viewer({
   housingParts?: HousingPart[];
   interior?: boolean;
   printSupport?: Mesh;
+  sphereCap?: Mesh;
+  onError?: (message: string) => void;
 }) {
   const host = useRef<HTMLDivElement>(null);
+  const view = useRef<{ offset: THREE.Vector3; target: THREE.Vector3 } | null>(
+    null,
+  );
   const [error, setError] = useState("");
   useEffect(() => {
     const el = host.current;
@@ -29,7 +37,10 @@ export default function Viewer({
     try {
       renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     } catch {
-      setError("La vista 3D requiere WebGL. Podés seguir exportando el STL.");
+      const message =
+        "La vista 3D requiere WebGL. Podés seguir exportando el STL.";
+      setError(message);
+      onError?.(message);
       return;
     }
     const scene = new THREE.Scene(),
@@ -50,6 +61,7 @@ export default function Viewer({
       const p = i % n;
       const t = Math.hypot(
         positions[p * 3] - positions[(p + n) * 3],
+        positions[p * 3 + 1] - positions[(p + n) * 3 + 1],
         positions[p * 3 + 2] - positions[(p + n) * 3 + 2],
       );
       const v = lit ? Math.exp(-0.4 * t) : 1;
@@ -62,6 +74,23 @@ export default function Viewer({
     model.add(mesh);
     scene.add(model);
     const resources: { dispose: () => void }[] = [geo, material];
+    if (sphereCap) {
+      const geometry = new THREE.BufferGeometry();
+      geometry.setAttribute(
+        "position",
+        new THREE.BufferAttribute(sphereCap.positions, 3),
+      );
+      geometry.setIndex(new THREE.BufferAttribute(sphereCap.indices, 1));
+      geometry.computeVertexNormals();
+      const surface = new THREE.MeshStandardMaterial({
+        color: 0xe9e7e2,
+        roughness: 0.8,
+      });
+      const cap = new THREE.Mesh(geometry, surface);
+      if (interior) cap.position.y = SPHERE_CAP_TUBE_LENGTH + 7;
+      model.add(cap);
+      resources.push(geometry, surface);
+    }
     if (printSupport) {
       const geometry = new THREE.BufferGeometry();
       geometry.setAttribute(
@@ -113,6 +142,12 @@ export default function Viewer({
       .add(new THREE.Vector3(extent * 0.35, extent * 0.12, extent * 2.4));
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.target.copy(center);
+    if (view.current) {
+      controls.target.addScaledVector(view.current.target, extent);
+      camera.position
+        .copy(controls.target)
+        .addScaledVector(view.current.offset, extent);
+    }
     controls.enableDamping = true;
     controls.minDistance = extent * 0.5;
     controls.maxDistance = extent * 5;
@@ -131,6 +166,15 @@ export default function Viewer({
       renderer.render(scene, camera);
     });
     return () => {
+      // Keep the angle, pan and zoom when parameters regenerate the geometry.
+      // In particular, a top view must stay on the LED opening while resizing it.
+      view.current = {
+        offset: camera.position
+          .clone()
+          .sub(controls.target)
+          .divideScalar(extent),
+        target: controls.target.clone().sub(center).divideScalar(extent),
+      };
       observer.disconnect();
       renderer.setAnimationLoop(null);
       controls.dispose();
@@ -138,7 +182,16 @@ export default function Viewer({
       renderer.dispose();
       renderer.domElement.remove();
     };
-  }, [positions, indices, lit, housingParts, interior, printSupport]);
+  }, [
+    positions,
+    indices,
+    lit,
+    housingParts,
+    interior,
+    printSupport,
+    sphereCap,
+    onError,
+  ]);
   return (
     <div
       className="three-view"

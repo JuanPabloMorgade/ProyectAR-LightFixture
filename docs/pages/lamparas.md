@@ -2,10 +2,23 @@
 
 **Archivo:** `src/app/lamparas/page.tsx`.
 
-La ruta monta el [LampEditor](../components/lamp-editor.md) dentro de [Shell](../components/shell.md). El editor transforma una foto en un panel de litofanía plano, curvo o semicircular, ofrece una vista 3D y descarga el STL.
+Monta [LampEditor](../components/lamp-editor.md) dentro de [Shell](../components/shell.md). La página no genera geometría ni mantiene el estado del editor.
 
-Plano y Curvo permiten generar una [caja trasera para iluminación](../components/lamp-housing.md), con marco y tapa desmontables. Se configura el espacio para la luz y la holgura, se inspecciona el interior y se descarga un ZIP con cuatro STL y guía. Semicírculo mantiene la descarga del panel independiente.
+## Flujo actual
 
-La página no mantiene estado ni genera la malla: estas tareas pertenecen a `src/features/lithophane/`. Usa el layout raíz de `src/app/layout.tsx` y los estilos compartidos de `src/app/globals.css`.
+1. El editor inicia con la imagen de ejemplo y los parámetros predeterminados. Diseños guardados comienza vacío: para aplicar uno hay que seleccionarlo y pulsar la carpeta.
+2. Se puede cargar JPG/PNG/WebP o importar un proyecto JSON. Un toast confirma Imagen o Diseño cargado correctamente y sugiere ajustar Detalle.
+3. Se elige Plano, Curvo o Esferas navideñas, se revisa el modelo y se descarga la pieza o el kit. Los paneles de 180° existentes siguen abriéndose.
+4. Exportar proyecto, Importar y Guardar están en la cabecera. Los [guardados compartidos](../components/saved-designs.md) mantienen independientes lámparas y cuadros.
 
-Las tres formas ofrecen [exportación de pie con soporte removible](../components/lamp-print-stand.md), activada inicialmente. La base y los contactos quedan en el STL del panel; se cortan y retiran después de imprimir. La vista permite inspeccionarlos en violeta.
+## Variantes
+
+Plano y Curvo exportan un panel o una [caja de iluminación opcional](../components/lamp-housing.md): cuatro STL y guía. Los paneles usan inicialmente [soporte removible](../components/lamp-print-stand.md), que se corta y retira después de imprimir. La vista permite inspeccionarlo en violeta.
+
+Las [esferas navideñas](../components/lamp-sphere.md) tienen cuerpo hueco, base cerrada, foto en relieve exterior y tapa desmontable con tubo guía. Exportan dos STL y guía. La abertura inicial es Ø22 mm y se ajusta de 8 a 30 mm; el cuerpo mide de 30 a 250 mm y debe superar la abertura en al menos 8 mm.
+
+## Detalle y vista previa
+
+Borrador, Equilibrado, Alto y Muy alto usan 80, 160, 256 y 384 puntos. Ultra usa 448 para paneles y 640 para esferas, adaptándose al alternar variantes. En una esfera de Ø80 mm, Ultra aproxima 0,20 mm entre muestras en ambos sentidos. Los archivos son más pesados y el resultado sigue dependiendo de la foto y la impresión.
+
+La misma malla alimenta la vista y el STL. Un recálculo fallido conserva la última vista válida y bloquea la descarga; cerrar el toast no habilita una malla desactualizada. La vista iluminada es orientativa. La guía de la esfera incluye las indicaciones de iluminación, montaje y sujeción.

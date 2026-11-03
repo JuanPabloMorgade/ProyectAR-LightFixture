@@ -25,4 +25,5 @@ export {
   TableCell,
 } from "./table";
 export { SegmentedControl } from "./segmented-control";
+export { SavedDesigns } from "./saved-designs";
 export { Toast, ToastViewport, type ToastProps, type ToastVariant } from "./toast";

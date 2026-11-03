@@ -17,6 +17,7 @@ import { closed, materialAt } from "./mesh-assertions";
 
 const base = {
   ...defaults,
+  angle: 120,
   resolution: 40,
   housing: { ...defaultHousing, enabled: true },
 };
@@ -46,7 +47,7 @@ test.each([0, 120])(
     );
     expect(materialAt(body, p(0, 0, l.back / 2))).toBe(false);
     expect(materialAt(body, p(0, -l.outerY + l.wall / 2, l.back + 6))).toBe(
-      false,
+      true,
     );
     expect(materialAt(body, p(8, -l.outerY + l.wall / 2, l.back + 6))).toBe(
       true,
@@ -54,6 +55,27 @@ test.each([0, 120])(
     expect(materialAt(bezel, p(0, 0, l.front + 1))).toBe(false);
     expect(materialAt(bezel, p(0, l.halfHeight - 1, l.front + 1))).toBe(true);
     expect(materialAt(lid, p(0, 0, l.back - 1))).toBe(true);
+    const wireY = -l.innerY + 10;
+    // The rear passage is open through the full lid thickness, with material
+    // at the old square's corners and intact top/bottom walls.
+    for (const depth of [l.back - l.wall + 0.1, l.back - 0.1]) {
+      const z = p(0, wireY, depth)[2];
+      expect(materialAt(lid, [0, wireY, z])).toBe(false);
+      for (const [x, y] of [
+        [1.8, 0],
+        [0, 1.8],
+        [1.6, 1.6],
+        [2.2, 0],
+      ]) {
+        const u = l.radius ? l.radius * Math.asin(x / (l.radius + depth)) : x;
+        expect(materialAt(lid, p(u, wireY + y, depth))).toBe(
+          Math.hypot(x, y) > 2,
+        );
+      }
+    }
+    expect(materialAt(body, p(0, l.outerY - l.wall / 2, l.back + 6))).toBe(
+      true,
+    );
     // Photo thickness envelope stays clear of both the body and the front skirt.
     for (const u of [-l.halfWidth + 0.1, 0, l.halfWidth - 0.1]) {
       expect(materialAt(body, p(u, 0, s.max / 2))).toBe(false);
@@ -93,6 +115,33 @@ test.each([0.1, 0.6])(
     expect(materialAt(body, point)).toBe(false);
   },
 );
+
+test("deep curved lids keep a round rear passage and a closed mesh", () => {
+  const s = {
+    ...base,
+    width: 190,
+    angle: 120,
+    housing: { ...base.housing, depth: 80 },
+  };
+  const l = housingLayout(s),
+    lid = createHousingParts(s)[2];
+  closed(lid);
+  closed(housingPrintMesh(lid, s));
+  const y = -l.innerY + 10;
+  for (const depth of [l.back - l.wall + 0.1, l.back - 0.1])
+    for (const [x, dy] of [
+      [0, 0],
+      [1.8, 0],
+      [0, 1.8],
+      [1.6, 1.6],
+      [2.2, 0],
+    ]) {
+      const u = l.radius * Math.asin(x / (l.radius + depth));
+      expect(materialAt(lid, housingPoint(u, y + dy, depth, l.radius))).toBe(
+        Math.hypot(x, dy) > 2,
+      );
+    }
+});
 
 test("legacy panel-only and semicircle settings keep their original single panel", () => {
   expect(createHousingParts(defaults)).toEqual([]);
@@ -164,6 +213,9 @@ test.each([true, false])(
     }
     expect(decoder.decode(files[4].data)).toContain(
       "se retira para acceder a la luz",
+    );
+    expect(decoder.decode(files[4].data)).toContain(
+      "agujero circular de Ø4 mm",
     );
     if (printStand) {
       const stl = new DataView(
