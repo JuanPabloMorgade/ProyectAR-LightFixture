@@ -5,6 +5,7 @@ import { hasPrintStand } from "./print-stand";
 import { sphereGrid } from "./sphere";
 import { SPHERE_LED_GUIDANCE } from "./sphere-export";
 import { Disclosure } from "./studio-controls";
+import { MODEL_MARK } from "@/lib/model-mark";
 
 export function PrintingGuide({
   settings,
@@ -154,6 +155,12 @@ export function PrintingGuide({
             <dd>STL binario · milímetros</dd>
           </div>
         </dl>
+        <p>
+          Marca de origen: {MODEL_MARK}.{" "}
+          {sphere
+            ? "Grabada en el hombro superior, fuera de la foto."
+            : "En relieve detrás de la foto; agrega hasta 0,24 mm al espesor local. El marco y la tapa llevan la marca grabada en el dorso."}
+        </p>
         {sphere ? (
           <>
             <p>

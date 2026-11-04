@@ -12,6 +12,8 @@ npm run build
 
 `npm run test:watch` ejecuta Vitest durante la edición.
 
+Vitest limita la ejecución a dos workers para evitar competencia entre pruebas de geometría y editores que generan mallas grandes. Las comprobaciones exhaustivas de colisión entre tapa y esfera disponen de 20 segundos por caso; revisan todos los vértices también con la geometría de la marca.
+
 `npm run typecheck` también rechaza imports, variables locales y parámetros sin uso mediante `noUnusedLocals` y `noUnusedParameters` en `tsconfig.json`.
 
 Para revisar Cuadros de Sombra por área:
@@ -22,6 +24,8 @@ npx vitest run tests/assembly-guide.test.tsx tests/shadow-editor.test.tsx
 ```
 
 ## Cobertura automática
+
+`tests/model-mark.test.ts` verifica **©Generado en ProyectAR** en la geometría de cuadros, paneles, marcos y esferas: orientación, escala, relieve, grabado superficial, espesor mínimo y conservación en el STL. Ver [marca en los modelos](components/model-mark.md).
 
 | Archivo | Comportamiento verificado |
 | --- | --- |
@@ -82,6 +86,10 @@ Abrir `/lamparas` en escritorio y a 390 × 844:
 7. **Estudio y ayuda contextual:** comprobar el orden variante → foto → ajustes. Cambiar las tarjetas con flechas del teclado. Abrir y cerrar Ajustes avanzados sin perder valores; la descarga debe preceder a las guías y la seguridad de esferas quedar visible. Cargar una panorámica, una foto común y una vertical; los avisos no bloquean. Revisar la guía visual en escritorio y móvil, cierre con Escape y retorno del foco. Probar anchos de 390, 768, 1024 y 1440 px.
 8. **Foto centrada en esferas:** con fotos cuadradas, verticales y panorámicas, alternar Cómo aplicar la foto. Conservar proporción debe mostrar la foto completa al frente y dejar liso el resto, sin repetición. Guardar, abrir, exportar/importar JSON y alternar variantes debe conservar el modo. Los proyectos anteriores sin la propiedad siguen cubriendo los 360°. Revisar también el STL y la guía del ZIP.
 9. **Estiramiento horizontal:** probar 0, 1, 25, 50 y 75 %. Solo debe cambiar el ancho, sin recortar la foto ni modificar la altura, el interior, el cuello o la tapa. El ancho se limita a 360°. Guardar y reabrir a +75 %; alternar variantes y comprobar que conserva el valor. Volver a 0 % debe recuperar la proporción original. El test del editor verifica el máximo del control y la persistencia de +75 %.
+
+## Revisión de la marca de origen
+
+En ambos editores, girar los modelos para leer **©Generado en ProyectAR** desde la cara exterior indicada en [marca en los modelos](components/model-mark.md). Revisar base y tapa electrónica; panel plano y curvo; marco, tapa de caja plana y curva; y hombro superior de la esfera con y sin tapa. Repetir con medidas pequeñas, detalle bajo y Ultra. Descargar los STL individuales y ZIP, abrirlos en un laminador y comprobar texto legible sin espejo, grabados de 0,24 mm y relieve posterior de hasta 0,24 mm en los paneles. Inspeccionar también el soporte removible, la salida de cable, el agujero central y los encastres.
 
 ## Límites de la verificación
 

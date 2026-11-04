@@ -18,7 +18,7 @@ export function meshAxes(
   return axis(values);
 }
 const inside = (b: Bounds, x: number, y: number, z: number) =>
-  x > b[0] && x < b[1] && y > b[2] && y < b[3] && z > b[4] && z < b[5];
+  z > b[4] && z < b[5] && x > b[0] && x < b[1] && y > b[2] && y < b[3];
 
 /** Exact rectilinear union/difference. Shared grid eliminates internal faces and T-junctions. */
 export function solidMesh(

@@ -8,6 +8,9 @@ export default defineConfig({
     },
   },
   test: {
+    // Geometry and jsdom editors both construct large meshes. Bound contention
+    // so exhaustive collision checks remain reliable on ordinary workstations.
+    maxWorkers: 2,
     environment: "node",
     include: ["tests/**/*.test.{js,mjs,ts,tsx}"],
   },

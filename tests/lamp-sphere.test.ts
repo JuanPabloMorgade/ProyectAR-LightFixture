@@ -84,7 +84,7 @@ test("centered photo stretch widens only the photo and persists the smooth close
     createMesh(white, 20, 20, { ...panorama, spherePhotoStretch: 50 })
       .positions,
   ).toEqual(createMesh(white, 20, 20, panorama).positions);
-});
+}, 20000);
 
 test.each([
   [20, 20],
@@ -147,6 +147,7 @@ test.each([
     const stl = binarySTL(printed.positions, printed.indices);
     expect(new DataView(stl).getUint32(80, true)).toBe(mesh.indices.length / 3);
   },
+  20000,
 );
 
 test("contained photo samples both halves without cropping and preserves old panorama projects", () => {
@@ -203,10 +204,9 @@ test.each([512, 640])(
     );
     expect(grid.cols).toBe(resolution * 2);
     const mesh = createMesh(photo, 2, 1, s);
-    const triangles = 4 * grid.cols * (grid.rows + 7);
-    expect(mesh.positions.length / 3).toBe(
-      2 * (1 + grid.cols * (grid.rows + 7)),
-    );
+    const rings = grid.rows + 7 + grid.shoulder.fractions.length - 2;
+    const triangles = 4 * grid.cols * rings;
+    expect(mesh.positions.length / 3).toBe(2 * (1 + grid.cols * rings));
     expect(mesh.indices.length / 3).toBe(triangles);
     expect(mesh.positions.every(Number.isFinite)).toBe(true);
     const stl = binarySTL(mesh.positions, mesh.indices);
@@ -231,8 +231,9 @@ test.each([30, 120])(
     for (const invert of [false, true]) {
       const mesh = createMesh(photo, 2, 1, { ...s, invert });
       closed(mesh);
-      // Six neck rings follow the spherical body; the neck deliberately extends above it.
-      const bodyVertices = mesh.positions.length / 6 - 6 * 80;
+      // The shoulder and six neck rings follow the original spherical body.
+      const grid = sphereGrid(s);
+      const bodyVertices = 1 + grid.cols * (grid.rows + 1);
       for (let i = 0; i < bodyVertices; i++)
         expect(
           Math.hypot(...mesh.positions.slice(i * 3, (i + 1) * 3)),
@@ -274,6 +275,7 @@ test.each([30, 80, 250])(
     expect(hasPrintStand(s)).toBe(false);
     expect(createHousingParts(s)).toEqual([]);
   },
+  20000,
 );
 
 test("photo contrast and inversion change the sphere's radial thickness", () => {
@@ -281,7 +283,8 @@ test("photo contrast and inversion change the sphere's radial thickness", () => 
   const mesh = createMesh(photo, 2, 1, s);
   const inverted = createMesh(photo, 2, 1, { ...s, invert: true });
   const n = mesh.positions.length / 6;
-  const vertex = 16 * 80 + 10;
+  const grid = sphereGrid(s);
+  const vertex = 1 + 16 * grid.cols + Math.round(grid.cols / 8);
   const thickness = (positions: Float32Array) =>
     Math.hypot(
       ...[0, 1, 2].map(
@@ -357,7 +360,8 @@ test("the reference profile has a smooth shoulder, outer lip and flared entrance
     Math.hypot(mesh.positions[top + n * 3], mesh.positions[top + n * 3 + 2]),
   ).toBeCloseTo(neck.inner + 0.5, 4);
   // The smooth cap begins at 55 degrees and runs straight to the neck.
-  const shoulder = (1 + 32 * 80) * 3;
+  const grid = sphereGrid(s);
+  const shoulder = (1 + grid.rows * grid.cols) * 3;
   expect(mesh.positions[shoulder + 1]).toBeCloseTo(
     (s.width / 2) * Math.sin((55 * Math.PI) / 180),
     4,

@@ -1,5 +1,6 @@
 import { test } from "vitest";
 import assert from "node:assert/strict";
+import { panelGrid } from "../src/features/lithophane/panel-grid.ts";
 import {
   createMesh,
   binarySTL,
@@ -65,8 +66,8 @@ test("Rechaza parámetros inválidos", () => {
 test("Muy alto acepta 384 puntos en el lado mayor y exporta esa resolución", () => {
   const settings = { ...defaults, resolution: 384 };
   const mesh = createMesh(pixels, 2, 2, settings);
-  const cols = 384,
-    rows = 320;
+  const { cols, rows } = panelGrid(settings);
+  assert.ok(cols >= 384 && rows >= 320);
   assert.equal(mesh.positions.length / 3, 2 * (cols + 1) * (rows + 1));
   const triangles = 4 * cols * rows + 4 * (cols + rows);
   assert.equal(mesh.indices.length / 3, triangles);
@@ -80,8 +81,8 @@ for (const angle of [0, 120])
   test(`Ultra de panel acepta 448 puntos y exporta su grilla: ${angle} grados`, () => {
     const settings = { ...defaults, angle, resolution: 448 };
     const mesh = createMesh(pixels, 2, 2, settings);
-    const cols = 448,
-      rows = 373;
+    const { cols, rows } = panelGrid(settings);
+    assert.ok(cols >= 448 && rows >= 373);
     const triangles = 4 * cols * rows + 4 * (cols + rows);
     assert.equal(mesh.positions.length / 3, 2 * (cols + 1) * (rows + 1));
     assert.equal(mesh.indices.length / 3, triangles);

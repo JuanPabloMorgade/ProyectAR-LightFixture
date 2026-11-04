@@ -29,6 +29,7 @@ export function closed(mesh: {
   const edges = new Map<string, { count: number; orientation: number }>();
   const adjacent = new Map<string, Set<string>>();
   let volume = 0;
+  const degenerate: number[] = [];
   const vertex = (i: number) =>
     Array.from(mesh.positions.slice(i * 3, i * 3 + 3));
   const key = (p: number[]) => p.map((v) => v.toFixed(4)).join(",");
@@ -43,10 +44,11 @@ export function closed(mesh: {
       u[2] * v[0] - u[0] * v[2],
       u[0] * v[1] - u[1] * v[0],
     ];
-    expect(
-      cross.reduce((sum, n) => sum + n * n, 0),
-      "nondegenerate triangle",
-    ).toBeGreaterThan(1e-14);
+    if (
+      !(cross.reduce((sum, n) => sum + n * n, 0) > 1e-14) &&
+      degenerate.length < 10
+    )
+      degenerate.push(i / 3);
     volume +=
       (a[0] * (b[1] * c[2] - b[2] * c[1]) +
         a[1] * (b[2] * c[0] - b[0] * c[2]) +
@@ -70,10 +72,18 @@ export function closed(mesh: {
       adjacent.get(y)!.add(x);
     }
   }
-  for (const [key, e] of edges) {
-    expect(e.count, `closed edge ${key}`).toBe(2);
-    expect(e.orientation, `winding ${key}`).toBe(0);
-  }
+  // Check every triangle and edge, but report a bounded sample in one assertion.
+  // Per-edge matcher overhead dominates detailed meshes with engraved lettering.
+  expect(degenerate, "nondegenerate triangles (first 10 failures)").toEqual([]);
+  const invalidEdges: { key: string; count: number; orientation: number }[] =
+    [];
+  for (const [key, e] of edges)
+    if ((e.count !== 2 || e.orientation !== 0) && invalidEdges.length < 10)
+      invalidEdges.push({ key, ...e });
+  expect(
+    invalidEdges,
+    "closed edges and coherent winding (first 10 failures)",
+  ).toEqual([]);
   expect(volume).toBeGreaterThan(0);
   const todo = [adjacent.keys().next().value!],
     seen = new Set<string>();

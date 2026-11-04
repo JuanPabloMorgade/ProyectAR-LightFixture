@@ -1,6 +1,7 @@
 import { IMAGE_SIZE } from "./engine";
 import { gridSolidMesh, meshAxes } from "./solid-mesh";
 import { roundOpening, roundOpeningAxes } from "./round-opening";
+import { MARK_DEPTH, modelMark } from "@/lib/model-mark";
 
 /** Rear electronics lid: optional artwork faces the open front; its skirt faces the wall. */
 export function wallRearMesh(
@@ -20,7 +21,13 @@ export function wallRearMesh(
     hole / 2 + 1,
     hole / 2 + 2,
   ]);
-  const axis = (span: number, extra: number[]) =>
+  const mark = modelMark(
+    width / 2,
+    (5 + height / 2 - hole / 2 - 3) / 2,
+    width - 12,
+    Math.max(1, height / 2 - hole / 2 - 8),
+  );
+  const axis = (span: number, extra: number[], required: number[]) =>
     meshAxes(
       [
         0,
@@ -31,6 +38,7 @@ export function wallRearMesh(
         span - 4.9,
         span / 2 - hole / 2,
         span / 2 + hole / 2,
+        ...required,
       ],
       [
         ...extra,
@@ -40,8 +48,16 @@ export function wallRearMesh(
       ],
       0.12,
     ).map((v) => +v.toFixed(5));
-  const xs = axis(width, circle.xs),
-    ys = axis(height, circle.ys);
+  const xs = axis(
+      width,
+      circle.xs,
+      mark.cells.flatMap((c) => c.slice(0, 2)),
+    ),
+    ys = axis(
+      height,
+      circle.ys,
+      mark.cells.flatMap((c) => c.slice(2, 4)),
+    );
   const columns = xs.length - 1,
     rows = ys.length - 1;
   const heights = new Float64Array(columns * rows);
@@ -111,7 +127,7 @@ export function wallRearMesh(
   const mesh = gridSolidMesh(
     xs,
     ys,
-    [-3, 0, 2, ...(design ? [2 + relief] : [])],
+    [-3, 0, MARK_DEPTH, 2, ...(design ? [2 + relief] : [])],
     (x, y, z) => {
       const top = heights[my.get(y)! * columns + mx.get(x)!];
       if (!top) return false;
@@ -121,17 +137,19 @@ export function wallRearMesh(
         y > 3.4 &&
         y < height - 3.4 &&
         !(x > 4.9 && x < width - 4.9 && y > 4.9 && y < height - 4.9);
-      return z < top && (z > 0 || skirt);
+      return (
+        z < top &&
+        (z > 0 || skirt) &&
+        !(z > 0 && z < MARK_DEPTH && mark.contains(x, y))
+      );
     },
   );
-  // Positive print Z, with the skirt upward. Assembly reflects this back into place.
+  // Rotate about Y for positive print Z and an upward skirt. A Z-only reflection
+  // would mirror both the lettering and any asymmetric front artwork in the STL.
   const top = 2 + (design ? relief : 0);
-  for (let i = 2; i < mesh.positions.length; i += 3)
-    mesh.positions[i] = top - mesh.positions[i];
-  for (let i = 0; i < mesh.indices.length; i += 3)
-    [mesh.indices[i + 1], mesh.indices[i + 2]] = [
-      mesh.indices[i + 2],
-      mesh.indices[i + 1],
-    ];
+  for (let i = 0; i < mesh.positions.length; i += 3) {
+    mesh.positions[i] = width - mesh.positions[i];
+    mesh.positions[i + 2] = top - mesh.positions[i + 2];
+  }
   return roundOpening(mesh, width / 2, height / 2, hole / 2);
 }
