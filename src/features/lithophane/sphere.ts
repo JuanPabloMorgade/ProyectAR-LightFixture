@@ -1,5 +1,6 @@
 import type { Settings } from "./mesh";
 import type { Mesh } from "../shadowbox/solid-mesh";
+import { MARK_DEPTH, modelMark } from "@/lib/model-mark";
 
 export const SPHERE_NECK_HEIGHT = 7;
 export const DEFAULT_OPENING_DIAMETER = 22;
@@ -38,8 +39,8 @@ export function spherePhotoBounds(
   };
 }
 
-/** Ultra balances sampling along meridians and around the equator. Previous
- * levels retain their grid so saved projects keep the same mesh density.
+/** Ultra balances photo sampling along meridians and around the equator.
+ * Lettering also sets a minimum angular density independent of photo detail.
  */
 export function sphereGrid(s: Settings) {
   const radius = s.width / 2;
@@ -48,19 +49,51 @@ export function sphereGrid(s: Settings) {
     (55 * Math.PI) / 180,
     Math.acos(sphereNeck(s).outer / radius) - Math.PI / 18,
   );
-  const cols = Math.max(64, s.resolution * 2);
+  const mark = sphereMark(s, top);
+  const cols = Math.max(
+    64,
+    s.resolution * 2,
+    Math.ceil((2 * Math.PI * mark.midRadius) / (mark.lettering.cell * 0.45)),
+  );
   const rows =
     s.resolution > 384
-      ? Math.ceil((cols * (top - bottom)) / (2 * Math.PI))
+      ? Math.ceil((s.resolution * 2 * (top - bottom)) / (2 * Math.PI))
       : Math.max(32, Math.round(s.resolution / 2));
   return {
     cols,
     rows,
     bottom,
     top,
+    shoulder: mark,
     horizontalStep: (Math.PI * s.width) / cols,
     verticalStep: (radius * (top - bottom)) / rows,
   };
+}
+
+/** Text follows the smooth conical shoulder, clear of both photo and cap seat. */
+function sphereMark(s: Settings, top: number) {
+  const radius = s.width / 2,
+    neck = sphereNeck(s);
+  const radial = radius * Math.cos(top),
+    height = radius * Math.sin(top);
+  const dy = sphereNeckY(s) - height,
+    dr = neck.outer - radial;
+  const length = Math.hypot(dr, dy),
+    midRadius = (radial + neck.outer) / 2;
+  const lettering = modelMark(
+    0,
+    length / 2,
+    Math.PI * midRadius * 1.5,
+    Math.min(4.3, length * 0.8),
+    false,
+    false,
+  );
+  const fractions = [
+    0,
+    ...lettering.ys.map((y) => y / length).sort((a, b) => a - b),
+    1,
+  ];
+  return { radial, height, dr, dy, length, midRadius, lettering, fractions };
 }
 
 /** Y-up assembly → Z-up print, with the flat closed bottom resting at Z=0. */
@@ -85,7 +118,7 @@ export function createSphere(
 ): Mesh {
   const radius = s.width / 2;
   const neck = sphereNeck(s);
-  const { cols, rows, bottom, top } = sphereGrid(s);
+  const { cols, rows, bottom, top, shoulder } = sphereGrid(s);
   const photoLimit = spherePhotoLatitude(s);
   const contain = s.spherePhotoFit === "contain";
   const bounds = spherePhotoBounds(s, imageWidth, imageHeight);
@@ -103,7 +136,8 @@ export function createSphere(
     [6.5, SPHERE_NECK_LIP, 0],
     [SPHERE_NECK_HEIGHT, 0.5 * SPHERE_NECK_LIP, 0.5],
   ];
-  const rings = rows + 1 + neckProfile.length;
+  const shoulderRows = shoulder.fractions.slice(1, -1);
+  const rings = rows + 1 + shoulderRows.length + neckProfile.length;
   const n = 1 + cols * rings;
   const positions = new Float32Array(n * 6);
   // Allocate once: Ultra otherwise creates millions of boxed index numbers
@@ -190,8 +224,15 @@ export function createSphere(
       );
       for (let layer = 0; layer < 2; layer++) {
         const r = layer ? innerRadius : innerRadius + thickness;
-        const profile = y > rows ? neckProfile[y - rows - 1] : undefined;
-        const radial =
+        const shoulderT =
+          y > rows && y <= rows + shoulderRows.length
+            ? shoulderRows[y - rows - 1]
+            : undefined;
+        const profile =
+          y > rows + shoulderRows.length
+            ? neckProfile[y - rows - shoulderRows.length - 1]
+            : undefined;
+        let radial =
           y === 0
             ? 3
             : profile
@@ -199,12 +240,30 @@ export function createSphere(
                 ? neck.inner + profile[2]
                 : neck.outer + profile[1]
               : r * Math.cos(latitude);
-        const height =
+        let height =
           y === 0
             ? bottomY + (layer ? floor : 0)
             : profile
               ? neckY + profile[0]
               : r * Math.sin(latitude);
+        if (shoulderT !== undefined) {
+          const bodyRadial = r * Math.cos(top),
+            bodyHeight = r * Math.sin(top);
+          radial =
+            bodyRadial +
+            shoulderT * ((layer ? neck.inner : neck.outer) - bodyRadial);
+          height = bodyHeight + shoulderT * (neckY - bodyHeight);
+          if (!layer) {
+            const depth =
+              MARK_DEPTH *
+              shoulder.lettering.sample(
+                theta * shoulder.midRadius,
+                shoulderT * shoulder.length,
+              );
+            radial -= (depth * shoulder.dy) / shoulder.length;
+            height += (depth * shoulder.dr) / shoulder.length;
+          }
+        }
         positions.set(
           [radial * Math.sin(theta), height, radial * Math.cos(theta)],
           (1 + y * cols + x + layer * n) * 3,

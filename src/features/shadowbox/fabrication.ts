@@ -716,11 +716,11 @@ export function assemblyMesh(
       i,
     );
   const indices = part.indices.slice();
-  // The lid faces inward; reflection reverses winding as well as its Z axis.
+  // Reflections reverse winding; the wall-mount separator uses a rigid rotation.
   if (
     f &&
     (isWallMount(f)
-      ? ["separator", "bottom", "right"].includes(part.id)
+      ? ["bottom", "right"].includes(part.id)
       : ["front", "post", "head", "face"].includes(part.id))
   )
     for (let i = 0; i < indices.length; i += 3)

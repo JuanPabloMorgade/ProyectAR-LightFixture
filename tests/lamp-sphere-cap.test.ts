@@ -57,6 +57,8 @@ test.each([8, 22, 30])(
         materialAt(sphere, Array.from(cap.positions.slice(i, i + 3))),
       ).toBe(false);
   },
+  // Every cap vertex is tested against the complete, lettered sphere mesh.
+  20000,
 );
 
 test.each([
@@ -83,4 +85,5 @@ test.each([
         materialAt(sphere, Array.from(cap.positions.slice(i, i + 3))),
       ).toBe(false);
   },
+  20000,
 );

@@ -1,4 +1,6 @@
 import { validateHousing, type HousingSettings } from "./housing-config";
+import { MARK_DEPTH } from "@/lib/model-mark";
+import { panelGrid } from "./panel-grid";
 import {
   createSphere,
   DEFAULT_OPENING_DIAMETER,
@@ -121,14 +123,7 @@ export function createMesh(
     throw new Error("La imagen no es válida.");
   if (s.shape === "sphere")
     return createSphere(pixels, imageWidth, imageHeight, s);
-  const cols = Math.max(
-    2,
-    Math.round((s.resolution * s.width) / Math.max(s.width, s.height)),
-  );
-  const rows = Math.max(
-    2,
-    Math.round((s.resolution * s.height) / Math.max(s.width, s.height)),
-  );
+  const { cols, rows, xs, ys, mark } = panelGrid(s);
   const n = (cols + 1) * (rows + 1),
     positions = new Float32Array(n * 6),
     indices: number[] = [];
@@ -138,11 +133,11 @@ export function createMesh(
     for (let x = 0; x <= cols; x++) {
       const px = Math.min(
           imageWidth - 1,
-          Math.round((x / cols) * (imageWidth - 1)),
+          Math.round((xs[x] / s.width + 0.5) * (imageWidth - 1)),
         ),
         py = Math.min(
           imageHeight - 1,
-          Math.round((1 - y / rows) * (imageHeight - 1)),
+          Math.round((0.5 - ys[y] / s.height) * (imageHeight - 1)),
         );
       const pi = (py * imageWidth + px) * 4,
         alpha = pixels[pi + 3] / 255;
@@ -158,14 +153,14 @@ export function createMesh(
       if (s.invert) l = 1 - l;
       const t = s.min + (1 - l) * (s.max - s.min),
         i = y * (cols + 1) + x,
-        theta = (x / cols - 0.5) * radians;
+        theta = (xs[x] / s.width) * radians;
       for (let layer = 0; layer < 2; layer++) {
-        const depth = layer === 0 ? t : 0,
+        const depth = layer === 0 ? t : -MARK_DEPTH * mark.sample(xs[x], ys[y]),
           offset = (i + layer * n) * 3;
         positions[offset] = radians
           ? (radius + depth) * Math.sin(theta)
-          : (x / cols - 0.5) * s.width;
-        positions[offset + 1] = (y / rows - 0.5) * s.height;
+          : xs[x];
+        positions[offset + 1] = ys[y];
         positions[offset + 2] = radians
           ? (radius + depth) * Math.cos(theta) - radius
           : depth;

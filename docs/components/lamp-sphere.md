@@ -26,7 +26,7 @@ Ver tapa separada eleva la pieza en la vista para inspeccionar el tubo; el STL c
 
 ## Detalle y archivos
 
-Ultra usa 512 puntos de resolución: 1024 muestras alrededor y filas calculadas para equilibrar el paso vertical con el del ecuador. En Ø80 mm aproxima 0,25 mm en ambos sentidos. Los niveles anteriores conservan sus grillas. La vista y el STL usan la misma malla, con índices preasignados para reducir el consumo temporal de memoria.
+Ultra usa 512 puntos de resolución: como mínimo 1024 muestras alrededor y filas calculadas para equilibrar el paso vertical con el del ecuador. En Ø80 mm aproxima 0,25 mm en ambos sentidos. La marca **©Generado en ProyectAR** se graba sobre el hombro superior liso: agrega filas allí y establece una densidad angular mínima para resolver las letras también en niveles bajos. La foto conserva su resolución vertical; el interior, cuello y encastre se mantienen. La vista y el STL usan la misma malla, con índices preasignados para reducir el consumo temporal de memoria. Ver [marca en los modelos](model-mark.md).
 
 El ZIP contiene `01-esfera.stl`, `02-tapa.stl` —con el nombre del proyecto como prefijo— y `Guia-de-armado.txt`. La esfera se orienta con su base en Z=0; la tapa apoya su cara exterior plana, con tubo y faldón hacia arriba. No usa soporte removible de panel ni caja trasera. Brim y soportes de la esfera se preparan en el laminador.
 

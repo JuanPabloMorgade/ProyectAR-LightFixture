@@ -18,6 +18,7 @@ import {
   headDockInset,
 } from "./head-mount";
 import { solidMesh, type Bounds, type Mesh } from "./solid-mesh";
+import { MARK_DEPTH, modelMark } from "@/lib/model-mark";
 import {
   wallSeatTabs,
   wallSeatFit,
@@ -417,6 +418,16 @@ export function wallMountParts(
       zs: isModular(f) ? [8 - SOCKET_CHAMFER] : [],
       minimumGap: 0.12,
     };
+    const markBottom = h / 2 + l.socketOuter / 2 + 0.5;
+    const markTop = l.hookBottom - 0.5;
+    cuts.push(
+      ...modelMark(
+        w / 2,
+        (markBottom + markTop) / 2,
+        w - 16,
+        Math.max(1, markTop - markBottom),
+      ).cuts(0, MARK_DEPTH),
+    );
     const rawBase = solidMesh(boxes, cuts, undefined, 0, extraAxes);
     base = isModular(f) ? roundOpening(rawBase, w / 2, h / 2, radius) : rawBase;
     if (isModular(f))
@@ -551,7 +562,7 @@ export function wallMountPoint(
       return [(x - l.width / 2) / 10, (y - l.height / 2) / 10, z / 10];
     case "separator":
       return [
-        (x - l.separatorWidth / 2) / 10,
+        (l.separatorWidth / 2 - x) / 10,
         (y - l.separatorHeight / 2) / 10,
         (l.depth +
           (f.enclosure?.front === "design" ? (f.enclosure.relief ?? 0.6) : 0) -

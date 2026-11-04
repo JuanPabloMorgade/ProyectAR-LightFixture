@@ -30,6 +30,8 @@ Esta carpeta describe las rutas y los componentes principales de ProyectAR segú
 
 ## Convenciones generales
 
+La [marca en los modelos imprimibles](components/model-mark.md) documenta **©Generado en ProyectAR**, sus ubicaciones y su incorporación a visor y STL.
+
 - `src/app/layout.tsx` define el documento raíz, los metadatos y `src/app/globals.css`. Cada página usa `Shell` para la estructura visible compartida.
 - La tipografía global es Inter Variable, cargada desde `src/app/layout.tsx` con `next/font` y aplicada en `src/app/globals.css`.
 - Los editores son componentes cliente. El procesamiento de imágenes, la generación de mallas y el almacenamiento de proyectos se hacen en el navegador.

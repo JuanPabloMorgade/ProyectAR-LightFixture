@@ -1,27 +1,23 @@
 import { validateSettings, type Settings } from "./mesh";
 import type { Mesh } from "../shadowbox/solid-mesh";
+import { panelGrid } from "./panel-grid";
 
 export const STAND_LIFT = 3;
 export const STAND_BASE = 1.2;
 export const STAND_GAP = 0.2;
 export const STAND_CONTACT = 0.8;
 export const STAND_MARGIN = 4;
-export const hasPrintStand = (s: Settings) => s.shape !== "sphere" && s.printStand !== false;
+export const hasPrintStand = (s: Settings) =>
+  s.shape !== "sphere" && s.printStand !== false;
 type Point = [number, number, number];
 
 /** Prepared from createMesh's indexed grid; all photo faces retain their geometry.
  * Only the bottom boundary is subdivided to join short sacrificial contacts. */
 export function createPrintStand(panel: Mesh, s: Settings) {
   validateSettings(s);
-  if (s.shape === "sphere") throw new Error("El soporte removible es para paneles.");
-  const cols = Math.max(
-    2,
-    Math.round((s.resolution * s.width) / Math.max(s.width, s.height)),
-  );
-  const rows = Math.max(
-    2,
-    Math.round((s.resolution * s.height) / Math.max(s.width, s.height)),
-  );
+  if (s.shape === "sphere")
+    throw new Error("El soporte removible es para paneles.");
+  const { cols, rows, xs } = panelGrid(s);
   const n = (cols + 1) * (rows + 1);
   if (
     panel.positions.length !== n * 6 ||
@@ -35,10 +31,16 @@ export function createPrintStand(panel: Mesh, s: Settings) {
   const plate = bed + STAND_BASE,
     rail = bottom - STAND_GAP;
   const count = Math.max(2, Math.ceil(s.width / 35));
+  const columnAt = (u: number) => {
+    const k = Math.min(cols - 1, Math.max(0, xs.findIndex((x) => x > u) - 1));
+    return k + (u - xs[k]) / (xs[k + 1] - xs[k]);
+  };
   const contacts = Array.from({ length: count }, (_, i) => {
-    const center = (cols * (i + 0.5)) / count,
-      half = (STAND_CONTACT * cols) / s.width / 2;
-    return [center - half, center + half];
+    const center = s.width * ((i + 0.5) / count - 0.5);
+    return [
+      columnAt(center - STAND_CONTACT / 2),
+      columnAt(center + STAND_CONTACT / 2),
+    ];
   });
   const values = [
     ...Array.from({ length: cols + 1 }, (_, i) => i),
@@ -78,18 +80,14 @@ export function createPrintStand(panel: Mesh, s: Settings) {
       const k = Math.min(cols - 1, Math.floor(v)),
         fraction = v - k;
       const at = (column: number): Point => {
-        const theta = (column / cols - 0.5) * radians;
+        const theta = (xs[column] / s.width) * radians;
         return radius
           ? [
               Math.fround((radius + d) * Math.sin(theta)),
               bottom,
               Math.fround((radius + d) * Math.cos(theta) - radius),
             ]
-          : [
-              Math.fround((column / cols - 0.5) * s.width),
-              bottom,
-              Math.fround(d),
-            ];
+          : [Math.fround(xs[column]), bottom, Math.fround(d)];
       };
       const a = at(k),
         b = at(k + 1);

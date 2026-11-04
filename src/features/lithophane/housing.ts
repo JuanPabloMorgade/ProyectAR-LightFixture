@@ -2,6 +2,7 @@ import { solidMesh, type Bounds, type Mesh } from "../shadowbox/solid-mesh";
 import { validateSettings, type Settings } from "./mesh";
 import { defaultHousing, hasHousing } from "./housing-config";
 import { roundOpening, roundOpeningAxes } from "../shadowbox/round-opening";
+import { MARK_DEPTH, modelMark } from "@/lib/model-mark";
 
 export type HousingPart = Mesh & {
   id: "body" | "bezel" | "lid";
@@ -142,24 +143,41 @@ export function createHousingParts(s: Settings): HousingPart[] {
     ),
   ];
   const body = mesh(bodyBoxes);
-  const bezel = mesh([
-    ...ring(
-      l.outerX,
-      l.outerY,
-      l.halfWidth - OVERLAP,
-      l.halfHeight - OVERLAP,
-      l.front,
-      l.front + w,
-    ),
-    ...ring(
-      l.innerX - c / 2,
-      l.innerY - c / 2,
-      l.innerX - c / 2 - SKIRT,
-      l.innerY - c / 2 - SKIRT,
-      l.front - l.frontEngagement,
-      l.front,
-    ),
-  ]);
+  // Rear outer band is clear of the photo and the guiding skirt.
+  const bezelMark = modelMark(
+    0,
+    (l.innerY + l.outerY) / 2,
+    s.width - 6,
+    w - 0.4,
+  );
+  const bezel = mesh(
+    [
+      ...ring(
+        l.outerX,
+        l.outerY,
+        l.halfWidth - OVERLAP,
+        l.halfHeight - OVERLAP,
+        l.front,
+        l.front + w,
+      ),
+      ...ring(
+        l.innerX - c / 2,
+        l.innerY - c / 2,
+        l.innerX - c / 2 - SKIRT,
+        l.innerY - c / 2 - SKIRT,
+        l.front - l.frontEngagement,
+        l.front,
+      ),
+    ],
+    bezelMark.cuts(l.front, l.front + MARK_DEPTH),
+  );
+  const lidMark = modelMark(
+    l.radius ? -l.innerX / 2 : 0,
+    0,
+    l.radius ? 4 : s.width - 10,
+    l.radius ? s.height - 16 : 4,
+    Boolean(l.radius),
+  );
   const lid = mesh(
     [
       [-l.outerX, l.outerX, -l.outerY, l.outerY, l.back - w, l.back],
@@ -173,6 +191,7 @@ export function createHousingParts(s: Settings): HousingPart[] {
       ),
     ],
     [
+      ...lidMark.cuts(l.back - w, l.back - w + MARK_DEPTH),
       [
         -wireRadius,
         wireRadius,

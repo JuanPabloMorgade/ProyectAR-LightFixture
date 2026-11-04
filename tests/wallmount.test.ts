@@ -494,17 +494,21 @@ test("artwork belongs to the rear lid and never fills the open front; ZIP includ
   closed(front);
   const l = wallMountLayout(s, f);
   const span = Math.min(l.separatorWidth, l.separatorHeight) - 12;
-  const x = l.separatorWidth / 2 - span * 0.2,
+  // A rigid Y rotation puts the skirt upward without mirroring the printed art.
+  const x = l.separatorWidth / 2 + span * 0.2,
     y = l.separatorHeight / 2 + span * 0.1;
   expect(materialAt(rear, [x, y, 0.3])).toBe(true);
   expect(
-    materialAt(rear, [l.separatorWidth / 2 + 25, l.separatorHeight / 2, 0.3]),
+    materialAt(rear, [l.separatorWidth / 2 - 25, l.separatorHeight / 2, 0.3]),
   ).toBe(false);
   expect(
     materialAt(rear, [l.separatorWidth / 2, l.separatorHeight / 2, 1]),
   ).toBe(false);
   expect(fabricationPoint("separator", x, y, 0, s, f)[2] * 10).toBeCloseTo(
     l.depth + f.enclosure.relief!,
+  );
+  expect(fabricationPoint("separator", x, y, 0, s, f)[0] * 10).toBeCloseTo(
+    -span * 0.2,
   );
   const plainFront = fabricationParts(masks, s, led).find(
     (p) => p.id === "front",
