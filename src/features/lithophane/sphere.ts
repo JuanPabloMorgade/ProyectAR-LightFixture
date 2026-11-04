@@ -4,7 +4,9 @@ import type { Mesh } from "../shadowbox/solid-mesh";
 export const SPHERE_NECK_HEIGHT = 7;
 export const DEFAULT_OPENING_DIAMETER = 22;
 export const SPHERE_NECK_LIP = 1;
-export const SPHERE_ULTRA_RESOLUTION = 640;
+export const SPHERE_ULTRA_RESOLUTION = 512;
+/** Upper bound retained to accept projects saved before Ultra changed to 512. */
+export const SPHERE_LEGACY_MAX_RESOLUTION = 640;
 export function sphereNeck(s: Settings) {
   const inner = (s.sphereOpeningDiameter ?? DEFAULT_OPENING_DIAMETER) / 2;
   return { inner, outer: inner + 2 };

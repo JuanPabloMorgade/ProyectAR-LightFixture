@@ -12,7 +12,6 @@ import {
   SPHERE_NECK_HEIGHT,
   DEFAULT_OPENING_DIAMETER,
   sphereGrid,
-  SPHERE_ULTRA_RESOLUTION,
 } from "../src/features/lithophane/sphere";
 import { binarySTL } from "../src/features/lithophane/mesh";
 import { sphereZIP } from "../src/features/lithophane/sphere-export";
@@ -22,28 +21,37 @@ import { closed, materialAt } from "./mesh-assertions";
 
 const photo = new Uint8ClampedArray([0, 0, 0, 255, 255, 255, 255, 255]);
 
-test("Ultra samples an 80 mm sphere near 0.2 mm in both axes and exports the full grid", () => {
-  const s = {
-    ...defaults,
-    shape: "sphere" as const,
-    width: 80,
-    resolution: SPHERE_ULTRA_RESOLUTION,
-  };
-  const grid = sphereGrid(s);
-  expect(grid.horizontalStep).toBeLessThanOrEqual(0.2);
-  expect(grid.verticalStep).toBeLessThanOrEqual(0.2);
-  expect(grid.cols).toBe(1280);
-  const mesh = createMesh(photo, 2, 1, s);
-  const triangles = 4 * grid.cols * (grid.rows + 7);
-  expect(mesh.positions.length / 3).toBe(2 * (1 + grid.cols * (grid.rows + 7)));
-  expect(mesh.indices.length / 3).toBe(triangles);
-  expect(mesh.positions.every(Number.isFinite)).toBe(true);
-  const stl = binarySTL(mesh.positions, mesh.indices);
-  expect(new DataView(stl).getUint32(80, true)).toBe(triangles);
-  expect(stl.byteLength).toBe(84 + triangles * 50);
-  expect(() => validateSettings({ ...s, resolution: 641 })).toThrow();
-  expect(() => validateSettings({ ...s, shape: "panel" })).toThrow();
-});
+test.each([512, 640])(
+  "Detail %s samples an 80 mm sphere evenly in both axes and exports the full grid",
+  (resolution) => {
+    const s = {
+      ...defaults,
+      shape: "sphere" as const,
+      width: 80,
+      resolution,
+    };
+    const grid = sphereGrid(s);
+    expect(grid.horizontalStep).toBeLessThanOrEqual(
+      resolution === 512 ? 0.25 : 0.2,
+    );
+    expect(grid.verticalStep).toBeLessThanOrEqual(
+      resolution === 512 ? 0.25 : 0.2,
+    );
+    expect(grid.cols).toBe(resolution * 2);
+    const mesh = createMesh(photo, 2, 1, s);
+    const triangles = 4 * grid.cols * (grid.rows + 7);
+    expect(mesh.positions.length / 3).toBe(
+      2 * (1 + grid.cols * (grid.rows + 7)),
+    );
+    expect(mesh.indices.length / 3).toBe(triangles);
+    expect(mesh.positions.every(Number.isFinite)).toBe(true);
+    const stl = binarySTL(mesh.positions, mesh.indices);
+    expect(new DataView(stl).getUint32(80, true)).toBe(triangles);
+    expect(stl.byteLength).toBe(84 + triangles * 50);
+    expect(() => validateSettings({ ...s, resolution: 641 })).toThrow();
+    expect(() => validateSettings({ ...s, shape: "panel" })).toThrow();
+  },
+);
 
 test.each([30, 120])(
   "outward relief stays within the %s mm body diameter at extreme thicknesses",

@@ -19,6 +19,6 @@ Las [esferas navideñas](../components/lamp-sphere.md) tienen cuerpo hueco, base
 
 ## Detalle y vista previa
 
-Borrador, Equilibrado, Alto y Muy alto usan 80, 160, 256 y 384 puntos. Ultra usa 448 para paneles y 640 para esferas, adaptándose al alternar variantes. En una esfera de Ø80 mm, Ultra aproxima 0,20 mm entre muestras en ambos sentidos. Los archivos son más pesados y el resultado sigue dependiendo de la foto y la impresión.
+Borrador, Equilibrado, Alto y Muy alto usan 80, 160, 256 y 384 puntos. Ultra usa 448 para paneles y 512 para esferas, adaptándose al alternar variantes. En una esfera de Ø80 mm, Ultra aproxima 0,25 mm entre muestras en ambos sentidos. Los archivos son más pesados y el resultado sigue dependiendo de la foto y la impresión.
 
 La misma malla alimenta la vista y el STL. Un recálculo fallido conserva la última vista válida y bloquea la descarga; cerrar el toast no habilita una malla desactualizada. La vista iluminada es orientativa. La guía de la esfera incluye las indicaciones de iluminación, montaje y sujeción.

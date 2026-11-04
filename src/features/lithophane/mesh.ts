@@ -2,7 +2,7 @@ import { validateHousing, type HousingSettings } from "./housing-config";
 import {
   createSphere,
   DEFAULT_OPENING_DIAMETER,
-  SPHERE_ULTRA_RESOLUTION,
+  SPHERE_LEGACY_MAX_RESOLUTION,
 } from "./sphere";
 
 export const PANEL_ULTRA_RESOLUTION = 448;
@@ -79,7 +79,7 @@ export function validateSettings(s: Settings) {
     s.resolution < 40 ||
     s.resolution >
       (s.shape === "sphere"
-        ? SPHERE_ULTRA_RESOLUTION
+        ? SPHERE_LEGACY_MAX_RESOLUTION
         : PANEL_ULTRA_RESOLUTION) ||
     s.contrast < 0.5 ||
     s.contrast > 2 ||

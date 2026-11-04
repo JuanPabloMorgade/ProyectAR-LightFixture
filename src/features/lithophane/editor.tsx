@@ -255,7 +255,13 @@ export default function LampEditor() {
     try {
       await designs.openSelected(async (p) => {
         await applyPhoto(p.photo);
-        setSettings(p.settings);
+        setSettings({
+          ...p.settings,
+          resolution:
+            p.settings.shape === "sphere"
+              ? Math.min(p.settings.resolution, SPHERE_ULTRA_RESOLUTION)
+              : p.settings.resolution,
+        });
         setName(p.name);
         setNotice(loadedNotice("Diseño"));
       });
@@ -346,7 +352,13 @@ export default function LampEditor() {
                 const p = JSON.parse(await file.text()) as Project;
                 validateProject(p);
                 await applyPhoto(p.photo);
-                setSettings(p.settings);
+                setSettings({
+                  ...p.settings,
+                  resolution:
+                    p.settings.shape === "sphere"
+                      ? Math.min(p.settings.resolution, SPHERE_ULTRA_RESOLUTION)
+                      : p.settings.resolution,
+                });
                 setName(p.name);
                 designs.select("");
                 setNotice(loadedNotice("Diseño"));
@@ -435,7 +447,9 @@ export default function LampEditor() {
                   resolution:
                     s.resolution > 384
                       ? value === "sphere"
-                        ? SPHERE_ULTRA_RESOLUTION
+                        ? s.shape === "sphere"
+                          ? s.resolution
+                          : SPHERE_ULTRA_RESOLUTION
                         : PANEL_ULTRA_RESOLUTION
                       : s.resolution,
                   angle: value === "sphere" ? s.angle : Number(value),
@@ -533,7 +547,7 @@ export default function LampEditor() {
                 value: sphere
                   ? SPHERE_ULTRA_RESOLUTION
                   : PANEL_ULTRA_RESOLUTION,
-                label: sphere ? "Ultra · 640 puntos" : "Ultra · 448 puntos",
+                label: sphere ? "Ultra · 512 puntos" : "Ultra · 448 puntos",
               },
             ]}
           />

@@ -17,7 +17,7 @@ Abrí http://127.0.0.1:3000. Para producción local: `npm run build` y `npm star
 
 - Cuadros de sombra: presets, pincel y borrador, carga de JPG/PNG/WebP/SVG, recorte circular, medidas de caja y luz, proyección estimada, vista 3D y cuatro patrones SVG. LED de 1 W con nueve piezas (USB) o diez (3 AAA), descargables en un STL combinado o un ZIP con los STL independientes, numerados y nombrados, más una guía de orientación.
 - Guía 3D de armado: doce pasos con las piezas del diseño abierto, movimiento de cada pieza, posición de la luz y orientación final contra la pared. Se abre desde `Vista 3D → Ver guía de armado`.
-- Lámparas: foto JPG/PNG/WebP, Plano, Curvo de 120° y Esferas navideñas con relieve exterior y tapa tubular. Medidas en mm, contraste, inversión, espesores y vista 3D. Ultra ofrece 448 puntos en paneles y 640 en esferas; los paneles de 180° anteriores siguen abriéndose.
+- Lámparas: foto JPG/PNG/WebP, Plano, Curvo de 120° y Esferas navideñas con relieve exterior y tapa tubular. Medidas en mm, contraste, inversión, espesores y vista 3D. Ultra ofrece 448 puntos en paneles y 512 en esferas; los paneles de 180° anteriores siguen abriéndose.
 - Guardados locales por nombre y exportación/importación JSON. Ambos editores inician con su ejemplo; para aplicar un diseño hay que seleccionarlo y pulsar la carpeta. Comparten componente, hook y almacenamiento con claves independientes y compatibilidad con versiones anteriores.
 - Las fotos y los modelos se procesan en el navegador; no se envían a un servidor.
 
