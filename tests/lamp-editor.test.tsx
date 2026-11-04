@@ -760,69 +760,84 @@ test("rechaza una imagen de formato no admitido", async () => {
   expect(localStorage.getItem("proyectar:lamp:v1")).toBeNull();
 });
 
-test("Ultra se guarda en esferas y se adapta entre 640 y 448 al cambiar de variante", async () => {
-  const first = render(<LampEditor />);
-  const save = () => screen.getByRole("button", { name: /^Guardar$/ });
-  await waitFor(() => expect(save().hasAttribute("disabled")).toBe(false));
-  expect(
-    screen.queryByRole("option", { name: "Ultra · 640 puntos" }),
-  ).toBeNull();
-  fireEvent.change(
-    screen.getByRole("combobox", { name: "Variante de litofanía" }),
-    { target: { value: "sphere" } },
-  );
-  fireEvent.change(
-    screen.getByRole("spinbutton", { name: "Diámetro de la esfera" }),
-    { target: { value: "80" } },
-  );
-  fireEvent.change(screen.getByRole("combobox", { name: "Detalle" }), {
-    target: { value: "640" },
-  });
-  await waitFor(() => expect(save().hasAttribute("disabled")).toBe(false), {
-    timeout: 10000,
-  });
-  expect(screen.getByText(/Ultra genera un STL pesado/)).toBeTruthy();
-  fireEvent.click(save());
-  expect(
-    JSON.parse(
-      localStorage.getItem(localStorage.getItem("proyectar:lamp:last")!)!,
-    ).settings.resolution,
-  ).toBe(640);
-  first.unmount();
-  render(<LampEditor />);
-  await openSavedDesign();
-  await waitFor(() => expect(save().hasAttribute("disabled")).toBe(false), {
-    timeout: 10000,
-  });
-  expect(
-    (screen.getByRole("combobox", { name: "Detalle" }) as HTMLSelectElement)
-      .value,
-  ).toBe("640");
-  fireEvent.change(
-    screen.getByRole("combobox", { name: "Variante de litofanía" }),
-    { target: { value: "0" } },
-  );
-  await waitFor(() => expect(save().hasAttribute("disabled")).toBe(false));
-  expect(
-    (screen.getByRole("combobox", { name: "Detalle" }) as HTMLSelectElement)
-      .value,
-  ).toBe("448");
-  expect(
-    screen.queryByRole("option", { name: "Ultra · 640 puntos" }),
-  ).toBeNull();
-  expect(screen.queryByRole("alert")).toBeNull();
-  fireEvent.change(
-    screen.getByRole("combobox", { name: "Variante de litofanía" }),
-    { target: { value: "sphere" } },
-  );
-  await waitFor(() => expect(save().hasAttribute("disabled")).toBe(false), {
-    timeout: 10000,
-  });
-  expect(
-    (screen.getByRole("combobox", { name: "Detalle" }) as HTMLSelectElement)
-      .value,
-  ).toBe("640");
-}, 15000);
+test.each([512, 640])(
+  "Ultra se guarda a 512 y recupera esferas anteriores de %s puntos",
+  async (savedResolution) => {
+    const resolution = 512;
+    const first = render(<LampEditor />);
+    const save = () => screen.getByRole("button", { name: /^Guardar$/ });
+    await waitFor(() => expect(save().hasAttribute("disabled")).toBe(false));
+    expect(
+      screen.queryByRole("option", { name: "Ultra · 512 puntos" }),
+    ).toBeNull();
+    fireEvent.change(
+      screen.getByRole("combobox", { name: "Variante de litofanía" }),
+      { target: { value: "sphere" } },
+    );
+    fireEvent.change(
+      screen.getByRole("spinbutton", { name: "Diámetro de la esfera" }),
+      { target: { value: "80" } },
+    );
+    fireEvent.change(screen.getByRole("combobox", { name: "Detalle" }), {
+      target: { value: String(resolution) },
+    });
+    await waitFor(() => expect(save().hasAttribute("disabled")).toBe(false), {
+      timeout: 10000,
+    });
+    expect(screen.getByText(/Ultra genera un STL pesado/)).toBeTruthy();
+    expect(
+      screen.getByRole("option", { name: "Ultra · 512 puntos" }),
+    ).toBeTruthy();
+    fireEvent.click(save());
+    expect(
+      JSON.parse(
+        localStorage.getItem(localStorage.getItem("proyectar:lamp:last")!)!,
+      ).settings.resolution,
+    ).toBe(resolution);
+    const savedKey = localStorage.getItem(LAMP_LAST_KEY)!;
+    const savedProject = JSON.parse(localStorage.getItem(savedKey)!);
+    savedProject.settings.resolution = savedResolution;
+    localStorage.setItem(savedKey, JSON.stringify(savedProject));
+    first.unmount();
+    render(<LampEditor />);
+    await openSavedDesign();
+    await waitFor(() => expect(save().hasAttribute("disabled")).toBe(false), {
+      timeout: 10000,
+    });
+    expect(
+      (screen.getByRole("combobox", { name: "Detalle" }) as HTMLSelectElement)
+        .value,
+    ).toBe(String(resolution));
+    fireEvent.change(
+      screen.getByRole("combobox", { name: "Variante de litofanía" }),
+      { target: { value: "0" } },
+    );
+    await waitFor(() => expect(save().hasAttribute("disabled")).toBe(false));
+    expect(
+      (screen.getByRole("combobox", { name: "Detalle" }) as HTMLSelectElement)
+        .value,
+    ).toBe("448");
+    expect(
+      screen.queryByRole("option", { name: "Ultra · 512 puntos" }),
+    ).toBeNull();
+    expect(
+      screen.queryByRole("option", { name: "Ultra · 512 puntos" }),
+    ).toBeNull();
+    expect(screen.queryByRole("alert")).toBeNull();
+    fireEvent.change(
+      screen.getByRole("combobox", { name: "Variante de litofanía" }),
+      { target: { value: "sphere" } },
+    );
+    await waitFor(() => expect(save().hasAttribute("disabled")).toBe(false), {
+      timeout: 10000,
+    });
+    expect(
+      (screen.getByRole("combobox", { name: "Detalle" }) as HTMLSelectElement)
+        .value,
+    ).toBe("512");
+  },
+  15000,
+);
 
 test.each(["0", "120"])(
   "Ultra 448 se guarda y abre en el panel de %s grados",
@@ -861,7 +876,7 @@ test.each(["0", "120"])(
       ).value,
     ).toBe(variant);
     expect(
-      screen.queryByRole("option", { name: "Ultra · 640 puntos" }),
+      screen.queryByRole("option", { name: "Ultra · 512 puntos" }),
     ).toBeNull();
     expect(screen.queryByRole("alert")).toBeNull();
   },

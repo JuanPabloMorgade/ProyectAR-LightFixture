@@ -28,11 +28,11 @@ Los paneles tienen [soporte removible](lamp-print-stand.md) activado inicialment
 | Equilibrado, inicial | 160 | 160 |
 | Alto | 256 | 256 |
 | Muy alto | 384 | 384 |
-| Ultra | 448 | 640 |
+| Ultra | 448 | 512 |
 
-En paneles, la resolución se aplica al lado mayor y el otro conserva su proporción. Ultra equivale a 3,5 veces 128 muestras en el lado mayor. En esferas, Ultra usa 1280 muestras alrededor y equilibra el paso vertical; en Ø80 mm aproxima 0,20 mm en ambos sentidos. El editor muestra la separación según el diámetro actual y advierte del mayor tamaño y tiempo de cálculo.
+En paneles, la resolución se aplica al lado mayor y el otro conserva su proporción. Ultra equivale a 3,5 veces 128 muestras en el lado mayor. En esferas, Ultra usa 1024 muestras alrededor y equilibra el paso vertical; en Ø80 mm aproxima 0,25 mm en ambos sentidos. El editor muestra la separación según el diámetro actual y advierte del mayor tamaño y tiempo de cálculo.
 
-Al cambiar de variante con Ultra seleccionado, adapta 448/640 al tipo de pieza. Los demás niveles se conservan. El nivel elegido se guarda en JSON v1 y la vista y el STL utilizan la misma malla.
+Al cambiar de variante con Ultra seleccionado, adapta 448/512 al tipo de pieza. Los proyectos anteriores de esferas de 640 puntos se abren con Ultra 512. Los demás niveles se conservan. El nivel elegido se guarda en JSON v1 y la vista y el STL utilizan la misma malla.
 
 ## Cálculo, avisos y errores
 
