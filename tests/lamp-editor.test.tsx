@@ -4,7 +4,7 @@ import {
   cleanup,
   act,
   fireEvent,
-  render,
+  render as renderComponent,
   screen,
   waitFor,
 } from "@testing-library/react";
@@ -23,6 +23,159 @@ import {
   createPrintStand,
   hasPrintStand,
 } from "../src/features/lithophane/print-stand";
+import { photoAdvice } from "../src/features/lithophane/photo-advice";
+import { spherePhotoLatitude } from "../src/features/lithophane/sphere";
+
+// Existing integration scenarios exercise all controls; the new UX scenarios
+// below render the default collapsed state explicitly.
+function render(element: Parameters<typeof renderComponent>[0]) {
+  const result = renderComponent(element);
+  fireEvent.click(screen.getByText("Ajustes avanzados"));
+  return result;
+}
+function selectedVariant() {
+  return (screen.getByRole("radio", { checked: true }) as HTMLInputElement)
+    .value;
+}
+function selectVariant(value: string) {
+  const radio = screen
+    .getAllByRole("radio")
+    .find((node) => (node as HTMLInputElement).value === value);
+  if (!radio) throw new Error(`Missing variant ${value}`);
+  fireEvent.click(radio);
+}
+
+test("la foto centrada se guarda, se recupera y conserva su ajuste entre variantes", async () => {
+  const first = render(<LampEditor />);
+  const save = () => screen.getByRole("button", { name: /^Guardar$/ });
+  await waitFor(() => expect(save().hasAttribute("disabled")).toBe(false));
+  selectVariant("sphere");
+  const fit = () =>
+    screen.getByRole("combobox", {
+      name: "Cómo aplicar la foto",
+    }) as HTMLSelectElement;
+  expect(fit().value).toBe("stretch");
+  fireEvent.change(fit(), { target: { value: "contain" } });
+  expect(screen.getByText("Tu foto, sin estirar")).toBeTruthy();
+  const stretch = () =>
+    screen.getByRole("slider", {
+      name: "Estiramiento horizontal",
+    }) as HTMLInputElement;
+  expect(stretch().value).toBe("0");
+  expect(stretch().max).toBe("75");
+  fireEvent.change(stretch(), { target: { value: "75" } });
+  expect(screen.getByText("Tu foto, un poco más ancha")).toBeTruthy();
+  expect(screen.queryByText(/Usá una panorámica horizontal/)).toBeNull();
+  expect(
+    photoAdvice(
+      { ...defaults, shape: "sphere", spherePhotoFit: "contain" },
+      600,
+      900,
+    )?.title,
+  ).toBe("Proporción conservada");
+  await waitFor(() => expect(save().hasAttribute("disabled")).toBe(false));
+  fireEvent.click(save());
+  const stored = JSON.parse(
+    localStorage.getItem(localStorage.getItem(LAMP_LAST_KEY)!)!,
+  );
+  expect(stored.settings.spherePhotoFit).toBe("contain");
+  expect(stored.settings.spherePhotoStretch).toBe(75);
+  first.unmount();
+  render(<LampEditor />);
+  await openSavedDesign();
+  expect(fit().value).toBe("contain");
+  expect(stretch().value).toBe("75");
+  selectVariant("0");
+  expect(
+    screen.queryByRole("combobox", { name: "Cómo aplicar la foto" }),
+  ).toBeNull();
+  selectVariant("sphere");
+  expect(fit().value).toBe("contain");
+  expect(stretch().value).toBe("75");
+  fireEvent.change(stretch(), { target: { value: "0" } });
+  expect(screen.getByText("Tu foto, sin estirar")).toBeTruthy();
+  fireEvent.change(fit(), { target: { value: "stretch" } });
+  expect(screen.getByText("Fotografía recomendada para esferas")).toBeTruthy();
+});
+
+test("el flujo mantiene los ajustes al plegarlos y los avisos de seguridad quedan visibles", async () => {
+  const { container } = renderComponent(<LampEditor />);
+  const advanced = screen.getByText("Ajustes avanzados").closest("details")!;
+  expect(advanced.open).toBe(false);
+  const headings = Array.from(container.querySelectorAll(".lamp-step h3"));
+  expect(headings.map((node) => node.textContent)).toEqual([
+    "01Elegí tu litofanía",
+    "02Subí tu fotografía",
+    "03Personalizá tu diseño",
+  ]);
+  const save = screen.getByRole("button", { name: /^Guardar$/ });
+  await waitFor(() => expect(save.hasAttribute("disabled")).toBe(false));
+  selectVariant("sphere");
+  fireEvent.click(screen.getByText("Ajustes avanzados"));
+  const contrast = screen.getByRole("slider", {
+    name: "Contraste",
+  }) as HTMLInputElement;
+  fireEvent.change(contrast, { target: { value: "1.4" } });
+  fireEvent.click(
+    screen.getByRole("checkbox", { name: "Invertir claros y oscuros" }),
+  );
+  fireEvent.click(screen.getByText("Ajustes avanzados"));
+  expect(advanced.open).toBe(false);
+  await waitFor(() => expect(save.hasAttribute("disabled")).toBe(false));
+  fireEvent.click(save);
+  const saved = JSON.parse(
+    localStorage.getItem(localStorage.getItem(LAMP_LAST_KEY)!)!,
+  );
+  expect(saved.settings.contrast).toBe(1.4);
+  expect(saved.settings.invert).toBe(true);
+  fireEvent.click(screen.getByText("Ajustes avanzados"));
+  expect(contrast.value).toBe("1.4");
+  expect(
+    (
+      screen.getByRole("checkbox", {
+        name: "Invertir claros y oscuros",
+      }) as HTMLInputElement
+    ).checked,
+  ).toBe(true);
+  expect(
+    screen.getByText(/nunca cuelgues la esfera del cable/).closest("details"),
+  ).toBeNull();
+  const photoStep = screen.getByRole("region", { name: "Subí tu fotografía" });
+  expect(photoStep.textContent).toContain("1500 × 417 px");
+  const download = screen.getByRole("button", {
+    name: "Descargar esfera + tapa · 2 STL",
+  });
+  const learning = screen.getByRole("region", {
+    name: "De la pantalla a tu impresión",
+  });
+  expect(
+    download.compareDocumentPosition(learning) &
+      Node.DOCUMENT_POSITION_FOLLOWING,
+  ).toBeTruthy();
+});
+
+test("la guía usa la franja real de la esfera y no inventa límites para paneles", () => {
+  const sphere = { ...defaults, shape: "sphere" as const, width: 80 };
+  expect(photoAdvice(sphere, 1500, 417)?.title).toBe("Imagen recomendada");
+  expect(photoAdvice(sphere, 1200, 900)?.title).toBe("Imagen adaptable");
+  expect(photoAdvice(sphere, 600, 900)?.title).toBe("Revisá el encuadre");
+  expect(photoAdvice(sphere, 900, 900)?.title).toBe("Revisá el encuadre");
+  const smallSphere = { ...sphere, width: 30 };
+  const height = Math.round(
+    (1500 * spherePhotoLatitude(smallSphere)) / Math.PI,
+  );
+  expect(photoAdvice(smallSphere, 1500, height)?.title).toBe(
+    "Imagen recomendada",
+  );
+  expect(photoAdvice(smallSphere, 1500, 417)?.title).toBe("Imagen adaptable");
+  expect(photoAdvice(defaults, 200, 1600)?.title).toBe(
+    "Revisá la vista previa",
+  );
+  expect(photoAdvice({ ...defaults, angle: 120 }, 1600, 200)?.text).toContain(
+    "arco",
+  );
+  expect(photoAdvice(sphere, 0, 0)).toBeNull();
+});
 
 vi.mock("../src/features/lithophane/viewer", () => ({
   default: ({
@@ -157,9 +310,6 @@ test.each([0, 1, 2])(
     const name = screen.getByRole("textbox", {
       name: "Nombre del proyecto",
     }) as HTMLInputElement;
-    const variant = screen.getByRole("combobox", {
-      name: "Variante de litofanía",
-    }) as HTMLSelectElement;
     const folder = screen.getByRole("button", {
       name: "Abrir diseño guardado",
     });
@@ -167,7 +317,7 @@ test.each([0, 1, 2])(
     expect(select.options.length).toBe(count + 1);
     expect(folder.hasAttribute("disabled")).toBe(true);
     expect(name.value).toBe("Mi primera litofanía");
-    expect(variant.value).toBe("0");
+    expect(selectedVariant()).toBe("0");
     expect(
       (screen.getByRole("combobox", { name: "Detalle" }) as HTMLSelectElement)
         .value,
@@ -179,12 +329,12 @@ test.each([0, 1, 2])(
     fireEvent.change(select, { target: { value: id } });
     expect(folder.hasAttribute("disabled")).toBe(false);
     expect(name.value).toBe("Mi primera litofanía");
-    expect(variant.value).toBe("0");
+    expect(selectedVariant()).toBe("0");
     fireEvent.click(folder);
     await screen.findByText(/Diseño cargado correctamente/);
     await waitFor(() => expect(save().hasAttribute("disabled")).toBe(false));
     expect(name.value).toBe("Guardado 1");
-    expect(variant.value).toBe("sphere");
+    expect(selectedVariant()).toBe("sphere");
     expect(
       (
         screen.getByRole("spinbutton", {
@@ -358,10 +508,7 @@ test("la caja opcional se guarda, restaura y descarga como kit; la esfera conser
         .hasAttribute("disabled"),
     ).toBe(false),
   );
-  fireEvent.change(
-    screen.getByRole("combobox", { name: "Variante de litofanía" }),
-    { target: { value: "0" } },
-  );
+  selectVariant("0");
   fireEvent.click(
     screen.getByRole("checkbox", { name: "Generar caja trasera" }),
   );
@@ -401,10 +548,7 @@ test("la caja opcional se guarda, restaura y descarga como kit; la esfera conser
       }) as HTMLInputElement
     ).value,
   ).toBe("30");
-  fireEvent.change(
-    screen.getByRole("combobox", { name: "Variante de litofanía" }),
-    { target: { value: "sphere" } },
-  );
+  selectVariant("sphere");
   await waitFor(() =>
     expect(
       screen
@@ -416,10 +560,7 @@ test("la caja opcional se guarda, restaura y descarga como kit; la esfera conser
     name: "Generar caja trasera",
   });
   expect(toggle).toBeNull();
-  fireEvent.change(
-    screen.getByRole("combobox", { name: "Variante de litofanía" }),
-    { target: { value: "120" } },
-  );
+  selectVariant("120");
   await waitFor(() => expect(kit().hasAttribute("disabled")).toBe(false));
 });
 
@@ -432,10 +573,7 @@ test("una caja que invade el radio curvo bloquea la descarga y permite corregirl
         .hasAttribute("disabled"),
     ).toBe(false),
   );
-  fireEvent.change(
-    screen.getByRole("combobox", { name: "Variante de litofanía" }),
-    { target: { value: "120" } },
-  );
+  selectVariant("120");
   fireEvent.click(
     screen.getByRole("checkbox", { name: "Generar caja trasera" }),
   );
@@ -472,20 +610,12 @@ test("cambia la forma del panel y guarda los ajustes actuales", async () => {
         .hasAttribute("disabled"),
     ).toBe(false),
   );
-  const variants = screen.getByRole("combobox", {
-    name: "Variante de litofanía",
-  }) as HTMLSelectElement;
-  expect(variants.value).toBe("0");
-  expect(Array.from(variants.options).map((option) => option.text)).toEqual([
-    "Plano",
-    "Curvo",
-    "Esferas navideñas",
-  ]);
+  expect(selectedVariant()).toBe("0");
+  expect(
+    screen.getAllByRole("radio").map((node) => node.getAttribute("aria-label")),
+  ).toEqual(["Plana", "Curva", "Esfera navide\u00f1a"]);
 
-  fireEvent.change(
-    screen.getByRole("combobox", { name: "Variante de litofanía" }),
-    { target: { value: "0" } },
-  );
+  selectVariant("0");
   await waitFor(() =>
     expect(
       screen
@@ -522,10 +652,7 @@ test("la esfera guarda su diámetro y variante, restaura y descarga un STL propi
   const first = render(<LampEditor />);
   const save = () => screen.getByRole("button", { name: /^Guardar$/ });
   await waitFor(() => expect(save().hasAttribute("disabled")).toBe(false));
-  fireEvent.change(
-    screen.getByRole("combobox", { name: "Variante de litofanía" }),
-    { target: { value: "sphere" } },
-  );
+  selectVariant("sphere");
   fireEvent.change(
     screen.getByRole("spinbutton", { name: "Diámetro de la esfera" }),
     { target: { value: "80" } },
@@ -584,13 +711,7 @@ test("la esfera guarda su diámetro y variante, restaura y descarga un STL propi
   render(<LampEditor />);
   await openSavedDesign();
   await waitFor(() => expect(save().hasAttribute("disabled")).toBe(false));
-  expect(
-    (
-      screen.getByRole("combobox", {
-        name: "Variante de litofanía",
-      }) as HTMLSelectElement
-    ).value,
-  ).toBe("sphere");
+  expect(selectedVariant()).toBe("sphere");
   expect(
     (
       screen.getByRole("spinbutton", {
@@ -604,10 +725,7 @@ test("un error muestra toast persistente; cerrarlo no permite descargar y correg
   render(<LampEditor />);
   const save = () => screen.getByRole("button", { name: /^Guardar$/ });
   await waitFor(() => expect(save().hasAttribute("disabled")).toBe(false));
-  fireEvent.change(
-    screen.getByRole("combobox", { name: "Variante de litofanía" }),
-    { target: { value: "sphere" } },
-  );
+  selectVariant("sphere");
   await waitFor(() => expect(save().hasAttribute("disabled")).toBe(false));
   const opening = screen.getByRole("spinbutton", {
     name: "Abertura para los LED",
@@ -770,10 +888,7 @@ test.each([512, 640])(
     expect(
       screen.queryByRole("option", { name: "Ultra · 512 puntos" }),
     ).toBeNull();
-    fireEvent.change(
-      screen.getByRole("combobox", { name: "Variante de litofanía" }),
-      { target: { value: "sphere" } },
-    );
+    selectVariant("sphere");
     fireEvent.change(
       screen.getByRole("spinbutton", { name: "Diámetro de la esfera" }),
       { target: { value: "80" } },
@@ -808,10 +923,7 @@ test.each([512, 640])(
       (screen.getByRole("combobox", { name: "Detalle" }) as HTMLSelectElement)
         .value,
     ).toBe(String(resolution));
-    fireEvent.change(
-      screen.getByRole("combobox", { name: "Variante de litofanía" }),
-      { target: { value: "0" } },
-    );
+    selectVariant("0");
     await waitFor(() => expect(save().hasAttribute("disabled")).toBe(false));
     expect(
       (screen.getByRole("combobox", { name: "Detalle" }) as HTMLSelectElement)
@@ -820,14 +932,8 @@ test.each([512, 640])(
     expect(
       screen.queryByRole("option", { name: "Ultra · 512 puntos" }),
     ).toBeNull();
-    expect(
-      screen.queryByRole("option", { name: "Ultra · 512 puntos" }),
-    ).toBeNull();
     expect(screen.queryByRole("alert")).toBeNull();
-    fireEvent.change(
-      screen.getByRole("combobox", { name: "Variante de litofanía" }),
-      { target: { value: "sphere" } },
-    );
+    selectVariant("sphere");
     await waitFor(() => expect(save().hasAttribute("disabled")).toBe(false), {
       timeout: 10000,
     });
@@ -845,10 +951,7 @@ test.each(["0", "120"])(
     const first = render(<LampEditor />);
     const save = () => screen.getByRole("button", { name: /^Guardar$/ });
     await waitFor(() => expect(save().hasAttribute("disabled")).toBe(false));
-    fireEvent.change(
-      screen.getByRole("combobox", { name: "Variante de litofanía" }),
-      { target: { value: variant } },
-    );
+    selectVariant(variant);
     expect(
       screen.getByRole("option", { name: "Ultra · 448 puntos" }),
     ).toBeTruthy();
@@ -868,13 +971,7 @@ test.each(["0", "120"])(
       (screen.getByRole("combobox", { name: "Detalle" }) as HTMLSelectElement)
         .value,
     ).toBe("448");
-    expect(
-      (
-        screen.getByRole("combobox", {
-          name: "Variante de litofanía",
-        }) as HTMLSelectElement
-      ).value,
-    ).toBe(variant);
+    expect(selectedVariant()).toBe(variant);
     expect(
       screen.queryByRole("option", { name: "Ultra · 512 puntos" }),
     ).toBeNull();

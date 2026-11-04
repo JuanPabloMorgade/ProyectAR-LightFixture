@@ -22,6 +22,10 @@ export type Settings = {
   /** Legacy cap bore retained only to read previous v1 projects. */
   sphereLedDiameter?: number;
   sphereOpeningDiameter?: number;
+  /** Missing in older projects: stretch the photo around the full band. */
+  spherePhotoFit?: "stretch" | "contain";
+  /** Optional extra horizontal stretch (%) for a centered photo. */
+  spherePhotoStretch?: number;
 };
 export const defaults: Settings = {
   width: 120,
@@ -36,6 +40,19 @@ export const defaults: Settings = {
   printStand: true,
 };
 export function validateSettings(s: Settings) {
+  if (
+    s.spherePhotoStretch !== undefined &&
+    (!Number.isFinite(s.spherePhotoStretch) ||
+      s.spherePhotoStretch < 0 ||
+      s.spherePhotoStretch > 75)
+  )
+    throw new Error("El estiramiento de la foto debe estar entre 0 y 75 %.");
+  if (
+    s.spherePhotoFit !== undefined &&
+    s.spherePhotoFit !== "stretch" &&
+    s.spherePhotoFit !== "contain"
+  )
+    throw new Error("Elegí cómo aplicar la foto a la esfera.");
   const opening = s.sphereOpeningDiameter ?? DEFAULT_OPENING_DIAMETER;
   if (!Number.isFinite(opening) || opening < 8 || opening > 30)
     throw new Error("La abertura para los LED debe medir entre 8 y 30 mm.");

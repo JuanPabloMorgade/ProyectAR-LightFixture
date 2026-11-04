@@ -20,6 +20,24 @@ export function spherePhotoLatitude(s: Settings) {
   return Math.min((50 * Math.PI) / 180, neckLatitude - Math.PI / 18);
 }
 
+/** Fit the whole image into the unwrapped spherical band, optionally widening
+ * the centered photo. theta=0 is the front, with the seam behind it.
+ */
+export function spherePhotoBounds(
+  s: Settings,
+  imageWidth: number,
+  imageHeight: number,
+) {
+  const aspect = imageWidth / imageHeight;
+  const halfHeight = Math.min(spherePhotoLatitude(s), Math.PI / aspect);
+  const stretch =
+    s.spherePhotoFit === "contain" ? (s.spherePhotoStretch ?? 0) : 0;
+  return {
+    halfWidth: Math.min(Math.PI, halfHeight * aspect * (1 + stretch / 100)),
+    halfHeight,
+  };
+}
+
 /** Ultra balances sampling along meridians and around the equator. Previous
  * levels retain their grid so saved projects keep the same mesh density.
  */
@@ -69,6 +87,8 @@ export function createSphere(
   const neck = sphereNeck(s);
   const { cols, rows, bottom, top } = sphereGrid(s);
   const photoLimit = spherePhotoLatitude(s);
+  const contain = s.spherePhotoFit === "contain";
+  const bounds = spherePhotoBounds(s, imageWidth, imageHeight);
   const fade = Math.PI / 45;
   const plainThickness = Math.min(s.max, Math.max(s.min, 1.2));
   const bottomY = radius * Math.sin(bottom),
@@ -126,18 +146,31 @@ export function createSphere(
       const reinforcement = Math.max(0, 1 - (top - latitude) / (Math.PI / 12));
       // Fit the entire photo into the middle band; polar caps carry no image.
       // Fade inward over four degrees so the boundary does not form a ridge.
-      const weight = Math.max(
+      const bandWeight = Math.max(
         0,
         Math.min(1, (photoLimit - Math.abs(latitude)) / fade),
       );
+      const weight = contain
+        ? Math.max(
+            0,
+            Math.min(
+              1,
+              (bounds.halfWidth - Math.abs(theta)) /
+                Math.min(fade, bounds.halfWidth / 4),
+              (bounds.halfHeight - Math.abs(latitude)) /
+                Math.min(fade, bounds.halfHeight / 4),
+            ),
+          )
+        : bandWeight;
       const imageThickness =
         weight > 0
-          ? photoThickness(x / cols, (latitude + photoLimit) / (2 * photoLimit))
+          ? photoThickness(
+              contain ? 0.5 + theta / (2 * bounds.halfWidth) : x / cols,
+              contain
+                ? 0.5 + latitude / (2 * bounds.halfHeight)
+                : (latitude + photoLimit) / (2 * photoLimit),
+            )
           : plainThickness;
-      const thickness = Math.max(
-        plainThickness + weight * (imageThickness - plainThickness),
-        2.4 * reinforcement,
-      );
       // Keep the inner surface independent of the photo. Reserve the maximum
       // thickness inward so outward relief stays within the chosen diameter.
       // Blend back to the original smooth caps to preserve the neck and floor.
@@ -145,7 +178,16 @@ export function createSphere(
       const innerRadius =
         radius -
         baseThickness -
-        weight * (Math.max(s.max, baseThickness) - baseThickness);
+        bandWeight * (Math.max(s.max, baseThickness) - baseThickness);
+      // In contain mode the unused surface stays on the smooth outer sphere.
+      // Keep the same inner surface for every photo and blend only the relief.
+      const backgroundThickness = contain
+        ? radius - innerRadius
+        : plainThickness;
+      const thickness = Math.max(
+        backgroundThickness + weight * (imageThickness - backgroundThickness),
+        2.4 * reinforcement,
+      );
       for (let layer = 0; layer < 2; layer++) {
         const r = layer ? innerRadius : innerRadius + thickness;
         const profile = y > rows ? neckProfile[y - rows - 1] : undefined;

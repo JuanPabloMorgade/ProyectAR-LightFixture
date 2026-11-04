@@ -42,13 +42,13 @@ npx vitest run tests/assembly-guide.test.tsx tests/shadow-editor.test.tsx
 | `tests/artwork.test.ts` | Archivos de imagen y limpieza de contenido activo en SVG. |
 | `tests/navigation.test.tsx` | Rutas, navegación y contenido compartido. |
 | `tests/mesh.test.mjs` | Paneles cerrados y orientados, espesores, validación y STL binario a 384 y Ultra 448 en Plano/Curvo. |
-| `tests/lamp-sphere.test.ts` | Relieve exterior, interior independiente de la foto, polos lisos, cuerpo dentro del diámetro, aberturas, Ultra 512 en ambos ejes y ZIP de dos STL con guía. |
+| `tests/lamp-sphere.test.ts` | Relieve exterior, interior independiente de la foto, polos lisos, diámetro y aberturas. Foto centrada, proporciones y estiramiento de 0 a +75 %, límite en 360° y rechazo de valores inválidos. Ultra 512, STL y ZIP con guía. |
 | `tests/lamp-sphere-cap.test.ts` | Tapa cerrada, ranura y paso libres, tubo de hasta 36 mm, encastre sin intersecciones y orientación; incluye esferas pequeñas con espesor máximo. |
 | `tests/saved-designs.test.tsx` | Aislamiento de datos y selección entre secciones, orden por nombre, actualización, apertura, confirmación de borrado, recuperación opcional, errores y migración segura con limpieza de metadatos. |
 | `tests/lamp-viewer.test.tsx` | Actualización de esfera y tapa conservando vista relativa, geometría nueva y tapa separada; WebGL simulado con OrbitControls reales. |
 | `tests/lamp-housing.test.ts` | Caja de litofanías plana/curva: sólidos cerrados, holguras, cable, orientación de impresión, límites, panel independiente y ZIP de cuatro piezas. |
 | `tests/lamp-print-stand.test.ts` | Soporte conectado y cerrado, orientación, huecos y contactos, conservación de la foto y ausencia de grietas a 384 y Ultra 448 en paneles de 0/120/180 grados. |
-| `tests/lamp-editor.test.tsx` | Inicio predeterminado con cero/uno/varios guardados, apertura manual, importación, compatibilidad anterior, guardado/eliminación, errores, descargas y adaptación Ultra 448/512. Avisos de Imagen/Diseño y reinicio de seis segundos en cargas consecutivas. |
+| `tests/lamp-editor.test.tsx` | Inicio predeterminado, guardado/apertura/importación y compatibilidad anterior, eliminación, errores, descargas y Ultra 448/512. Tarjetas de variantes, conservación de ajustes al plegarlos, orden del flujo, seguridad visible y orientación de proporciones. Avisos de Imagen/Diseño con reinicio de seis segundos. |
 
 Las pruebas de interfaz usan jsdom y sustituyen canvas, imágenes, workers o visores. No renderizan WebGL ni validan la apariencia del CSS, los gestos o la distribución real del scroll. Los casos COB, LEDs individuales, cajas anteriores y exportaciones de cinco piezas verifican compatibilidad; no representan opciones disponibles en el editor actual.
 
@@ -77,6 +77,9 @@ Abrir `/lamparas` en escritorio y a 390 × 844:
 4. **Esfera:** inspeccionar relieve exterior en Material y Luz encendida, polos lisos y abertura ajustable. Ver tapa separada debe mostrar el tubo. Cambiar medidas conservando la vista; un error debe mantener el modelo anterior y bloquear la descarga.
 5. **STL y montaje:** abrir los archivos en el laminador. Esfera: cuerpo y tapa, base en Z=0 y tubo hacia arriba. Panel: comprobar soporte removible activado/desactivado; kit de caja con cuatro STL y guía. Verificar escala, normales, transiciones, ranuras y contactos. Los encastres requieren prueba física.
 6. **Accesibilidad y WebGL:** recorrer selector, carpeta, papelera, variantes, Detalle y avisos con teclado; comprobar foco visible, textos y ausencia de desbordamiento. Sin WebGL debe ser posible descargar una malla válida.
+7. **Estudio y ayuda contextual:** comprobar el orden variante → foto → ajustes. Cambiar las tarjetas con flechas del teclado. Abrir y cerrar Ajustes avanzados sin perder valores; la descarga debe preceder a las guías y la seguridad de esferas quedar visible. Cargar una panorámica, una foto común y una vertical; los avisos no bloquean. Revisar la guía visual en escritorio y móvil, cierre con Escape y retorno del foco. Probar anchos de 390, 768, 1024 y 1440 px.
+8. **Foto centrada en esferas:** con fotos cuadradas, verticales y panorámicas, alternar Cómo aplicar la foto. Conservar proporción debe mostrar la foto completa al frente y dejar liso el resto, sin repetición. Guardar, abrir, exportar/importar JSON y alternar variantes debe conservar el modo. Los proyectos anteriores sin la propiedad siguen cubriendo los 360°. Revisar también el STL y la guía del ZIP.
+9. **Estiramiento horizontal:** probar 0, 1, 25, 50 y 75 %. Solo debe cambiar el ancho, sin recortar la foto ni modificar la altura, el interior, el cuello o la tapa. El ancho se limita a 360°. Guardar y reabrir a +75 %; alternar variantes y comprobar que conserva el valor. Volver a 0 % debe recuperar la proporción original. El test del editor verifica el máximo del control y la persistencia de +75 %.
 
 ## Límites de la verificación
 
