@@ -260,7 +260,7 @@ afterEach(() => {
 
 async function openSavedDesign(id = localStorage.getItem(LAMP_LAST_KEY)!) {
   const open = () =>
-    screen.getByRole("button", { name: "Abrir diseño guardado" });
+    screen.getByRole("button", { name: "Aplicar diseño guardado" });
   await waitFor(() =>
     expect(
       screen
@@ -286,7 +286,7 @@ async function openSavedDesign(id = localStorage.getItem(LAMP_LAST_KEY)!) {
 }
 
 test.each([0, 1, 2])(
-  "con %s diseños guardados empieza con el ejemplo y solo aplica al pulsar la carpeta",
+  "con %s diseños guardados empieza con el ejemplo y solo aplica al pulsar Aplicar",
   async (count) => {
     for (let i = 1; i <= count; i++) {
       const project = {
@@ -311,7 +311,7 @@ test.each([0, 1, 2])(
       name: "Nombre del proyecto",
     }) as HTMLInputElement;
     const folder = screen.getByRole("button", {
-      name: "Abrir diseño guardado",
+      name: "Aplicar diseño guardado",
     });
     expect(select.value).toBe("");
     expect(select.options.length).toBe(count + 1);
@@ -358,7 +358,7 @@ test("guarda varios diseños, abre el elegido y elimina solo tras confirmar", as
   await waitFor(() => expect(save().hasAttribute("disabled")).toBe(false));
   expect(
     screen
-      .getByRole("button", { name: "Abrir diseño guardado" })
+      .getByRole("button", { name: "Aplicar diseño guardado" })
       .hasAttribute("disabled"),
   ).toBe(true);
   fireEvent.change(name(), { target: { value: "Primero" } });
@@ -375,7 +375,7 @@ test("guarda varios diseños, abre el elegido y elimina solo tras confirmar", as
     target: { value: LAMP_PROJECT_PREFIX + "Primero" },
   });
   fireEvent.click(
-    screen.getByRole("button", { name: "Abrir diseño guardado" }),
+    screen.getByRole("button", { name: "Aplicar diseño guardado" }),
   );
   await waitFor(() =>
     expect((name() as HTMLInputElement).value).toBe("Primero"),
@@ -447,7 +447,7 @@ test("recupera el guardado anterior y lo conserva al guardar con otro nombre", a
     { target: { value: LAMP_LEGACY_KEY } },
   );
   fireEvent.click(
-    screen.getByRole("button", { name: "Abrir diseño guardado" }),
+    screen.getByRole("button", { name: "Aplicar diseño guardado" }),
   );
   await waitFor(() =>
     expect(

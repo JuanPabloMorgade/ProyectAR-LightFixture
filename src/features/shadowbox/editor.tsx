@@ -18,6 +18,9 @@ import {
   RotateCcw,
   FileDown,
   ChevronDown,
+  Eye,
+  Info,
+  ShieldCheck,
 } from "lucide-react";
 import {
   IMAGE_SIZE,
@@ -49,6 +52,8 @@ import {
 } from "./fabrication";
 import {
   Button,
+  Disclosure,
+  FieldHelp,
   SavedDesigns,
   Input,
   TextField,
@@ -176,14 +181,27 @@ export default function ShadowEditor() {
     [showInterior, setShowInterior] = useState(false);
   const designs = useSavedDesigns(shadowProjectStorage);
   const steps = [
-    { id: "how" as const, number: 1, label: "Cómo funciona", Icon: Sun },
+    {
+      id: "how" as const,
+      number: 1,
+      label: "Cómo funciona",
+      description: "Concepto y armado",
+      Icon: Sun,
+    },
     {
       id: "design" as const,
       number: 2,
       label: "Diseñador de patrones",
+      description: "Imagen y proyección",
       Icon: PenLine,
     },
-    { id: "three" as const, number: 3, label: "Vista 3D", Icon: Box },
+    {
+      id: "three" as const,
+      number: 3,
+      label: "Vista 3D",
+      description: "Modelo y descarga",
+      Icon: Box,
+    },
   ];
   const opticalSettings = useMemo(
     () => projectionSettings(settings, fabrication),
@@ -348,7 +366,7 @@ export default function ShadowEditor() {
     setSettings((s) => ({ ...s, [key]: value }));
     setMessage("");
   }
-  function selectStep(next: typeof step) {
+  function selectStep(next: typeof step, reveal = false) {
     if (next === "three") {
       const adjusted = fitWallLight(settings, fabrication);
       if (adjusted.lightPercent !== settings.lightPercent) {
@@ -360,6 +378,12 @@ export default function ShadowEditor() {
       }
     }
     setStep(next);
+    if (reveal && window.matchMedia?.("(max-width: 1000px)").matches)
+      requestAnimationFrame(() =>
+        document
+          .getElementById("shadow-active-step")
+          ?.scrollIntoView({ block: "start" }),
+      );
   }
   async function loadImage(src: string) {
     const image = new Image();
@@ -557,6 +581,29 @@ export default function ShadowEditor() {
             reales.
           </p>
         </div>
+        <a
+          href="#shadow-active-step"
+          className="button secondary shadow-work-link"
+        >
+          <Eye size={16} />
+          Ir al área de trabajo
+        </a>
+      </div>
+      <section className="shadow-project-bar" aria-label="Proyecto y archivos">
+        <TextField
+          label="Nombre"
+          value={name}
+          maxLength={100}
+          onChange={(e) => setName(e.target.value)}
+        />
+        <SavedDesigns
+          items={designs.items}
+          selected={designs.selected}
+          onSelect={designs.select}
+          onOpen={() => void openSelected()}
+          onRemove={removeSelected}
+          fieldClassName="shadow-saved"
+        />
         <div className="shadow-header-actions">
           <Button
             variant="secondary"
@@ -611,10 +658,10 @@ export default function ShadowEditor() {
             }}
           />
         </div>
-      </div>
+      </section>
       <nav className="shadow-stepper" aria-label="Recorrido del editor">
         <ol>
-          {steps.map(({ id, number, label, Icon }, index) => (
+          {steps.map(({ id, number, label, description, Icon }, index) => (
             <li key={id}>
               <Button
                 variant="unstyled"
@@ -622,8 +669,9 @@ export default function ShadowEditor() {
                   stepButtons.current[index] = button;
                 }}
                 className={step === id ? "selected" : ""}
+                aria-label={label}
                 aria-current={step === id ? "step" : undefined}
-                onClick={() => selectStep(id)}
+                onClick={(event) => selectStep(id, event.detail > 0)}
                 onKeyDown={(event) => {
                   const targetIndex =
                     event.key === "ArrowRight"
@@ -645,65 +693,109 @@ export default function ShadowEditor() {
                   {number}
                 </span>
                 <Icon size={16} aria-hidden="true" />
-                <span>{label}</span>
+                <span className="shadow-step-label">
+                  {label}
+                  <small aria-hidden="true">{description}</small>
+                </span>
               </Button>
             </li>
           ))}
         </ol>
       </nav>
       <div className="shadow-layout">
-        <aside className="shadow-sidebar">
-          <div className="shadow-panel-head">
-            <h2>Tu diseño</h2>
-            <span>01</span>
+        <aside className="shadow-sidebar" aria-label="Configurar tu cuadro">
+          <section
+            className="shadow-sidebar-section"
+            aria-labelledby="shadow-dimensions-title"
+          >
+            <div className="shadow-panel-head">
+              <h2 id="shadow-dimensions-title">Medidas principales</h2>
+            </div>
+            <div className="shadow-two">
+              {number("width", "Ancho", 6, 80, 0.01, "cm")}
+              {number("height", "Alto", 6, 100, 0.01, "cm")}
+              {number("depth", "Profundidad", 3, 50, 0.01, "cm")}
+              <div className="shadow-help-field">
+                {number("radius", "Radio de proyección", 15, 150, 1, "cm")}
+                <FieldHelp title="Radio de proyección">
+                  <p>
+                    Define el radio de la imagen objetivo sobre la pared. Revisá
+                    cómo cambia la proyección estimada al modificarlo.
+                  </p>
+                  <p>
+                    La luz real, su posición y el montaje pueden cambiar el
+                    resultado. Probá primero con un diseño simple.
+                  </p>
+                </FieldHelp>
+              </div>
+              <div className="shadow-help-field">
+                {number("lightPercent", "Posición de luz", 10, 95, 1, "%")}
+                <FieldHelp title="Posición de luz">
+                  <p>
+                    Ubica la luz a lo largo de la profundidad óptica, en
+                    porcentaje. Al entrar en Vista 3D, una posición incompatible
+                    se ajusta al valor válido más cercano para que entre el
+                    cabezal.
+                  </p>
+                  <p>
+                    El largo del tubo depende de esta posición y de la altura
+                    real del emisor sobre la estrella.
+                  </p>
+                </FieldHelp>
+              </div>
+              {number("margin", "Margen de corte", 0, 10, 1, "mm")}
+              {number("thickness", "Espesor", 0.6, 12, 0.2, "mm")}
+            </div>
+            <Disclosure
+              title="Ajustes avanzados"
+              subtitle="Detalle de los recortes y exportación"
+              className="shadow-settings-disclosure"
+            >
+              <SelectField
+                label="Detalle"
+                value={settings.detail}
+                onChange={(e) => change("detail", Number(e.target.value))}
+                options={[
+                  { value: 96, label: "Borrador" },
+                  { value: 160, label: "Equilibrado" },
+                  { value: 224, label: "Alto" },
+                ]}
+              />
+              <p className="shadow-help">
+                Todas las medidas de exportación se convierten a milímetros.
+              </p>
+              <p className="shadow-help">
+                Las partes sin unión al marco se eliminan tanto en la proyección
+                estimada como en los archivos exportados.
+              </p>
+            </Disclosure>
+          </section>
+          <div className="shadow-context" aria-live="polite">
+            <Info size={18} aria-hidden="true" />
+            <div>
+              <strong>
+                {step === "how"
+                  ? "Empezá con un ejemplo"
+                  : step === "design"
+                    ? "Contraste y formas simples"
+                    : "Antes de imprimir"}
+              </strong>
+              <p>
+                {step === "how"
+                  ? "Podés probar el flujo con las medidas iniciales y ajustar tu cuadro después."
+                  : step === "design"
+                    ? "Los contrastes marcados producen cortes más definidos. La proyección es estimativa y depende de la distancia y el montaje."
+                    : "Medí tus componentes y probá los encastres con tu material antes de imprimir el conjunto."}
+              </p>
+            </div>
           </div>
-          <TextField
-            label="Nombre"
-            value={name}
-            maxLength={100}
-            onChange={(e) => setName(e.target.value)}
-          />
-          <SavedDesigns
-            items={designs.items}
-            selected={designs.selected}
-            onSelect={designs.select}
-            onOpen={() => void openSelected()}
-            onRemove={removeSelected}
-            fieldClassName="shadow-saved"
-          />
-          <div className="shadow-divider" />
-          <div className="shadow-panel-head">
-            <h2>Geometría</h2>
-            <span>02</span>
-          </div>
-          <div className="shadow-two">
-            {number("width", "Ancho", 6, 80, 0.01, "cm")}
-            {number("height", "Alto", 6, 100, 0.01, "cm")}
-            {number("depth", "Profundidad", 3, 50, 0.01, "cm")}
-            {number("radius", "Radio de proyección", 15, 150, 1, "cm")}
-            {number("lightPercent", "Posición de luz", 10, 95, 1, "%")}
-            {number("margin", "Margen de corte", 0, 10, 1, "mm")}
-            {number("thickness", "Espesor", 0.6, 12, 0.2, "mm")}
-          </div>
-          <SelectField
-            label="Detalle"
-            value={settings.detail}
-            onChange={(e) => change("detail", Number(e.target.value))}
-            options={[
-              { value: 96, label: "Borrador" },
-              { value: 160, label: "Equilibrado" },
-              { value: 224, label: "Alto" },
-            ]}
-          />
-          <p className="shadow-help">
-            Todas las medidas de exportación se convierten a milímetros.
-          </p>
-          <p className="shadow-help">
-            Las partes sin unión al marco se eliminan tanto en la proyección
-            estimada como en los archivos exportados.
-          </p>
         </aside>
-        <section className="shadow-main">
+        <section
+          className="shadow-main"
+          id="shadow-active-step"
+          tabIndex={-1}
+          aria-label="Área de trabajo"
+        >
           {step === "design" && (
             <>
               <header className="shadow-step-header">
@@ -760,6 +852,50 @@ export default function ShadowEditor() {
                   }}
                 />
               </div>
+              <div className="shadow-design-tools">
+                <div
+                  className="shadow-tool-row"
+                  role="group"
+                  aria-label="Herramientas de dibujo"
+                >
+                  <span>Pincel</span>
+                  <Button
+                    variant="unstyled"
+                    className={!erase ? "active" : ""}
+                    aria-pressed={!erase}
+                    onClick={() => setErase(false)}
+                  >
+                    Dibujar
+                  </Button>
+                  <Button
+                    variant="unstyled"
+                    className={erase ? "active" : ""}
+                    aria-pressed={erase}
+                    onClick={() => setErase(true)}
+                  >
+                    Borrar
+                  </Button>
+                  <Input
+                    type="range"
+                    min="4"
+                    max="58"
+                    value={brush}
+                    onChange={(e) => setBrush(Number(e.target.value))}
+                    aria-label="Tamaño del pincel"
+                  />
+                  <small>{brush}px</small>
+                  <Button
+                    variant="unstyled"
+                    onClick={() => {
+                      setArtwork(presetArt("rays"));
+                      setMessage("Patrón restablecido.");
+                    }}
+                  >
+                    <RotateCcw size={14} />
+                    Reiniciar
+                  </Button>
+                </div>
+              </div>
               <div className="shadow-canvas-grid">
                 <article className="shadow-canvas-card">
                   <div className="shadow-card-top">
@@ -793,7 +929,8 @@ export default function ShadowEditor() {
                     }}
                   />
                   <small>
-                    Arrastrá para dibujar · Mayús invierte pincel y borrador
+                    Claro = luz · Oscuro = sombra. Arrastrá para dibujar; Mayús
+                    invierte pincel y borrador.
                   </small>
                 </article>
                 <article className="shadow-canvas-card">
@@ -813,44 +950,6 @@ export default function ShadowEditor() {
                   </small>
                 </article>
               </div>
-              <div className="shadow-design-tools">
-                <div className="shadow-tool-row">
-                  <span>Pincel</span>
-                  <Button
-                    variant="unstyled"
-                    className={!erase ? "active" : ""}
-                    onClick={() => setErase(false)}
-                  >
-                    Dibujar
-                  </Button>
-                  <Button
-                    variant="unstyled"
-                    className={erase ? "active" : ""}
-                    onClick={() => setErase(true)}
-                  >
-                    Borrar
-                  </Button>
-                  <Input
-                    type="range"
-                    min="4"
-                    max="58"
-                    value={brush}
-                    onChange={(e) => setBrush(Number(e.target.value))}
-                    aria-label="Tamaño del pincel"
-                  />
-                  <small>{brush}px</small>
-                  <Button
-                    variant="unstyled"
-                    onClick={() => {
-                      setArtwork(presetArt("rays"));
-                      setMessage("Patrón restablecido.");
-                    }}
-                  >
-                    <RotateCcw size={14} />
-                    Reiniciar
-                  </Button>
-                </div>
-              </div>
               <div className="shadow-section-title">
                 <div>
                   <h2>Patrones de corte</h2>
@@ -867,6 +966,7 @@ export default function ShadowEditor() {
                       <strong>Panel {labels[mask.face].toLowerCase()}</strong>
                       <Button
                         variant="unstyled"
+                        aria-label={`Descargar SVG del panel ${labels[mask.face].toLowerCase()}`}
                         onClick={() =>
                           download(
                             maskSVG(mask),
@@ -881,7 +981,14 @@ export default function ShadowEditor() {
                     </div>
                     <MaskPreview mask={mask} />
                     <small>
-                      {mask.span * 10} × {mask.depth * 10} mm
+                      {(mask.span * 10).toLocaleString("es-AR", {
+                        maximumFractionDigits: 2,
+                      })}{" "}
+                      ×{" "}
+                      {(mask.depth * 10).toLocaleString("es-AR", {
+                        maximumFractionDigits: 2,
+                      })}{" "}
+                      mm
                     </small>
                   </article>
                 ))}
@@ -913,25 +1020,6 @@ export default function ShadowEditor() {
                   onChange={(e) => setShowInterior(e.target.checked)}
                 />
               </div>
-              {isModular(fabrication) && (
-                <p className="shadow-preview-note">
-                  Marco frontal abierto hacia la persona; cierre y base con
-                  anclaje contra la pared. El tubo queda visible por delante.
-                  Activá Ver interior para revisar las tapitas y el recorrido de
-                  los cables. Medidas de portapilas y altura del emisor
-                  provisionales: revisalas antes de exportar. La vista incluye
-                  la sombra de las piezas impresas con una fuente puntual.
-                </p>
-              )}
-              <p className="shadow-preview-note">
-                Recortes bloqueados por las piezas de la lámpara:
-                aproximadamente{" "}
-                {Math.round(maskProjection.blockedApertureFraction * 100)}% de
-                su área. Se omiten los recortes completamente bloqueados; no se
-                trasladan a otra altura.
-                {isModular(fabrication) &&
-                  " Las paredes y el marco terminan después del cabezal, conservando el espacio de montaje."}
-              </p>
               <div className="shadow-three-stage">
                 {simulation && masks.length === 4 && !fabricationError ? (
                   <ShadowViewer
@@ -946,50 +1034,95 @@ export default function ShadowEditor() {
                   <span>{fabricationError || "Preparando la vista 3D…"}</span>
                 )}
               </div>
+              <div className="shadow-model-summary">
+                <div>
+                  <span>DIMENSIONES DEL DISEÑO</span>
+                  <strong>
+                    {settings.width} × {settings.height} × {settings.depth} cm
+                  </strong>
+                </div>
+                <div>
+                  <span>ARMADO</span>
+                  <strong>
+                    {modularCount(fabrication)} piezas imprimibles
+                  </strong>
+                </div>
+              </div>
+              <div className="shadow-safety">
+                <ShieldCheck size={19} aria-hidden="true" />
+                <div>
+                  <strong>Revisá el montaje real</strong>
+                  <p>
+                    Las medidas iniciales del portapilas y la altura del emisor
+                    son provisionales. Medí tus componentes. No conectes USB a
+                    las pilas; comprobá la temperatura del LED y la resistencia,
+                    y la retención del anclaje en tu pared.
+                  </p>
+                </div>
+              </div>
               <section
                 className="shadow-lighting-panel"
                 aria-labelledby="shadow-lighting-title"
               >
                 <div className="shadow-panel-head">
-                  <h2 id="shadow-lighting-title">Luz y armado</h2>
+                  <h2 id="shadow-lighting-title">Prepará el armado</h2>
                   <span>03</span>
                 </div>
                 <p className="shadow-lighting-intro">
                   LED de 1 W · Ajustá su ubicación y elegí la alimentación antes
                   de preparar el armado.
                 </p>
-                <ModularControls
-                  key={designs.selected}
-                  settings={opticalSettings}
-                  fabrication={fabrication}
-                  onChange={(modular) => {
-                    setFabrication((f) => ({ ...f, modular }));
-                    setMessage("");
-                  }}
-                  onLightPosition={(lightPercent) => {
-                    setSettings((s) => ({ ...s, lightPercent }));
-                    setNumberDrafts({});
-                    setMessage("");
-                  }}
-                />
-                {fabricationNumber("clearance", "Holgura de ajuste", 0.1, 0.8)}
-                <EnclosureControls
-                  key={`enclosure-${designs.selected}`}
-                  settings={settings}
-                  fabrication={fabrication}
-                  onChange={(enclosure) => {
-                    setFabrication((f) => ({ ...f, enclosure }));
-                    setMessage("");
-                  }}
-                />
-                <Checkbox
-                  label="Encastres de armado"
-                  checked={fabrication.joints}
-                  onChange={(e) => {
-                    setFabrication((f) => ({ ...f, joints: e.target.checked }));
-                    setMessage("");
-                  }}
-                />
+                <div className="shadow-build-grid">
+                  <ModularControls
+                    key={designs.selected}
+                    settings={opticalSettings}
+                    fabrication={fabrication}
+                    onChange={(modular) => {
+                      setFabrication((f) => ({ ...f, modular }));
+                      setMessage("");
+                    }}
+                    onLightPosition={(lightPercent) => {
+                      setSettings((s) => ({ ...s, lightPercent }));
+                      setNumberDrafts({});
+                      setMessage("");
+                    }}
+                  />
+                  <div className="shadow-base-options">
+                    <h3>Base y terminación</h3>
+                    <EnclosureControls
+                      key={`enclosure-${designs.selected}`}
+                      settings={settings}
+                      fabrication={fabrication}
+                      onChange={(enclosure) => {
+                        setFabrication((f) => ({ ...f, enclosure }));
+                        setMessage("");
+                      }}
+                    />
+                  </div>
+                </div>
+                <Disclosure
+                  title="Holguras y encastres"
+                  subtitle="Separación entre piezas y uniones de armado"
+                  className="shadow-settings-disclosure"
+                >
+                  {fabricationNumber(
+                    "clearance",
+                    "Holgura de ajuste",
+                    0.1,
+                    0.8,
+                  )}
+                  <Checkbox
+                    label="Encastres de armado"
+                    checked={fabrication.joints}
+                    onChange={(e) => {
+                      setFabrication((f) => ({
+                        ...f,
+                        joints: e.target.checked,
+                      }));
+                      setMessage("");
+                    }}
+                  />
+                </Disclosure>
                 {fabricationError && (
                   <p className="shadow-fabrication-error" role="alert">
                     {fabricationError}
@@ -998,16 +1131,11 @@ export default function ShadowEditor() {
               </section>
               <div className="shadow-3d-footer">
                 <div>
-                  <strong>
-                    {settings.width} × {settings.height} × {settings.depth} cm
-                  </strong>
-                  <span>
-                    {`Armado modular: ${modularCount(fabrication)} piezas. La estrella y el LED son referencias que no se imprimen.`}
-                  </span>
-                  <span>
-                    Izquierda y derecha mirando la caja de frente, desde la
-                    habitación.
-                  </span>
+                  <h3>Tu cuadro, listo para imprimir</h3>
+                  <p>
+                    Elegí un STL combinado o las piezas separadas. El LED y la
+                    estrella se compran aparte.
+                  </p>
                   <Button
                     variant="unstyled"
                     type="button"
@@ -1058,6 +1186,36 @@ export default function ShadowEditor() {
                   </Button>
                 </div>
               </div>
+              <Disclosure
+                title="Cómo interpretar el modelo y la proyección"
+                subtitle="Orientación, recortes bloqueados y límites de la simulación"
+                className="shadow-preview-details"
+              >
+                {isModular(fabrication) && (
+                  <p className="shadow-preview-note">
+                    Marco frontal abierto hacia la persona; cierre y base con
+                    anclaje contra la pared. El tubo queda visible por delante.
+                    Activá Ver interior para revisar las tapitas y el recorrido
+                    de los cables. Medidas de portapilas y altura del emisor
+                    provisionales: revisalas antes de exportar. La vista incluye
+                    la sombra de las piezas impresas con una fuente puntual.
+                  </p>
+                )}
+                <p className="shadow-preview-note">
+                  Recortes bloqueados por las piezas de la lámpara:
+                  aproximadamente{" "}
+                  {Math.round(maskProjection.blockedApertureFraction * 100)}% de
+                  su área. Se omiten los recortes completamente bloqueados; no
+                  se trasladan a otra altura.
+                  {isModular(fabrication) &&
+                    " Las paredes y el marco terminan después del cabezal, conservando el espacio de montaje."}
+                </p>
+                <p>
+                  Izquierda y derecha se nombran mirando la caja de frente,
+                  desde la habitación. La estrella y el LED son referencias que
+                  no se imprimen.
+                </p>
+              </Disclosure>
             </>
           )}
           {step === "how" && (
@@ -1083,42 +1241,46 @@ export default function ShadowEditor() {
                   className="shadow-journey"
                   aria-label="Cómo crear tu cuadro"
                 >
-                  <li>
-                    <div className="shadow-journey-icon">
-                      <Upload size={21} aria-hidden="true" />
-                      <span>01</span>
-                    </div>
-                    <h3>Elegí tu imagen</h3>
-                    <p>
-                      Cargá una imagen o probá un ejemplo. Las zonas oscuras
-                      forman la sombra; las claras dejan pasar la luz. Los
-                      dibujos con buen contraste son más fáciles de preparar.
-                    </p>
-                  </li>
-                  <li>
-                    <div className="shadow-journey-icon">
-                      <PenLine size={21} aria-hidden="true" />
-                      <span>02</span>
-                    </div>
-                    <h3>Hacé tuyo el diseño</h3>
-                    <p>
-                      Dibujá, borrá y definí las medidas del cuadro. En Vista 3D
-                      ajustá la posición del LED y revisá la proyección y el
-                      interior antes de exportar.
-                    </p>
-                  </li>
-                  <li>
-                    <div className="shadow-journey-icon">
-                      <Box size={21} aria-hidden="true" />
-                      <span>03</span>
-                    </div>
-                    <h3>Llevalo a la impresión</h3>
-                    <p>
-                      Elegí USB o 3 pilas AAA y descargá las piezas en STL o
-                      ZIP. La guía muestra cómo montar las paredes, el tubo, el
-                      cabezal y las tapas de tu diseño.
-                    </p>
-                  </li>
+                  {(
+                    [
+                      [
+                        Upload,
+                        "Elegí una imagen",
+                        "Subí tu foto o probá un ejemplo.",
+                      ],
+                      [
+                        PenLine,
+                        "Diseñá el patrón",
+                        "Dibujá, borrá y ajustá el contraste.",
+                      ],
+                      [
+                        Sun,
+                        "Revisá la proyección",
+                        "Compará tu dibujo con la sombra estimada.",
+                      ],
+                      [
+                        Box,
+                        "Explorá el modelo",
+                        "Revisá el interior y prepará el armado.",
+                      ],
+                      [
+                        Download,
+                        "Llevalo a imprimir",
+                        "Descargá las piezas y seguí la guía.",
+                      ],
+                    ] as const
+                  ).map(([StepIcon, title, text], index) => {
+                    return (
+                      <li key={title}>
+                        <div className="shadow-journey-icon">
+                          <StepIcon size={21} aria-hidden="true" />
+                          <span>0{index + 1}</span>
+                        </div>
+                        <h3>{title}</h3>
+                        <p>{text}</p>
+                      </li>
+                    );
+                  })}
                 </ol>
                 <section
                   className="shadow-how-assembly"

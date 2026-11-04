@@ -1,6 +1,6 @@
 "use client";
-import { FolderOpen, Trash2 } from "lucide-react";
-import { Button } from "./button";
+import { Check, Trash2 } from "lucide-react";
+import { IconButton } from "./button";
 import { FormField, Select } from "./form";
 
 export function SavedDesigns({
@@ -40,22 +40,20 @@ export function SavedDesigns({
               </option>
             ))}
           </Select>
-          <Button
-            variant="unstyled"
-            aria-label="Abrir diseño guardado"
+          <IconButton
+            label="Aplicar diseño guardado"
             disabled={!selected || busy}
             onClick={onOpen}
           >
-            <FolderOpen size={16} />
-          </Button>
-          <Button
-            variant="unstyled"
-            aria-label="Eliminar diseño guardado"
+            <Check size={16} aria-hidden="true" />
+          </IconButton>
+          <IconButton
+            label="Eliminar diseño guardado"
             disabled={!selected || busy}
             onClick={onRemove}
           >
-            <Trash2 size={16} />
-          </Button>
+            <Trash2 size={16} aria-hidden="true" />
+          </IconButton>
         </div>
       )}
     </FormField>

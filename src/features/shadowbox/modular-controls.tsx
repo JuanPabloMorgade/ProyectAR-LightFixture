@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { Button, NumberField, SelectField } from "@/components/ui";
+import { Button, Disclosure, NumberField, SelectField } from "@/components/ui";
 import type { BoxSettings } from "./engine";
 import type { Fabrication } from "./fabrication";
 import {
@@ -70,13 +70,6 @@ export default function ModularControls({
   }
   return (
     <div className="shadow-modular-controls">
-      <div className="shadow-modular-intro">
-        <strong>Una luz central, piezas desmontables</strong>
-        <p>
-          Base de pared con pilas y anclaje; tubo pasacables y cabezal sujeto al
-          marco por detrás del LED. Paneles y embellecedor independientes.
-        </p>
-      </div>
       <SelectField
         label="Alimentación del modelo"
         value={m.power}
@@ -98,14 +91,12 @@ export default function ModularControls({
           Con pilas se agrega su tapita independiente.
         </span>
       </div>
-      <h3>Estrella y LED</h3>
+      <h3>Medidas del LED</h3>
       <div className="shadow-two">
         {(
           [
             ["starDiameter", "Diámetro de la estrella", 15, 40],
-            ["starThickness", "Espesor de la estrella", 0.6, 4],
             ["emitterHeight", "Altura del emisor sobre la estrella", 1, 15],
-            ["cableDiameter", "Ancho del paso de cables", 2, 6],
           ] as const
         ).map(([key, label, min, max]) => (
           <Measure
@@ -118,41 +109,84 @@ export default function ModularControls({
           />
         ))}
       </div>
-      <p className="shadow-help">
-        Estrella nominal: Ø20 × 1,2 mm. La altura de emisor inicial de 5 mm es
-        provisional: medí desde la cara superior de la placa hasta el punto
-        luminoso. El largo del poste se calcula con esa medida y la posición de
-        luz.
-      </p>
+      <Disclosure
+        title="Estrella y LED"
+        subtitle="Placa, cables y medidas del montaje"
+        className="shadow-settings-disclosure"
+      >
+        <div className="shadow-two">
+          {(
+            [
+              ["starThickness", "Espesor de la estrella", 0.6, 4],
+              ["cableDiameter", "Ancho del paso de cables", 2, 6],
+            ] as const
+          ).map(([key, label, min, max]) => (
+            <Measure
+              key={key}
+              label={label}
+              value={m[key]}
+              min={min}
+              max={max}
+              onChange={(v) => update({ [key]: v })}
+            />
+          ))}
+        </div>
+        <p className="shadow-help">
+          Estrella nominal: Ø20 × 1,2 mm. La altura de emisor inicial de 5 mm es
+          provisional: medí desde la cara superior de la placa hasta el punto
+          luminoso. El largo del poste se calcula con esa medida y la posición
+          de luz.
+        </p>
+        {layout && (
+          <p className="shadow-help">
+            Tubo: Ø10 ×{" "}
+            {layout.postLength.toLocaleString("es-AR", {
+              maximumFractionDigits: 2,
+            })}{" "}
+            mm. Emisor a{" "}
+            {(
+              (settings.wallOffset ?? 0) * 10 +
+              (settings.depth * 10 * settings.lightPercent) / 100
+            ).toLocaleString("es-AR", { maximumFractionDigits: 2 })}{" "}
+            mm de la pared. La holgura de ajuste se suma en total a los
+            alojamientos.
+          </p>
+        )}
+      </Disclosure>
       {m.power === "aaa" && (
         <>
-          <h3>Portapilas de 3 AAA</h3>
-          <div className="shadow-two">
-            {(
-              [
-                ["holderLength", "Largo del portapilas", 30, 100],
-                ["holderWidth", "Ancho del portapilas", 20, 80],
-                ["holderHeight", "Alto del portapilas", 8, 35],
-              ] as const
-            ).map(([key, label, min, max]) => (
-              <Measure
-                key={key}
-                label={label}
-                value={m[key]}
-                min={min}
-                max={max}
-                onChange={(v) => update({ [key]: v })}
-              />
-            ))}
-          </div>
-          <p className="shadow-help">
-            55 × 38 × 14 mm es una envolvente provisional de portapilas
-            comercial. Medí el tuyo, incluyendo contactos y salida de cables,
-            antes de imprimir. El portapilas va dentro de la base contra la
-            pared, con tapa accesible desde atrás al descolgar el cuadro. La
-            tapa electrónica tiene un hueco circular para que el tubo lleve los
-            cables hacia abajo.
-          </p>
+          <Disclosure
+            title="Portapilas de 3 AAA"
+            subtitle="Dimensiones del componente real"
+            className="shadow-settings-disclosure"
+          >
+            <div className="shadow-two">
+              {(
+                [
+                  ["holderLength", "Largo del portapilas", 30, 100],
+                  ["holderWidth", "Ancho del portapilas", 20, 80],
+                  ["holderHeight", "Alto del portapilas", 8, 35],
+                ] as const
+              ).map(([key, label, min, max]) => (
+                <Measure
+                  key={key}
+                  label={label}
+                  value={m[key]}
+                  min={min}
+                  max={max}
+                  onChange={(v) => update({ [key]: v })}
+                />
+              ))}
+            </div>
+            <p className="shadow-help">
+              55 × 38 × 14 mm es una envolvente provisional de portapilas
+              comercial. Medí el tuyo, incluyendo contactos y salida de cables,
+              antes de imprimir. El portapilas va dentro de la base contra la
+              pared, con tapa accesible desde atrás al descolgar el cuadro. La
+              tapa electrónica tiene un hueco circular para que el tubo lleve
+              los cables hacia abajo.
+            </p>
+          </Disclosure>
         </>
       )}
       {suggestion !== undefined && (
@@ -160,23 +194,19 @@ export default function ModularControls({
           Ajustar posición de luz a {suggestion}% para el montaje
         </Button>
       )}
-      {layout && (
-        <p className="shadow-help">
-          Tubo: Ø10 ×{" "}
-          {layout.postLength.toLocaleString("es-AR", {
-            maximumFractionDigits: 2,
-          })}{" "}
-          mm. Emisor a{" "}
-          {(
-            (settings.wallOffset ?? 0) * 10 +
-            (settings.depth * 10 * settings.lightPercent) / 100
-          ).toLocaleString("es-AR", { maximumFractionDigits: 2 })}{" "}
-          mm de la pared. La holgura de ajuste se suma en total a los
-          alojamientos.
-        </p>
-      )}
-      <details className="shadow-modular-details">
-        <summary>Conexión y prueba del prototipo</summary>
+      <Disclosure
+        title="Conexión y prueba del prototipo"
+        subtitle="Circuito, polaridad y comprobaciones"
+        className="shadow-settings-disclosure"
+      >
+        <div className="shadow-modular-intro">
+          <strong>Una luz central, piezas desmontables</strong>
+          <p>
+            Base de pared con pilas y anclaje; tubo pasacables y cabezal sujeto
+            al marco por detrás del LED. Paneles y embellecedor independientes.
+          </p>
+        </div>
+
         <p>
           Para un solo LED blanco: positivo → interruptor → resistencia de 10 Ω
           / 5 W → LED → negativo. Verificá la polaridad y la corriente del LED
@@ -196,7 +226,7 @@ export default function ModularControls({
           impresas. Los cables y componentes comprados no se simulan: acomodá
           los cables finos fuera de la cara luminosa y validá la sombra real.
         </p>
-      </details>
+      </Disclosure>
     </div>
   );
 }

@@ -2,7 +2,7 @@
 import { isWallMount } from "./enclosure-config";
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
-import { Button } from "@/components/ui/button";
+import { Button, IconButton } from "@/components/ui/button";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { RotateCcw, RotateCw, Scan } from "lucide-react";
 import {
@@ -371,24 +371,22 @@ export default function AssemblyViewer({
         </p>
       )}
       <div className="assembly-camera">
-        <Button
-          variant="unstyled"
+        <IconButton
           type="button"
-          aria-label="Girar vista a la izquierda"
+          label="Girar vista a la izquierda"
           disabled={!!error}
           onClick={() => api.current?.rotate(-Math.PI / 6)}
         >
           <RotateCcw size={16} />
-        </Button>
-        <Button
-          variant="unstyled"
+        </IconButton>
+        <IconButton
           type="button"
-          aria-label="Girar vista a la derecha"
+          label="Girar vista a la derecha"
           disabled={!!error}
           onClick={() => api.current?.rotate(Math.PI / 6)}
         >
           <RotateCw size={16} />
-        </Button>
+        </IconButton>
         <Button
           variant="unstyled"
           type="button"

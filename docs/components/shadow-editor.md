@@ -10,7 +10,17 @@ Cómo funciona explica además el significado de zonas claras/oscuras, el montaj
 
 El selector de pasos usa botones nativos y señala el paso actual con `aria-current="step"`. Tab, Enter y Espacio conservan su interacción nativa; ArrowLeft, ArrowRight, Home y End seleccionan y enfocan el paso correspondiente. En el diseñador, Cargar imagen es la primera acción de origen y abre la misma entrada de archivos validada; debajo, O probá con un ejemplo agrupa Rayos, Flor, Estrellas y Texto como alternativas secundarias.
 
-Los tres pasos comparten una cabecera con título, orientación y navegación sobre la misma superficie violeta de la card. Cómo funciona presenta el recorrido en tres bloques y conserva la explicación de proyección en un desplegable nativo, cerrado inicialmente y accesible con teclado.
+Los tres pasos comparten una cabecera con título, orientación y navegación sobre la misma superficie violeta de la card. Cómo funciona presenta cinco acciones breves (imagen, patrón, proyección, 3D y descarga), resume el montaje y conserva la explicación de proyección en un desplegable nativo, cerrado inicialmente y accesible con teclado.
+
+## Organización del estudio
+
+Una barra horizontal de **Proyecto** (nombre, guardados y acciones), como la de lámparas, precede al selector de pasos. El panel lateral agrupa **Medidas principales** y **Ajustes avanzados** (detalle y notas de exportación). Conserva todas las unidades y límites, agrega ayudas sobre radio y posición de luz y muestra una recomendación breve según el paso. En pantallas de hasta 1000 px se apila sobre el área de trabajo. Un clic o toque en el selector de pasos lleva al contenido activo en esas pantallas; el teclado conserva el foco y las flechas del recorrido. El encabezado ofrece también un enlace directo al trabajo.
+
+En el diseñador, la carga y los ejemplos preceden a la barra de dibujo. Dibujar/Borrar anuncian su estado con `aria-pressed`; el grosor sigue siendo editable y las herramientas se conservan al cambiar de paso. Imagen y proyección se comparan en paralelo en escritorio y se apilan en móvil. Los cuatro SVG tienen nombres accesibles por panel; sus medidas visibles se formatean con hasta dos decimales, sin modificar el archivo a escala real.
+
+Vista 3D muestra primero visor e inspección interior, dimensiones y cantidad de piezas. Siguen las comprobaciones visibles de montaje, la alimentación y medidas principales de LED/base. `modular-controls.tsx` pliega Estrella y LED, Portapilas y Conexión; `enclosure-controls.tsx` pliega geometría de base y anclaje. Holguras y encastres forman otro desplegable. Cerrar estos bloques no desmonta sus controles ni cambia valores. La descarga y la guía de armado preceden al bloque de interpretación técnica de la proyección. Los errores de fabricación siguen visibles y bloquean exportaciones inválidas.
+
+`Disclosure` y `FieldHelp`, en `src/components/ui/studio.tsx` y `studio.css`, son compartidos con Lámparas con fotos. Reutilizan `details/summary` nativos y el modal accesible existente. El rediseño no modifica motores de imagen, proyección, geometría, guías 3D ni formatos de proyecto o exportación.
 
 ## Estado y dependencias
 

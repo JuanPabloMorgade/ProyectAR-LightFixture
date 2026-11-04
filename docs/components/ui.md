@@ -8,6 +8,8 @@ Los componentes contienen presentación, HTML accesible y comportamiento común.
 
 ## Componentes disponibles
 
+`studio.tsx` y `studio.css` reúnen los desplegables y ayudas de ambos editores, extraídos de la implementación de lámparas. `Disclosure` usa `details/summary` y mantiene sus hijos montados al cerrarse. `FieldHelp` ofrece un botón etiquetado y reutiliza `Modal` para navegación por teclado, Escape y retorno de foco. Ambos se exportan desde el índice UI; no contienen estados ni cálculos del proyecto.
+
 | Componente                            | Uso                                                                                                     |
 | ------------------------------------- | ------------------------------------------------------------------------------------------------------- |
 | `TextField`                           | Input con etiqueta; admite `type="email"`, `name`, `required`, `ref` y otras props nativas.             |
@@ -26,6 +28,8 @@ Los componentes contienen presentación, HTML accesible y comportamiento común.
 | `Toast`, `ToastViewport`              | Avisos flotantes con variantes, cierre, duración y acción opcional.                                     |
 
 Los controles aceptan props HTML tipadas y referencias de React 19. Los campos etiquetados generan un ID con `useId` o usan el `id` recibido; conectan `description` y `error` mediante `aria-describedby`, y marcan errores con `aria-invalid`. `fieldClassName` modifica el contenedor; `className` modifica el control.
+
+Los botones que muestran únicamente un ícono deben usar `IconButton` con un `label` descriptivo. El componente asigna ese texto a `aria-label` y, por defecto, a `title`, que proporciona el tooltip nativo del navegador al pasar el puntero. Las ayudas, los cierres de modal/avisos, los controles de giro de la guía y los botones de diseños guardados usan esta convención en ambos editores. Los botones con texto visible conservan `Button`.
 
 ## Campos
 

@@ -156,7 +156,7 @@ export function PhotoGuide({
           }
           onClose={() => setOpen(false)}
         />
-        <div className="lamp-help-body">
+        <div className="studio-help-body">
           {sphere ? (
             <>
               <div className="lamp-photo-examples">

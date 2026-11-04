@@ -6,7 +6,7 @@ Monta [LampEditor](../components/lamp-editor.md) dentro de [Shell](../components
 
 ## Flujo actual
 
-1. El editor inicia con la imagen de ejemplo y los parámetros predeterminados. Diseños guardados comienza vacío: para aplicar uno hay que seleccionarlo y pulsar la carpeta.
+1. El editor inicia con la imagen de ejemplo y los parámetros predeterminados. Diseños guardados comienza vacío: para aplicar uno hay que seleccionarlo y pulsar Aplicar (✓).
 2. Primero se elige Plana, Curva o Esfera navideña mediante tarjetas. Los paneles de 180° existentes siguen abriéndose.
 3. Se carga JPG/PNG/WebP con recomendaciones junto al cargador y una guía visual. Las fotos de esfera reciben orientación de proporciones sin bloquear la creación.
 4. Se ajustan medidas y opciones básicas; espesores, contraste, inversión y Detalle están en Ajustes avanzados.
