@@ -12,14 +12,178 @@ import {
   SPHERE_NECK_HEIGHT,
   DEFAULT_OPENING_DIAMETER,
   sphereGrid,
+  spherePhotoBounds,
 } from "../src/features/lithophane/sphere";
 import { binarySTL } from "../src/features/lithophane/mesh";
-import { sphereZIP } from "../src/features/lithophane/sphere-export";
+import {
+  sphereZIP,
+  sphereImageGuidance,
+} from "../src/features/lithophane/sphere-export";
 import { createHousingParts } from "../src/features/lithophane/housing";
 import { hasPrintStand } from "../src/features/lithophane/print-stand";
 import { closed, materialAt } from "./mesh-assertions";
 
 const photo = new Uint8ClampedArray([0, 0, 0, 255, 255, 255, 255, 255]);
+
+test("centered photo stretch widens only the photo and persists the smooth closed background", () => {
+  const s = {
+    ...defaults,
+    shape: "sphere" as const,
+    spherePhotoFit: "contain" as const,
+    width: 80,
+    resolution: 80,
+  };
+  const baseBounds = spherePhotoBounds(s, 20, 20);
+  for (const stretch of [1, 10, 25, 50, 75]) {
+    const bounds = spherePhotoBounds(
+      { ...s, spherePhotoStretch: stretch },
+      20,
+      20,
+    );
+    expect(bounds.halfHeight).toBe(baseBounds.halfHeight);
+    expect(bounds.halfWidth).toBeCloseTo(
+      baseBounds.halfWidth * (1 + stretch / 100),
+      10,
+    );
+  }
+  expect(
+    spherePhotoBounds({ ...s, spherePhotoStretch: 50 }, 100, 10).halfWidth,
+  ).toBe(Math.PI);
+  const white = new Uint8ClampedArray(20 * 20 * 4).fill(255);
+  const original = createMesh(white, 20, 20, s);
+  const widened = createMesh(white, 20, 20, { ...s, spherePhotoStretch: 75 });
+  closed(widened);
+  const n = original.positions.length / 6;
+  expect(widened.positions.slice(n * 3)).toEqual(
+    original.positions.slice(n * 3),
+  );
+  expect(widened.indices).toEqual(original.indices);
+  const grid = sphereGrid(s);
+  const y = Math.round((-grid.bottom / (grid.top - grid.bottom)) * grid.rows);
+  const radiusAt = (mesh: typeof original, theta: number) => {
+    const x = Math.round((theta / (2 * Math.PI) + 0.5) * grid.cols);
+    const i = 1 + y * grid.cols + x;
+    return Math.hypot(...mesh.positions.slice(i * 3, i * 3 + 3));
+  };
+  expect(radiusAt(original, 1)).toBeCloseTo(40, 4);
+  expect(radiusAt(widened, 1)).toBeLessThan(39);
+  expect(radiusAt(widened, 2.5)).toBeCloseTo(40, 4);
+  const stl = binarySTL(widened.positions, widened.indices);
+  expect(new DataView(stl).getUint32(80, true)).toBe(
+    widened.indices.length / 3,
+  );
+  expect(sphereImageGuidance({ ...s, spherePhotoStretch: 25 })).toContain(
+    "+25 %",
+  );
+  for (const invalid of [-1, 76, NaN, Infinity])
+    expect(() =>
+      validateSettings({ ...s, spherePhotoStretch: invalid }),
+    ).toThrow(/0 y 75/);
+  const panorama = { ...s, spherePhotoFit: "stretch" as const };
+  expect(
+    createMesh(white, 20, 20, { ...panorama, spherePhotoStretch: 50 })
+      .positions,
+  ).toEqual(createMesh(white, 20, 20, panorama).positions);
+});
+
+test.each([
+  [20, 20],
+  [10, 20],
+  [100, 10],
+])(
+  "contained %sx%s photo keeps its aspect and leaves a smooth closed sphere outside the patch",
+  (width, height) => {
+    const s = {
+      ...defaults,
+      shape: "sphere" as const,
+      spherePhotoFit: "contain" as const,
+      width: 80,
+      resolution: 80,
+    };
+    const bounds = spherePhotoBounds(s, width, height);
+    expect(bounds.halfWidth / bounds.halfHeight).toBeCloseTo(
+      width / height,
+      10,
+    );
+    expect(bounds.halfWidth).toBeLessThanOrEqual(Math.PI);
+    expect(bounds.halfHeight).toBeLessThanOrEqual(spherePhotoLatitude(s));
+    const white = new Uint8ClampedArray(width * height * 4).fill(255);
+    const black = white.map((value, i) => (i % 4 === 3 ? value : 0));
+    const mesh = createMesh(white, width, height, s);
+    const dark = createMesh(black, width, height, s);
+    closed(mesh);
+    const n = mesh.positions.length / 6;
+    expect(mesh.positions.slice(n * 3)).toEqual(dark.positions.slice(n * 3));
+    const grid = sphereGrid(s);
+    let affected = 0,
+      smooth = 0;
+    for (let y = 1; y <= grid.rows; y++) {
+      const latitude = grid.bottom + (y / grid.rows) * (grid.top - grid.bottom);
+      for (let x = 0; x < grid.cols; x++) {
+        const theta = (x / grid.cols - 0.5) * 2 * Math.PI;
+        const i = 1 + y * grid.cols + x;
+        const radial = Math.hypot(...mesh.positions.slice(i * 3, i * 3 + 3));
+        if (
+          Math.abs(theta) >= bounds.halfWidth ||
+          Math.abs(latitude) >= bounds.halfHeight
+        ) {
+          expect(radial).toBeCloseTo(s.width / 2, 4);
+          smooth++;
+        } else if (radial < s.width / 2 - 0.1) affected++;
+        const thickness = Math.hypot(
+          ...[0, 1, 2].map(
+            (axis) =>
+              mesh.positions[i * 3 + axis] - mesh.positions[(i + n) * 3 + axis],
+          ),
+        );
+        expect(thickness).toBeGreaterThanOrEqual(s.min - 1e-5);
+        expect(thickness).toBeLessThanOrEqual(s.max + 1e-5);
+      }
+    }
+    expect(affected).toBeGreaterThan(0);
+    expect(smooth).toBeGreaterThan(0);
+    const printed = sphereForPrinting(mesh);
+    closed(printed);
+    const stl = binarySTL(printed.positions, printed.indices);
+    expect(new DataView(stl).getUint32(80, true)).toBe(mesh.indices.length / 3);
+  },
+);
+
+test("contained photo samples both halves without cropping and preserves old panorama projects", () => {
+  const s = {
+    ...defaults,
+    shape: "sphere" as const,
+    width: 80,
+    resolution: 160,
+  };
+  const legacy = createMesh(photo, 2, 1, s);
+  expect(
+    createMesh(photo, 2, 1, { ...s, spherePhotoFit: "stretch" }).positions,
+  ).toEqual(legacy.positions);
+  const contained = createMesh(photo, 2, 1, {
+    ...s,
+    spherePhotoFit: "contain",
+  });
+  const grid = sphereGrid(s);
+  const y = Math.round((-grid.bottom / (grid.top - grid.bottom)) * grid.rows);
+  const radiusAt = (theta: number) => {
+    const x = Math.round((theta / (2 * Math.PI) + 0.5) * grid.cols);
+    const i = 1 + y * grid.cols + x;
+    return Math.hypot(...contained.positions.slice(i * 3, i * 3 + 3));
+  };
+  expect(radiusAt(-0.4)).toBeCloseTo(s.width / 2, 4);
+  expect(radiusAt(0.4)).toBeCloseTo(s.width / 2 - s.max + s.min, 4);
+  expect(radiusAt(2.5)).toBeCloseTo(s.width / 2, 4);
+  expect(sphereImageGuidance({ ...s, spherePhotoFit: "contain" })).toContain(
+    "sin recorte ni estiramiento",
+  );
+  expect(
+    sphereImageGuidance({ ...s, spherePhotoFit: "contain" }),
+  ).not.toContain("1500 ×");
+  expect(() =>
+    validateSettings({ ...s, spherePhotoFit: "invalid" as "contain" }),
+  ).toThrow(/cómo aplicar/);
+});
 
 test.each([512, 640])(
   "Detail %s samples an 80 mm sphere evenly in both axes and exports the full grid",

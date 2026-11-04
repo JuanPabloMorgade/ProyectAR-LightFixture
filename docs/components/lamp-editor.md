@@ -4,6 +4,20 @@
 
 Editor cliente de litofanías: carga JPG/PNG/WebP, ofrece Plano, Curvo y Esferas navideñas, ajusta medidas y espesores en mm, contraste, inversión y detalle. Conserva los paneles de 180° de proyectos anteriores. Las imágenes se procesan en el navegador y se reducen a un máximo de 1600 px por lado.
 
+## Organización del estudio
+
+El panel izquierdo sigue tres pasos: **Elegí tu litofanía**, **Subí tu fotografía** y **Personalizá tu diseño**. `studio-controls.tsx` aporta tarjetas de variante con radios nativos, secciones desplegables y ayudas que reutilizan el modal accesible compartido. `design-settings.tsx` mantiene las medidas, abertura y opciones de caja/soporte a mano; espesores, contraste, inversión, detalle y holgura quedan en Ajustes avanzados. Plegar una sección no desmonta controles ni altera valores.
+
+`photo-guide.tsx` ubica la recomendación junto al cargador y ofrece diagramas locales en un modal. Identifica la imagen de ejemplo. `photo-advice.ts` analiza la foto cargada usando la proporción real de la franja esférica y una tolerancia de orientación UX configurable del 12 %, sin bloquear la creación. En paneles describe la adaptación completa al ancho/arco y alto, sin inventar límites numéricos ni prometer recortes automáticos.
+
+Para esferas, **Cómo aplicar la foto** permite elegir entre **Panorámica · cubrir 360°** (comportamiento anterior) y **Conservar proporción · foto centrada**. El segundo coloca la imagen completa en un sector frontal y deja liso el resto; las recomendaciones y diagramas se adaptan al modo. `settings.spherePhotoFit` persiste en el proyecto y se conserva al alternar variantes. Los proyectos anteriores sin esta propiedad mantienen su aspecto panorámico.
+
+En foto centrada aparece **Estiramiento horizontal**: de 0 % (proporción original) a +75 %, con ajustes de 1 %. Permite ensanchar suavemente la foto manteniendo su altura y encuadre completo, hasta completar la vuelta. El valor se guarda en `settings.spherePhotoStretch`, se conserva al cambiar de variante y se aplica tanto a la vista como al STL.
+
+El panel derecho conserva `Viewer`, controles de luz y componentes separados. Sigue con dimensiones, espesores y descarga; `printing-guide.tsx` agrupa impresión, montaje y detalles técnicos, incluida la cantidad de triángulos. Las advertencias críticas de LED y sujeción de esferas permanecen visibles fuera de los desplegables.
+
+`studio.css` aplica los estilos únicamente al estudio y sus ayudas. Dos columnas en escritorio, una hasta 850 px y enlace directo a la vista 3D en el encabezado. No usa elementos sticky. La barra compacta de proyectos reúne nombre, guardados y acciones.
+
 ## Inicio y diseños guardados
 
 Al montarse crea el worker, lista los diseños y carga siempre el ejemplo con los parámetros predeterminados. El selector comienza vacío, incluso si hay un único guardado o un registro del último proyecto. Seleccionar una opción no aplica el diseño: hay que pulsar la carpeta.

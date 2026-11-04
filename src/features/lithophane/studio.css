@@ -1,0 +1,764 @@
+/* Scoped to the lamp studio: shared controls and other editors keep their styles. */
+.lamp-studio {
+  --lamp-copy: #c5b7d4;
+}
+.lamp-studio .editor-heading {
+  padding-bottom: 22px;
+}
+.lamp-preview-link {
+  white-space: nowrap;
+}
+.lamp-project-bar {
+  max-width: 1320px;
+  margin: 0 auto 24px;
+  padding: 16px 20px;
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) minmax(220px, 1fr) auto;
+  align-items: end;
+  gap: 20px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: #140e1d;
+}
+.lamp-project-bar .ui-field {
+  margin: 0;
+}
+.lamp-project-bar .lamp-header-actions {
+  align-items: center;
+  gap: 8px;
+}
+.lamp-project-bar .button {
+  min-height: 44px;
+}
+.lamp-studio .lamp-workspace {
+  grid-template-columns: 400px minmax(0, 1fr);
+  gap: 24px;
+}
+.lamp-studio .controls {
+  padding: 0;
+  overflow: visible;
+  background: linear-gradient(145deg, #1e1428, #15101e);
+}
+.lamp-panel-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 22px 24px;
+  border-bottom: 1px solid var(--line);
+}
+.lamp-panel-heading h2 {
+  margin: 0;
+  font-size: 17px;
+  letter-spacing: -0.3px;
+}
+.lamp-panel-heading > span {
+  font-size: 12px;
+  color: var(--lamp-copy);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 4px 9px;
+}
+.lamp-step {
+  padding: 24px;
+}
+.lamp-step + .lamp-step {
+  border-top: 1px solid var(--line);
+}
+.lamp-step h3 {
+  margin: 0 0 18px;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  font-size: 16px;
+  letter-spacing: -0.2px;
+}
+.lamp-step h3 > span {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  flex: none;
+  color: #d4b5ff;
+  background: #a879ff14;
+  border: 1px solid #a879ff40;
+  border-radius: 9px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.lamp-step-intro,
+.lamp-example-label {
+  color: var(--lamp-copy);
+  font-size: 13px;
+  line-height: 1.65;
+  margin: -4px 0 15px;
+}
+.lamp-studio .ui-label,
+.lamp-studio .ui-checkbox {
+  font-size: 13px;
+  line-height: 1.55;
+}
+.lamp-studio .ui-control {
+  min-height: 44px;
+  font-size: 14px;
+}
+.lamp-studio .ui-checkbox {
+  min-height: 32px;
+  margin: 10px 0;
+}
+.lamp-studio .ui-checkbox input {
+  width: 16px;
+  height: 16px;
+}
+.lamp-studio .field-hint,
+.lamp-studio .ui-field-hint {
+  font-size: 13px;
+  line-height: 1.65;
+  color: var(--lamp-copy);
+}
+.lamp-studio .text-button {
+  font-size: 13px;
+  min-height: 44px;
+}
+.lamp-studio .ui-field {
+  margin: 12px 0;
+}
+.lamp-project-bar .ui-field {
+  margin: 0;
+}
+.lamp-options {
+  margin: 12px 0 20px;
+}
+.lamp-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+.lamp-variants {
+  padding: 0;
+  margin: 0;
+  border: 0;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.lamp-variant {
+  position: relative;
+  min-width: 0;
+  cursor: pointer;
+}
+.lamp-variant input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+}
+.lamp-variant-face {
+  height: 100%;
+  min-height: 150px;
+  padding: 12px 7px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  border: 1px solid #4c355f;
+  border-radius: 13px;
+  background: #130d1b;
+  color: #c1accf;
+}
+.lamp-variant-face > svg:not(.lamp-variant-check) {
+  width: 70px;
+  height: 58px;
+  margin-bottom: 8px;
+}
+.lamp-variant-face strong {
+  font-size: 13px;
+  line-height: 1.35;
+  font-weight: 600;
+  color: var(--ink);
+}
+.lamp-variant-face small {
+  display: block;
+  font-size: 11px;
+  line-height: 1.5;
+  margin-top: 5px;
+  color: var(--lamp-copy);
+}
+.lamp-variant-check {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  opacity: 0;
+}
+.lamp-variant:hover .lamp-variant-face {
+  border-color: #a879ff;
+  background: #271735;
+}
+.lamp-variant input:checked + .lamp-variant-face {
+  background: linear-gradient(155deg, #44245f, #281936);
+  border-color: #b385f6;
+  box-shadow: inset 0 0 0 1px #b385f6;
+  color: #d8b5ff;
+}
+.lamp-variant input:checked + .lamp-variant-face .lamp-variant-check {
+  opacity: 1;
+}
+.lamp-variant input:focus-visible + .lamp-variant-face {
+  outline: 2px solid #dfc7ff;
+  outline-offset: 4px;
+}
+.lamp-studio .upload-area {
+  display: flex;
+  align-items: center;
+  min-height: 112px;
+  border-style: dashed;
+  background: #100b18;
+}
+.lamp-studio .upload-area > img {
+  width: 36%;
+  height: 112px;
+  object-fit: contain;
+  padding: 8px;
+  background: #08070d66;
+}
+.lamp-studio .upload-area > span {
+  flex: 1;
+  font-size: 14px;
+  line-height: 1.5;
+  padding: 15px 10px;
+}
+.lamp-studio .upload-area small {
+  font-size: 12px;
+  line-height: 1.6;
+}
+.lamp-photo-advice {
+  margin-top: 16px;
+}
+.lamp-photo-tip,
+.lamp-photo-assessment {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+}
+.lamp-photo-tip > svg,
+.lamp-photo-assessment > svg {
+  flex: none;
+  margin-top: 2px;
+  color: #c6a1f1;
+}
+.lamp-photo-tip strong,
+.lamp-photo-assessment strong {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+.lamp-photo-tip p {
+  margin: 5px 0 0;
+}
+.lamp-photo-assessment {
+  margin: 12px 0 0;
+  padding: 12px;
+  border: 1px solid #665079;
+  border-radius: 10px;
+  background: #ffffff03;
+}
+.lamp-photo-assessment p {
+  font-size: 13px;
+  color: var(--lamp-copy);
+  line-height: 1.6;
+  margin: 4px 0 0;
+}
+.lamp-photo-assessment.good {
+  border-color: #577567;
+}
+.lamp-photo-assessment.good > svg {
+  color: var(--success);
+}
+.lamp-photo-assessment.review {
+  border-color: #9b794a;
+}
+.lamp-photo-assessment.review > svg {
+  color: #ebc288;
+}
+.lamp-guide-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  text-align: left;
+  padding: 10px 0 0;
+  min-height: 44px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #d6b9ff;
+  background: transparent;
+  border: 0;
+}
+.lamp-disclosure {
+  border-top: 1px solid var(--line);
+}
+.lamp-disclosure > summary {
+  list-style: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 68px;
+  padding: 18px 22px;
+  font-size: 14px;
+  font-weight: 600;
+}
+.lamp-disclosure > summary::-webkit-details-marker {
+  display: none;
+}
+.lamp-disclosure > summary small {
+  display: block;
+  margin-top: 5px;
+  font-weight: 400;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--lamp-copy);
+}
+.lamp-disclosure > summary > svg {
+  flex: none;
+  color: #c5a3e8;
+}
+.lamp-disclosure[open] > summary > svg {
+  transform: rotate(180deg);
+}
+.lamp-disclosure > summary:hover {
+  background: #a879ff08;
+}
+.lamp-disclosure > summary:focus-visible {
+  outline-offset: -4px;
+  border-radius: 8px;
+}
+.lamp-disclosure-content {
+  padding: 0 22px 20px;
+}
+.lamp-disclosure-content p {
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--lamp-copy);
+  margin: 0 0 12px;
+}
+.lamp-disclosure-content p:last-child {
+  margin-bottom: 0;
+}
+.lamp-advanced {
+  margin-top: 20px;
+  border: 1px solid #4c355f;
+  border-radius: 12px;
+  background: #100b1833;
+}
+.lamp-advanced > summary {
+  padding: 15px;
+}
+.lamp-advanced .lamp-disclosure-content {
+  padding: 0 15px 15px;
+}
+.lamp-help-field {
+  display: flow-root;
+  position: relative;
+  min-width: 0;
+}
+.lamp-help-field .ui-label {
+  padding-right: 27px;
+}
+.lamp-help-button {
+  position: absolute;
+  right: -4px;
+  top: 8px;
+  width: 30px;
+  height: 30px;
+  min-height: 30px;
+  border: 0;
+  background: transparent;
+  color: #c6a1f1;
+  padding: 5px;
+  border-radius: 8px;
+}
+.lamp-help-field:has(> .ui-field) > .lamp-help-button {
+  top: 8px;
+}
+.lamp-output {
+  min-width: 0;
+  scroll-margin-top: 24px;
+}
+.lamp-studio .preview-panel {
+  border-radius: 22px;
+}
+.lamp-studio .preview-toolbar {
+  padding: 16px 22px;
+  gap: 12px;
+}
+.lamp-studio .preview-title {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.7px;
+  margin-right: auto;
+}
+.lamp-studio .preview-toolbar .ui-checkbox {
+  margin: 0;
+  font-size: 12px;
+}
+.lamp-studio .light-toggle {
+  min-height: 40px;
+}
+.lamp-studio .preview-stage {
+  height: 440px;
+  background: radial-gradient(ellipse at 50% 45%, #3e3044, #120d1b 85%);
+}
+.lamp-studio .preview-stage.illuminated {
+  background: radial-gradient(
+    ellipse at 50% 45%,
+    #4a3540,
+    #1e1428 65%,
+    #100b18
+  );
+}
+.lamp-studio .stage-caption {
+  font-size: 12px;
+  padding: 0 16px;
+  line-height: 1.6;
+}
+.lamp-studio .preview-meta {
+  padding: 20px 24px;
+  grid-template-columns: 1fr 1fr;
+}
+.lamp-studio .preview-meta span {
+  font-size: 11px;
+  letter-spacing: 0.6px;
+}
+.lamp-studio .preview-meta strong {
+  font-size: 17px;
+  font-variant-numeric: tabular-nums;
+}
+.lamp-studio .export-bar {
+  padding: 22px 24px 18px;
+  align-items: stretch;
+}
+.lamp-studio .export-bar > div {
+  flex: 1 1 220px;
+}
+.lamp-studio .export-bar h3 {
+  font-size: 16px;
+}
+.lamp-studio .export-bar p {
+  font-size: 13px;
+  line-height: 1.6;
+}
+.lamp-studio .export-bar .button {
+  flex: 1 1 240px;
+  min-height: 52px;
+  border-radius: 13px;
+  font-size: 14px;
+}
+.lamp-studio .status {
+  font-size: 12px;
+  padding: 0 24px 20px;
+}
+.lamp-learning {
+  margin-top: 22px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: #110c18;
+  overflow: hidden;
+}
+.lamp-learning-heading {
+  padding: 20px 22px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  color: #ceb5e3;
+}
+.lamp-learning-heading h2 {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0;
+}
+.lamp-learning-heading > span {
+  margin-left: auto;
+  color: var(--lamp-copy);
+  font-size: 12px;
+}
+.lamp-safety {
+  margin: 0 20px 18px;
+  padding: 16px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  border: 1px solid #756048;
+  border-radius: 12px;
+  background: #cda16308;
+}
+.lamp-safety > svg {
+  flex: none;
+  color: #e2c19a;
+}
+.lamp-safety strong {
+  font-size: 14px;
+  color: #f0d7b4;
+}
+.lamp-safety p {
+  margin: 6px 0 0;
+  font-size: 13px;
+  line-height: 1.65;
+  color: #d5c8bd;
+}
+.lamp-technical {
+  margin: 0 0 16px;
+}
+.lamp-technical > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid var(--line);
+  padding: 10px 0;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.lamp-technical dt {
+  color: var(--lamp-copy);
+}
+.lamp-technical dd {
+  margin: 0;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.lamp-help-modal.ui-modal {
+  width: min(500px, calc(100vw - 32px));
+}
+.lamp-photo-modal.ui-modal {
+  width: min(840px, calc(100vw - 32px));
+}
+.lamp-help-body {
+  padding: 0 24px 24px;
+}
+.lamp-help-body p {
+  color: #c5b7d4;
+  font-size: 14px;
+  line-height: 1.75;
+}
+.lamp-help-body h3 {
+  font-size: 15px;
+  line-height: 1.5;
+}
+.lamp-photo-examples {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+.lamp-photo-examples article {
+  min-width: 0;
+}
+.lamp-photo-examples p {
+  font-size: 13px;
+}
+.lamp-photo-diagram {
+  height: 150px;
+  background: #100b18;
+  border: 1px solid #503561;
+  border-radius: 12px;
+  padding: 16px 12px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.lamp-diagram-picture {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  height: 58px;
+  margin: auto;
+  background: linear-gradient(155deg, #5a396f, #342144);
+  border: 1px solid #a879ff;
+  border-radius: 5px;
+  overflow: hidden;
+}
+.lamp-diagram-picture > svg {
+  color: #f4debc;
+  width: 32px;
+  height: 32px;
+}
+.lamp-diagram-edge {
+  width: 15%;
+  height: 100%;
+  background: repeating-linear-gradient(
+    135deg,
+    #dcb17d25 0 3px,
+    transparent 3px 7px
+  );
+  border-inline: 1px dashed #dcb17d88;
+}
+.standard .lamp-diagram-picture {
+  width: 65%;
+  height: 78px;
+}
+.portrait .lamp-diagram-picture {
+  width: 38%;
+  height: 90px;
+}
+.lamp-diagram-caption {
+  font-size: 11px;
+  color: #c8b5d8;
+  text-align: center;
+}
+.lamp-photo-band {
+  margin-top: 20px;
+  padding: 18px 10px;
+  display: grid;
+  grid-template-columns: 1fr 2fr 1fr;
+  gap: 12px;
+  align-items: center;
+  text-align: center;
+  border: 1px dashed #a879ff;
+  border-radius: 12px;
+  background: linear-gradient(
+    90deg,
+    #c9a06318,
+    #a879ff20 25%,
+    #a879ff20 75%,
+    #c9a06318
+  );
+}
+.lamp-photo-band > span {
+  font-size: 12px;
+  line-height: 1.5;
+  color: #dbc4a9;
+}
+.lamp-photo-band > strong {
+  font-size: 14px;
+  line-height: 1.5;
+}
+@media (max-width: 1400px) {
+  .lamp-project-bar {
+    margin-inline: 40px;
+  }
+}
+@media (max-width: 1150px) {
+  .lamp-project-bar {
+    grid-template-columns: 1fr 1fr;
+  }
+  .lamp-project-bar .lamp-header-actions {
+    grid-column: 1 / -1;
+    justify-content: flex-end;
+  }
+  .lamp-studio .lamp-workspace {
+    grid-template-columns: 360px minmax(0, 1fr);
+    gap: 18px;
+  }
+  .lamp-step {
+    padding: 20px;
+  }
+  .lamp-studio .preview-toolbar .preview-title {
+    width: 100%;
+  }
+  .lamp-studio .preview-stage {
+    height: 400px;
+  }
+}
+@media (max-width: 1000px) {
+  .lamp-project-bar {
+    margin-inline: 20px;
+  }
+}
+@media (max-width: 850px) {
+  .lamp-studio .lamp-workspace {
+    grid-template-columns: 1fr;
+    padding-inline: 20px;
+  }
+  .lamp-studio .editor-heading {
+    align-items: flex-start;
+  }
+  .lamp-studio .preview-toolbar .preview-title {
+    width: auto;
+  }
+  .lamp-studio .preview-stage {
+    height: 440px;
+  }
+  .lamp-step {
+    padding: 24px;
+  }
+  .lamp-variant-face {
+    min-height: 145px;
+  }
+}
+@media (max-width: 540px) {
+  .lamp-project-bar {
+    margin-inline: 14px;
+    padding: 16px;
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  .lamp-project-bar .lamp-header-actions {
+    gap: 6px;
+  }
+  .lamp-project-bar .lamp-header-actions .button {
+    font-size: 12px;
+    padding: 10px;
+  }
+  .lamp-studio .lamp-workspace {
+    padding-inline: 14px;
+  }
+  .lamp-step {
+    padding: 20px 16px;
+  }
+  .lamp-panel-heading {
+    padding: 20px 16px;
+  }
+  .lamp-variant-face {
+    padding-inline: 5px;
+  }
+  .lamp-studio .two-fields {
+    gap: 10px;
+  }
+  .lamp-studio .preview-toolbar {
+    padding: 16px;
+  }
+  .lamp-studio .preview-stage {
+    height: 350px;
+  }
+  .lamp-studio .preview-meta,
+  .lamp-studio .export-bar {
+    padding: 18px 16px;
+  }
+  .lamp-studio .status {
+    padding-inline: 16px;
+  }
+  .lamp-learning-heading {
+    padding: 18px 16px;
+  }
+  .lamp-learning-heading > span {
+    display: none;
+  }
+  .lamp-disclosure > summary {
+    padding-inline: 16px;
+  }
+  .lamp-disclosure-content {
+    padding-inline: 16px;
+  }
+  .lamp-safety {
+    margin-inline: 14px;
+    padding: 14px;
+  }
+  .lamp-help-body {
+    padding-inline: 18px;
+  }
+  .lamp-photo-examples {
+    grid-template-columns: 1fr;
+  }
+  .lamp-photo-band {
+    gap: 6px;
+  }
+}

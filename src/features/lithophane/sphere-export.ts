@@ -19,6 +19,10 @@ export function sphereImageSize(s: Settings) {
   return `1500 × ${Math.round((1500 * spherePhotoLatitude(s)) / Math.PI)} px`;
 }
 export function sphereImageGuidance(s: Settings) {
+  if (s.spherePhotoFit === "contain" && (s.spherePhotoStretch ?? 0) > 0)
+    return `Foto centrada con estiramiento horizontal de +${s.spherePhotoStretch} %, limitado a los 360° disponibles. La imagen completa se ensancha sin recortarse, repetirse ni cambiar de altura. El resto de la esfera queda liso. Los bordes de la foto se suavizan, los polos y el cuello permanecen lisos. La curvatura sigue afectando cómo se ve la imagen desde distintos ángulos.`;
+  if (s.spherePhotoFit === "contain")
+    return "Foto centrada con proporción conservada: la imagen completa se ajusta a un sector frontal de la franja central, sin recorte ni estiramiento para completar los 360°. Admite fotos cuadradas, verticales y horizontales. La superficie restante queda lisa, con una transición suave en los bordes de la foto. El tamaño se ajusta a la esfera; los píxeles no se interpretan como una medida física en milímetros. La curvatura sigue afectando cómo se ve la imagen desde distintos ángulos. Los polos y el cuello permanecen lisos.";
   return `Imagen recomendada: panorámica horizontal de ${sphereImageSize(s)} (ancho × alto). La foto completa envuelve los 360° de la franja central; los polos quedan lisos, sin imagen, con una transición suave. La franja se limita a ±50° de latitud para alejar la foto de las zonas más curvas. En esferas muy pequeñas se adapta para dejar libre el cuello. Dejá margen a los lados: los bordes izquierdo y derecho se unen atrás. Una foto común se adapta a la franja y puede deformarse; usá una panorámica para reducirlo.`;
 }
 
