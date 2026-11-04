@@ -1,7 +1,7 @@
 "use client";
-import { useId, useState, type ReactNode } from "react";
-import { Check, ChevronDown, CircleHelp } from "lucide-react";
-import { IconButton, Modal, ModalHeader } from "@/components/ui";
+import { useId, type ReactNode } from "react";
+import { Check } from "lucide-react";
+export { Disclosure, FieldHelp } from "@/components/ui/studio";
 
 export function StudioStep({
   number,
@@ -21,66 +21,6 @@ export function StudioStep({
       </h3>
       {children}
     </section>
-  );
-}
-
-export function Disclosure({
-  title,
-  subtitle,
-  children,
-  className = "",
-}: {
-  title: string;
-  subtitle?: string;
-  children: ReactNode;
-  className?: string;
-}) {
-  return (
-    <details className={`lamp-disclosure ${className}`}>
-      <summary>
-        <span>
-          {title}
-          {subtitle && <small>{subtitle}</small>}
-        </span>
-        <ChevronDown size={18} aria-hidden="true" />
-      </summary>
-      <div className="lamp-disclosure-content">{children}</div>
-    </details>
-  );
-}
-
-export function FieldHelp({
-  title,
-  children,
-}: {
-  title: string;
-  children: ReactNode;
-}) {
-  const [open, setOpen] = useState(false);
-  const id = useId();
-  return (
-    <>
-      <IconButton
-        label={`Ayuda: ${title}`}
-        className="lamp-help-button"
-        onClick={() => setOpen(true)}
-      >
-        <CircleHelp size={17} />
-      </IconButton>
-      <Modal
-        open={open}
-        onClose={() => setOpen(false)}
-        aria-labelledby={id}
-        className="lamp-help-modal"
-      >
-        <ModalHeader
-          title={title}
-          titleId={id}
-          onClose={() => setOpen(false)}
-        />
-        <div className="lamp-help-body">{children}</div>
-      </Modal>
-    </>
   );
 }
 

@@ -6,7 +6,9 @@ Los editores de cuadros y lámparas usan tres piezas reutilizables:
 - `src/hooks/use-saved-designs.ts`: listado, selección local a cada instancia, guardar, abrir y eliminar con confirmación. Propaga errores al sistema de avisos de la sección.
 - `src/lib/project-storage.ts`: operaciones de `localStorage`, orden por nombre, validación mediante el adaptador, aislamiento por claves, recuperación opcional y limpieza de versiones anteriores.
 
-Cada sección declara su adaptador en `features/<sección>/projects.ts`. Cuadros conserva `proyectar:shadow:v2:*` y su lector anterior; lámparas conserva `proyectar:lamp:v1:*`, el guardado único anterior y `proyectar:lamp:last`. No se altera el formato JSON exportado. Ambos editores comienzan con su ejemplo y una selección vacía: llaman a `refresh()`, sin restaurar un proyecto. Solo seleccionar y pulsar la carpeta aplica un guardado, independientemente de cuántos haya. La recuperación automática sigue siendo una capacidad opcional de la capa compartida para otras secciones que la necesiten.
+Cada sección declara su adaptador en `features/<sección>/projects.ts`. Cuadros conserva `proyectar:shadow:v2:*` y su lector anterior; lámparas conserva `proyectar:lamp:v1:*`, el guardado único anterior y `proyectar:lamp:last`. No se altera el formato JSON exportado. Ambos editores comienzan con su ejemplo y una selección vacía: llaman a `refresh()`, sin restaurar un proyecto. Solo seleccionar y pulsar Aplicar (✓) aplica un guardado, independientemente de cuántos haya. La recuperación automática sigue siendo una capacidad opcional de la capa compartida para otras secciones que la necesiten.
+
+Las dos acciones usan `IconButton`: una marca de confirmación con etiqueta y tooltip **Aplicar diseño guardado**, y una papelera con **Eliminar diseño guardado**. Sin selección o mientras `busy` está activo quedan deshabilitadas. Seleccionar un elemento no ejecuta `onOpen`; sólo el botón Aplicar lo hace. La confirmación de borrado pertenece al hook y sigue siendo obligatoria antes de eliminar.
 
 ## Agregar otra sección
 

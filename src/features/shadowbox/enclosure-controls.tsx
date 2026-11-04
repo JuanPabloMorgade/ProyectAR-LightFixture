@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { NumberField, SelectField } from "@/components/ui";
+import { Disclosure, NumberField, SelectField } from "@/components/ui";
 import {
   defaultEnclosure,
   wallPanelStart,
@@ -66,20 +66,6 @@ export default function EnclosureControls({
   }
   return (
     <div className="shadow-enclosure-controls">
-      <h3>Base de pared y marco abierto</h3>
-      <p className="shadow-help">
-        Desde la pared hacia la persona, como en el modelo de referencia:
-      </p>
-      <ol
-        className="shadow-enclosure-layers"
-        aria-label="Armado desde la pared hacia la persona"
-      >
-        <li>Base con anclaje y pilas</li>
-        <li>Tapitas y paso central</li>
-        <li>Tubo y LED</li>
-        <li>Paneles de sombra</li>
-        <li>Marco frontal abierto</li>
-      </ol>
       <Measure
         label="Profundidad de la base"
         value={e.depth}
@@ -87,28 +73,6 @@ export default function EnclosureControls({
         max={50}
         onChange={(depth) => update({ depth })}
       />
-      <div className="shadow-two">
-        <Measure
-          label="Entrada de cabeza del tornillo"
-          value={e.hangerEntry ?? 8}
-          min={6}
-          max={12}
-          onChange={(hangerEntry) => update({ hangerEntry })}
-        />
-        <Measure
-          label="Guía del cuello del tornillo"
-          value={e.hangerNeck ?? 4}
-          min={2}
-          max={(e.hangerEntry ?? 8) - 2}
-          onChange={(hangerNeck) => update({ hangerNeck })}
-        />
-      </div>
-      <p className="shadow-help">
-        El ojo de cerradura está reforzado en la cara posterior de la base. La
-        entrada es circular y el cuello termina redondeado. La guía retiene la
-        cabeza del tornillo. Medí el tornillo y comprobá el ajuste y la carga en
-        tu pared.
-      </p>
       <SelectField
         label="Diseño de la tapa trasera"
         value={e.front ?? "plain"}
@@ -129,35 +93,83 @@ export default function EnclosureControls({
           onChange={(relief) => update({ relief })}
         />
       )}
-      <p className="shadow-help">
-        El frente es un marco abierto: permite ver el tubo y los paneles. El
-        cierre queda atrás, sobre el compartimiento de electrónica, junto a la
-        pared. Esta tapa puede ser lisa o llevar el mismo diseño en relieve y
-        conserva el agujero central circular para el tubo y los cables. La tapa
-        de pilas queda al ras de la cara posterior: descolgá el cuadro para
-        cambiar las pilas sin desmontar los paneles. La base inicial mide 20 mm;
-        aumentá esa altura si tu portapilas real lo requiere.
-      </p>
-      {total !== undefined && (
+      <Disclosure
+        title="Base de pared y marco abierto"
+        subtitle="Capas, recortes y profundidad total"
+        className="shadow-settings-disclosure"
+      >
         <p className="shadow-help">
-          Los recortes de sombra arrancan a{" "}
-          {wallPanelStart(fabrication).toLocaleString("es-AR")} mm de la pared,
-          por encima de la tapa electrónica. La parte inferior de cada pared
-          baja por fuera del único perímetro de la base hasta su reborde, sin
-          canal entre dos paredes de base. Largo del tramo de sombra:{" "}
-          {panelDepth!.toLocaleString("es-AR", { maximumFractionDigits: 2 })}{" "}
-          mm. No hay recortes escondidos por debajo de la tapa.
-          {fabrication.joints &&
-            " Alineá las dos guías finas de la base con las ranuras interiores de cada pared y deslizá la pared hasta el reborde inferior."}
-          {fabrication.illumination === "modular" &&
-            " La profundidad configurada es el máximo: el tramo delantero sin función óptica se acorta hasta dejar la holgura del cabezal."}
-          {trim! > 0 &&
-            ` Se acortan ${trim!.toLocaleString("es-AR", { maximumFractionDigits: 2 })} mm del extremo delantero, dejando espacio para el cabezal.`}{" "}
-          Profundidad total desde la pared:{" "}
-          {total.toLocaleString("es-AR", { maximumFractionDigits: 2 })} mm. Los
-          recortes se calculan incluyendo la separación de la base.
+          Desde la pared hacia la persona, como en el modelo de referencia:
         </p>
-      )}
+        <ol
+          className="shadow-enclosure-layers"
+          aria-label="Armado desde la pared hacia la persona"
+        >
+          <li>Base con anclaje y pilas</li>
+          <li>Tapitas y paso central</li>
+          <li>Tubo y LED</li>
+          <li>Paneles de sombra</li>
+          <li>Marco frontal abierto</li>
+        </ol>
+        <p className="shadow-help">
+          El frente es un marco abierto: permite ver el tubo y los paneles. El
+          cierre queda atrás, sobre el compartimiento de electrónica, junto a la
+          pared. Esta tapa puede ser lisa o llevar el mismo diseño en relieve y
+          conserva el agujero central circular para el tubo y los cables. La
+          tapa de pilas queda al ras de la cara posterior: descolgá el cuadro
+          para cambiar las pilas sin desmontar los paneles. La base inicial mide
+          20 mm; aumentá esa altura si tu portapilas real lo requiere.
+        </p>
+        {total !== undefined && (
+          <p className="shadow-help">
+            Los recortes de sombra arrancan a{" "}
+            {wallPanelStart(fabrication).toLocaleString("es-AR")} mm de la
+            pared, por encima de la tapa electrónica. La parte inferior de cada
+            pared baja por fuera del único perímetro de la base hasta su
+            reborde, sin canal entre dos paredes de base. Largo del tramo de
+            sombra:{" "}
+            {panelDepth!.toLocaleString("es-AR", { maximumFractionDigits: 2 })}{" "}
+            mm. No hay recortes escondidos por debajo de la tapa.
+            {fabrication.joints &&
+              " Alineá las dos guías finas de la base con las ranuras interiores de cada pared y deslizá la pared hasta el reborde inferior."}
+            {fabrication.illumination === "modular" &&
+              " La profundidad configurada es el máximo: el tramo delantero sin función óptica se acorta hasta dejar la holgura del cabezal."}
+            {trim! > 0 &&
+              ` Se acortan ${trim!.toLocaleString("es-AR", { maximumFractionDigits: 2 })} mm del extremo delantero, dejando espacio para el cabezal.`}{" "}
+            Profundidad total desde la pared:{" "}
+            {total.toLocaleString("es-AR", { maximumFractionDigits: 2 })} mm.
+            Los recortes se calculan incluyendo la separación de la base.
+          </p>
+        )}
+      </Disclosure>
+      <Disclosure
+        title="Tornillos y anclaje"
+        subtitle="Entrada y guía del tornillo"
+        className="shadow-settings-disclosure"
+      >
+        <div className="shadow-two">
+          <Measure
+            label="Entrada de cabeza del tornillo"
+            value={e.hangerEntry ?? 8}
+            min={6}
+            max={12}
+            onChange={(hangerEntry) => update({ hangerEntry })}
+          />
+          <Measure
+            label="Guía del cuello del tornillo"
+            value={e.hangerNeck ?? 4}
+            min={2}
+            max={(e.hangerEntry ?? 8) - 2}
+            onChange={(hangerNeck) => update({ hangerNeck })}
+          />
+        </div>
+        <p className="shadow-help">
+          El ojo de cerradura está reforzado en la cara posterior de la base. La
+          entrada es circular y el cuello termina redondeado. La guía retiene la
+          cabeza del tornillo. Medí el tornillo y comprobá el ajuste y la carga
+          en tu pared.
+        </p>
+      </Disclosure>
     </div>
   );
 }

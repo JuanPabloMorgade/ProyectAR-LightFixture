@@ -6,7 +6,7 @@ Editor cliente de litofanías: carga JPG/PNG/WebP, ofrece Plano, Curvo y Esferas
 
 ## Organización del estudio
 
-El panel izquierdo sigue tres pasos: **Elegí tu litofanía**, **Subí tu fotografía** y **Personalizá tu diseño**. `studio-controls.tsx` aporta tarjetas de variante con radios nativos, secciones desplegables y ayudas que reutilizan el modal accesible compartido. `design-settings.tsx` mantiene las medidas, abertura y opciones de caja/soporte a mano; espesores, contraste, inversión, detalle y holgura quedan en Ajustes avanzados. Plegar una sección no desmonta controles ni altera valores.
+El panel izquierdo sigue tres pasos: **Elegí tu litofanía**, **Subí tu fotografía** y **Personalizá tu diseño**. `studio-controls.tsx` aporta tarjetas de variante con radios nativos y reexporta `Disclosure` y `FieldHelp` desde `src/components/ui/studio.tsx`. Los desplegables y ayudas se comparten con Cuadros de sombra y reutilizan el modal accesible existente. `design-settings.tsx` mantiene las medidas, abertura y opciones de caja/soporte a mano; espesores, contraste, inversión, detalle y holgura quedan en Ajustes avanzados. Plegar una sección no desmonta controles ni altera valores.
 
 `photo-guide.tsx` ubica la recomendación junto al cargador y ofrece diagramas locales en un modal. Identifica la imagen de ejemplo. `photo-advice.ts` analiza la foto cargada usando la proporción real de la franja esférica y una tolerancia de orientación UX configurable del 12 %, sin bloquear la creación. En paneles describe la adaptación completa al ancho/arco y alto, sin inventar límites numéricos ni prometer recortes automáticos.
 
@@ -20,7 +20,7 @@ El panel derecho conserva `Viewer`, controles de luz y componentes separados. Si
 
 ## Inicio y diseños guardados
 
-Al montarse crea el worker, lista los diseños y carga siempre el ejemplo con los parámetros predeterminados. El selector comienza vacío, incluso si hay un único guardado o un registro del último proyecto. Seleccionar una opción no aplica el diseño: hay que pulsar la carpeta.
+Al montarse crea el worker, lista los diseños y carga siempre el ejemplo con los parámetros predeterminados. El selector comienza vacío, incluso si hay un único guardado o un registro del último proyecto. Seleccionar una opción no aplica el diseño: hay que pulsar Aplicar (✓).
 
 La cabecera contiene Exportar proyecto, Importar y Guardar. Guardar agrega un diseño por nombre o actualiza el existente; eliminar pide confirmación. `SavedDesigns`, `useSavedDesigns` y `project-storage.ts` comparten interfaz y operaciones con Cuadros de Sombra. El adaptador `projects.ts` conserva el formato JSON v1, sus validaciones y claves independientes. Ver [persistencia compartida](saved-designs.md).
 

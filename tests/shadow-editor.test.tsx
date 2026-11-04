@@ -50,7 +50,7 @@ test("guarda embellecedor con diseño y anclaje, manteniendo acceso a pilas y tu
     { target: { value: "plain" } },
   );
   fireEvent.click(
-    screen.getByRole("button", { name: "Abrir diseño guardado" }),
+    screen.getByRole("button", { name: "Aplicar diseño guardado" }),
   );
   await screen.findByRole("button", { name: "Cargar imagen" });
   fireEvent.click(screen.getByRole("button", { name: "Vista 3D" }));
@@ -170,7 +170,7 @@ test("modular permite corregir ajustes manuales, cambia alimentación y restaura
     screen.queryByRole("combobox", { name: "Cantidad de LEDs" }),
   ).toBeNull();
   fireEvent.click(
-    screen.getByRole("button", { name: "Abrir diseño guardado" }),
+    screen.getByRole("button", { name: "Aplicar diseño guardado" }),
   );
   await screen.findByRole("button", { name: "Cargar imagen" });
   fireEvent.click(screen.getByRole("button", { name: "Vista 3D" }));
@@ -225,7 +225,9 @@ test("guarda el proyecto con las medidas editadas y muestra cuatro paneles", asy
     screen.getByRole("button", { name: "Diseñador de patrones" }),
   );
   expect(await screen.findByText("Panel superior")).toBeTruthy();
-  expect(screen.getAllByRole("button", { name: "SVG" })).toHaveLength(4);
+  expect(
+    screen.getAllByRole("button", { name: /^Descargar SVG del panel/ }),
+  ).toHaveLength(4);
 
   fireEvent.change(screen.getByRole("spinbutton", { name: /Ancho/ }), {
     target: { value: "20" },
@@ -239,6 +241,108 @@ test("guarda el proyecto con las medidas editadas y muestra cuatro paneles", asy
   expect(saved.settings.width).toBe(20);
   expect(saved.image).toMatch(/^data:image\/png;base64,/);
   expect(screen.getByRole("status").textContent).toContain("Diseño guardado");
+});
+
+test("los ajustes técnicos comienzan plegados y conservan valores al cerrar y guardar", () => {
+  const { container } = render(<ShadowEditor />);
+  const projectBar = screen.getByRole("region", {
+    name: "Proyecto y archivos",
+  });
+  const steps = screen.getByRole("navigation", {
+    name: "Recorrido del editor",
+  });
+  expect(
+    projectBar.compareDocumentPosition(steps) &
+      Node.DOCUMENT_POSITION_FOLLOWING,
+  ).toBeTruthy();
+  const advanced = screen.getByText("Ajustes avanzados").closest("details")!;
+  expect(advanced.open).toBe(false);
+  fireEvent.click(screen.getByRole("button", { name: "Vista 3D" }));
+  const lighting = screen.getByRole("region", { name: "Prepará el armado" });
+  const download = screen.getByRole("button", {
+    name: "Descargar STL · 10 piezas",
+  });
+  const preview = container.querySelector(".shadow-three-stage")!;
+  expect(
+    preview.compareDocumentPosition(lighting) &
+      Node.DOCUMENT_POSITION_FOLLOWING,
+  ).toBeTruthy();
+  expect(
+    lighting.compareDocumentPosition(download) &
+      Node.DOCUMENT_POSITION_FOLLOWING,
+  ).toBeTruthy();
+  for (const details of container.querySelectorAll<HTMLDetailsElement>(
+    ".shadow-settings-disclosure",
+  ))
+    expect(details.open).toBe(false);
+  const starSummary = screen.getByText("Estrella y LED");
+  fireEvent.click(starSummary);
+  const star = screen.getByRole("spinbutton", {
+    name: "Espesor de la estrella",
+  }) as HTMLInputElement;
+  fireEvent.change(star, { target: { value: "1.5" } });
+  fireEvent.blur(star);
+  fireEvent.click(starSummary);
+  expect(starSummary.closest("details")!.open).toBe(false);
+  fireEvent.click(screen.getByText("Holguras y encastres"));
+  fireEvent.change(
+    screen.getByRole("spinbutton", { name: "Holgura de ajuste" }),
+    { target: { value: "0.4" } },
+  );
+  fireEvent.click(screen.getByText("Holguras y encastres"));
+  fireEvent.click(screen.getByRole("button", { name: "Guardar" }));
+  const saved = JSON.parse(
+    localStorage.getItem("proyectar:shadow:v2:Mi cuadro de sombra")!,
+  );
+  expect(saved.fabrication.modular.starThickness).toBe(1.5);
+  expect(saved.fabrication.clearance).toBe(0.4);
+  fireEvent.click(starSummary);
+  expect(star.value).toBe("1.5");
+  expect(
+    screen.getByText(/No conectes USB a las pilas;/).closest("details"),
+  ).toBeNull();
+  const technical = screen
+    .getByText("Cómo interpretar el modelo y la proyección")
+    .closest("details")!;
+  expect(technical.open).toBe(false);
+  expect(
+    download.compareDocumentPosition(technical) &
+      Node.DOCUMENT_POSITION_FOLLOWING,
+  ).toBeTruthy();
+});
+
+test("la barra de dibujo expresa la herramienta activa y conserva herramientas al cambiar de paso", () => {
+  const { container } = render(<ShadowEditor />);
+  fireEvent.click(
+    screen.getByRole("button", { name: "Diseñador de patrones" }),
+  );
+  const tools = screen.getByRole("group", { name: "Herramientas de dibujo" });
+  const canvas = screen.getByLabelText("Dibujá el patrón aquí");
+  expect(
+    tools.compareDocumentPosition(canvas) & Node.DOCUMENT_POSITION_FOLLOWING,
+  ).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "Borrar" }));
+  fireEvent.change(screen.getByRole("slider", { name: "Tamaño del pincel" }), {
+    target: { value: "32" },
+  });
+  expect(
+    screen.getByRole("button", { name: "Borrar" }).getAttribute("aria-pressed"),
+  ).toBe("true");
+  fireEvent.click(screen.getByRole("button", { name: "Vista 3D" }));
+  fireEvent.click(screen.getByRole("button", { name: "Volver al diseño" }));
+  expect(
+    screen.getByRole("button", { name: "Borrar" }).getAttribute("aria-pressed"),
+  ).toBe("true");
+  expect(
+    (
+      screen.getByRole("slider", {
+        name: "Tamaño del pincel",
+      }) as HTMLInputElement
+    ).value,
+  ).toBe("32");
+  expect(container.querySelectorAll(".shadow-mask-grid article")).toHaveLength(
+    4,
+  );
 });
 
 test("las medidas se pueden borrar y reescribir sin insertar cero y se guardan como números", () => {
@@ -494,7 +598,7 @@ test("abrir un proyecto guardado desde otro paso vuelve al diseñador restaurado
     },
   );
   fireEvent.click(
-    screen.getByRole("button", { name: "Abrir diseño guardado" }),
+    screen.getByRole("button", { name: "Aplicar diseño guardado" }),
   );
   await waitFor(() =>
     expect(screen.getByRole("button", { name: "Cargar imagen" })).toBeTruthy(),
@@ -563,7 +667,7 @@ test("guarda medidas de estrella y electrónica con campos numéricos editables"
     enclosure: { depth: 30 },
   });
   fireEvent.click(
-    screen.getByRole("button", { name: "Abrir diseño guardado" }),
+    screen.getByRole("button", { name: "Aplicar diseño guardado" }),
   );
   await screen.findByRole("button", { name: "Cargar imagen" });
   fireEvent.click(screen.getByRole("button", { name: "Vista 3D" }));
