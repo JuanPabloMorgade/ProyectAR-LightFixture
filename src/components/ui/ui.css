@@ -195,7 +195,7 @@
 }
 :where(.ui-modal) {
   width: min(520px, calc(100vw - 32px));
-  max-height: calc(100dvh - 32px);
+  max-height: calc(var(--interface-viewport-height) - 32px);
   margin: auto;
   padding: 24px;
   border: 1px solid #664780;
@@ -287,7 +287,7 @@
     background: #1d1428;
     color: var(--ink);
     box-shadow: 0 12px 32px #08070d80;
-    max-height: min(320px, 50dvh);
+    max-height: min(320px, calc(50dvh / var(--interface-scale)));
     overflow-y: auto;
   }
   .ui-select option {
@@ -317,7 +317,7 @@
   flex-direction: column;
   gap: 12px;
   width: min(420px, calc(100vw - 32px));
-  max-height: 75dvh;
+  max-height: calc(75dvh / var(--interface-scale));
   overflow-y: auto;
   pointer-events: none;
   padding: 4px;
@@ -387,6 +387,6 @@
   }
   .ui-modal {
     max-width: calc(100vw - 20px);
-    max-height: calc(100dvh - 20px);
+    max-height: calc(var(--interface-viewport-height) - 20px);
   }
 }

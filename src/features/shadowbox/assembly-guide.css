@@ -1,6 +1,6 @@
 .assembly-open { align-self: flex-start; margin-top: 14px; }
 .assembly-dialog-cob .assembly-file p + p { margin-top: 10px; }
-.assembly-dialog { width: min(1120px, calc(100vw - 40px)); height: min(900px, calc(100dvh - 40px)); max-height: calc(100dvh - 40px); padding: 0; border: 1px solid #664780; border-radius: 24px; background: #181021; color: var(--ink); box-shadow: 0 30px 120px #000a; overflow: hidden; }
+.assembly-dialog { width: min(1120px, calc(100vw - 40px)); height: min(900px, calc(var(--interface-viewport-height) - 40px)); max-height: calc(var(--interface-viewport-height) - 40px); padding: 0; border: 1px solid #664780; border-radius: 24px; background: #181021; color: var(--ink); box-shadow: 0 30px 120px #000a; overflow: hidden; }
 .assembly-dialog[open] { display: grid; grid-template-rows: auto auto minmax(0, 1fr) auto; }
 .assembly-dialog::backdrop { background: #08070dcc; backdrop-filter: blur(8px); }
 .assembly-header { margin-bottom: 0; padding: 24px 28px 20px; display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; }
@@ -36,7 +36,7 @@
 .assembly-restart { display: inline-flex; gap: 7px; align-items: center; border: 0; background: transparent; color: var(--muted); padding: 10px 0; font-size: 12px; }
 .assembly-error { position: absolute; inset: 40% 24px auto; text-align: center; color: var(--error); line-height: 1.7; }
 @media (max-width: 760px), (max-height: 540px) {
-  .assembly-dialog { width: calc(100vw - 20px); height: calc(100dvh - 20px); max-height: calc(100dvh - 20px); border-radius: 20px; }
+  .assembly-dialog { width: calc(100vw - 20px); height: calc(var(--interface-viewport-height) - 20px); max-height: calc(var(--interface-viewport-height) - 20px); border-radius: 20px; }
   .assembly-header { padding: 20px 18px 14px; }
   .assembly-header h2 { font-size: 23px; }
   .assembly-header .eyebrow { font-size: 9px; letter-spacing: 1px; }
