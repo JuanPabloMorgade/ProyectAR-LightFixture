@@ -273,7 +273,8 @@ export default function AssemblyViewer({
       el.appendChild(renderer.domElement);
       const resize = () => {
         const { width, height } = el.getBoundingClientRect();
-        renderer.setSize(width, height);
+        // Keep the canvas aligned with the labels at the compact desktop scale.
+        renderer.setSize(width, height, false);
         camera.aspect = width / Math.max(height, 1);
         camera.updateProjectionMatrix();
         reset();

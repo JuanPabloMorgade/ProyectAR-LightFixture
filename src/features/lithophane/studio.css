@@ -1,17 +1,24 @@
 /* Scoped to the lamp studio: shared controls and other editors keep their styles. */
 .lamp-studio {
   --lamp-copy: #c5b7d4;
+  width: var(--page-width);
+  margin: auto;
+  padding: 24px 0 48px;
 }
 .lamp-studio .editor-heading {
-  padding-bottom: 22px;
+  max-width: none;
+  padding: 0 0 20px;
+}
+.lamp-studio .editor-heading h1 {
+  font-size: 28px;
+  margin: 10px 0 6px;
 }
 .lamp-preview-link {
   white-space: nowrap;
 }
 .lamp-project-bar {
-  max-width: 1320px;
-  margin: 0 auto 24px;
-  padding: 16px 20px;
+  margin: 0 0 20px;
+  padding: 12px 18px;
   display: grid;
   grid-template-columns: minmax(180px, 1fr) minmax(220px, 1fr) auto;
   align-items: end;
@@ -23,6 +30,9 @@
 .lamp-project-bar .ui-field {
   margin: 0;
 }
+.lamp-project-bar .ui-saved-designs > div {
+  margin-top: 0;
+}
 .lamp-project-bar .lamp-header-actions {
   align-items: center;
   gap: 8px;
@@ -31,7 +41,8 @@
   min-height: 44px;
 }
 .lamp-studio .lamp-workspace {
-  grid-template-columns: 400px minmax(0, 1fr);
+  padding: 0;
+  grid-template-columns: 320px minmax(0, 1fr);
   gap: 24px;
 }
 .lamp-studio .controls {
@@ -43,7 +54,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 22px 24px;
+  padding: 18px 20px;
   border-bottom: 1px solid var(--line);
 }
 .lamp-panel-heading h2 {
@@ -59,7 +70,7 @@
   padding: 4px 9px;
 }
 .lamp-step {
-  padding: 24px;
+  padding: 20px;
 }
 .lamp-step + .lamp-step {
   border-top: 1px solid var(--line);
@@ -161,7 +172,7 @@
 }
 .lamp-variant-face {
   height: 100%;
-  min-height: 150px;
+  min-height: 136px;
   padding: 12px 7px;
   display: flex;
   flex-direction: column;
@@ -347,7 +358,7 @@
   min-height: 40px;
 }
 .lamp-studio .preview-stage {
-  height: 440px;
+  height: clamp(280px, calc(40vh / var(--interface-scale)), 440px);
   background: radial-gradient(ellipse at 50% 45%, #3e3044, #120d1b 85%);
 }
 .lamp-studio .preview-stage.illuminated {
@@ -561,21 +572,9 @@
   font-size: 14px;
   line-height: 1.5;
 }
-@media (max-width: 1400px) {
-  .lamp-project-bar {
-    margin-inline: 40px;
-  }
-}
 @media (max-width: 1150px) {
-  .lamp-project-bar {
-    grid-template-columns: 1fr 1fr;
-  }
-  .lamp-project-bar .lamp-header-actions {
-    grid-column: 1 / -1;
-    justify-content: flex-end;
-  }
   .lamp-studio .lamp-workspace {
-    grid-template-columns: 360px minmax(0, 1fr);
+    grid-template-columns: 300px minmax(0, 1fr);
     gap: 18px;
   }
   .lamp-step {
@@ -584,19 +583,25 @@
   .lamp-studio .preview-toolbar .preview-title {
     width: 100%;
   }
-  .lamp-studio .preview-stage {
-    height: 400px;
+}
+@media (min-width: 851px) {
+  .lamp-variant-face > svg:not(.lamp-variant-check) {
+    width: 52px;
+    height: 44px;
   }
 }
 @media (max-width: 1000px) {
   .lamp-project-bar {
-    margin-inline: 20px;
+    grid-template-columns: 1fr 1fr;
+  }
+  .lamp-project-bar .lamp-header-actions {
+    grid-column: 1 / -1;
+    justify-content: flex-end;
   }
 }
 @media (max-width: 850px) {
   .lamp-studio .lamp-workspace {
     grid-template-columns: 1fr;
-    padding-inline: 20px;
   }
   .lamp-studio .editor-heading {
     align-items: flex-start;
@@ -616,7 +621,6 @@
 }
 @media (max-width: 540px) {
   .lamp-project-bar {
-    margin-inline: 14px;
     padding: 16px;
     grid-template-columns: 1fr;
     gap: 16px;
@@ -627,9 +631,6 @@
   .lamp-project-bar .lamp-header-actions .button {
     font-size: 12px;
     padding: 10px;
-  }
-  .lamp-studio .lamp-workspace {
-    padding-inline: 14px;
   }
   .lamp-step {
     padding: 20px 16px;

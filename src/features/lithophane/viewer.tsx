@@ -156,7 +156,8 @@ export default function Viewer({
     el.appendChild(renderer.domElement);
     const observer = new ResizeObserver(() => {
       const { width, height } = el.getBoundingClientRect();
-      renderer.setSize(width, height);
+      // CSS sizes the canvas; only resize its buffer to avoid applying zoom twice.
+      renderer.setSize(width, height, false);
       camera.aspect = width / Math.max(1, height);
       camera.updateProjectionMatrix();
     });

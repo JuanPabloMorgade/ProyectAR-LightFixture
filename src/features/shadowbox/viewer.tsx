@@ -312,7 +312,8 @@ export default function ShadowViewer({
     el.appendChild(renderer.domElement);
     const observer = new ResizeObserver(() => {
       const box = el.getBoundingClientRect();
-      renderer.setSize(box.width, box.height);
+      // CSS sizes the canvas; only resize its buffer to avoid applying zoom twice.
+      renderer.setSize(box.width, box.height, false);
       camera.aspect = box.width / Math.max(box.height, 1);
       camera.updateProjectionMatrix();
       if (separated) frame();
