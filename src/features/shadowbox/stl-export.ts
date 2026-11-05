@@ -76,7 +76,9 @@ export function buildSTLExport({
         "",
         "Superior, inferior, izquierda y derecha se nombran mirando la caja de frente,",
         isWallMount(fabrication)
-          ? "desde la habitación. El frente es un marco abierto; la base cerrada va contra la pared."
+          ? isModular(fabrication)
+            ? "desde la habitación. El frente queda abierto, sin marco; la base cerrada va contra la pared."
+            : "desde la habitación. El frente es un marco abierto; la base cerrada va contra la pared."
           : "desde la habitación, con la tapa exterior hacia la persona. El lado abierto mira hacia la pared.",
         "Cada STL contiene una sola pieza, en milímetros y a escala real. Consultá la orientación de impresión indicada para el montaje.",
         `Caja: ${settings.width} x ${settings.height} x ${settings.depth} cm. Espesor: ${settings.thickness} mm.`,

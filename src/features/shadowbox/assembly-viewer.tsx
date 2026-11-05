@@ -223,15 +223,8 @@ export default function AssemblyViewer({
           const placed = next >= assemblyPlacement(part.id, fabrication);
           const active =
             steps[next].part === part.id || (extra && next === lightStep);
-          const headFrame =
-            isWallMount(fabrication) &&
-            isModular(fabrication) &&
-            next === lightStep &&
-            part.id === "front";
-          part.mesh.visible = next === 0 || placed || active || headFrame;
-          part.target.set(
-            ...assemblyPosition(part.id, settings, !(placed || headFrame)),
-          );
+          part.mesh.visible = next === 0 || placed || active;
+          part.target.set(...assemblyPosition(part.id, settings, !placed));
           part.material.color.set(active ? 0xb388ff : 0xb9cad0);
           part.material.emissive.set(active ? 0x321853 : 0x000000);
           part.material.opacity =

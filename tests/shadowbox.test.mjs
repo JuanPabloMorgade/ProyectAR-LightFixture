@@ -2,6 +2,9 @@ import { test } from "vitest";
 import assert from "node:assert/strict";
 import {
   IMAGE_SIZE,
+  HIGH_DETAIL,
+  MEDIUM_DETAIL,
+  VERY_HIGH_DETAIL,
   defaultBox,
   masksFromImage,
   wallToImage,
@@ -11,6 +14,57 @@ import {
   printableMask,
   simulatedImage,
 } from "../src/features/shadowbox/engine.ts";
+import { checkProject } from "../src/features/shadowbox/projects.ts";
+
+test("Muy alto refina Alto un 50% por eje, incluso en paneles cortos y con el tope de filas", () => {
+  const image = new Uint8ClampedArray(IMAGE_SIZE * IMAGE_SIZE * 4);
+  for (const dimensions of [
+    { width: 15, height: 15, depth: 6 },
+    { width: 6, height: 100, depth: 3 },
+    { width: 80, height: 6, depth: 50 },
+  ]) {
+    let previous = masksFromImage(image, {
+      ...defaultBox,
+      ...dimensions,
+      detail: MEDIUM_DETAIL,
+    });
+    for (const detail of [HIGH_DETAIL, VERY_HIGH_DETAIL]) {
+      const next = masksFromImage(image, {
+        ...defaultBox,
+        ...dimensions,
+        detail,
+      });
+      for (let i = 0; i < previous.length; i++) {
+        assert.equal(next[i].columns, previous[i].columns * 1.5);
+        assert.equal(next[i].rows, Math.round(previous[i].rows * 1.5));
+        assert.equal(next[i].span, previous[i].span);
+        assert.equal(next[i].depth, previous[i].depth);
+        assert.equal(next[i].cells.length, next[i].columns * next[i].rows);
+      }
+      previous = next;
+    }
+  }
+});
+
+test("los proyectos admiten los cuatro niveles y los datos históricos de Borrador", () => {
+  for (const detail of [96, 160, 224, HIGH_DETAIL, VERY_HIGH_DETAIL]) {
+    const project = {
+      version: 2,
+      name: "Detalle",
+      image: "data:image/png;base64,AA==",
+      settings: { ...defaultBox, detail },
+    };
+    assert.equal(checkProject(project).settings.detail, detail);
+  }
+  assert.throws(() =>
+    checkProject({
+      version: 2,
+      name: "Detalle",
+      image: "data:image/png;base64,AA==",
+      settings: { ...defaultBox, detail: 337 },
+    }),
+  );
+});
 
 function radialArtwork() {
   const image = new Uint8ClampedArray(IMAGE_SIZE * IMAGE_SIZE * 4);
@@ -27,7 +81,7 @@ function radialArtwork() {
   return image;
 }
 
-test("Alto mejora el detalle proyectado y conserva el tamaño físico del marco", () => {
+test("Medio mejora el detalle proyectado y conserva el tamaño físico del marco", () => {
   const image = radialArtwork();
   const settings = { ...defaultBox, detail: 224 };
   const high = masksFromImage(image, settings);

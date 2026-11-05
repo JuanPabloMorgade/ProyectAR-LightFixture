@@ -1,6 +1,10 @@
 import { ShapeUtils, Vector2 } from "three";
 
 export const IMAGE_SIZE = 512;
+export const LOW_DETAIL = 160;
+export const MEDIUM_DETAIL = 224;
+export const HIGH_DETAIL = 336;
+export const VERY_HIGH_DETAIL = 504;
 export const FACES = ["top", "bottom", "left", "right"] as const;
 export type Face = (typeof FACES)[number];
 export type BoxSettings = {
@@ -35,7 +39,7 @@ export const defaultBox: BoxSettings = {
   lightPercent: 85,
   thickness: 2,
   margin: 3,
-  detail: 160,
+  detail: LOW_DETAIL,
 };
 
 export function validateBox(s: BoxSettings) {
@@ -60,7 +64,10 @@ export function validateBox(s: BoxSettings) {
     s.thickness > 12 ||
     s.margin < 0 ||
     s.margin > 10 ||
-    ![96, 160, 224].includes(s.detail)
+    // 96 remains readable for historical geometry/API consumers, not the editor.
+    ![96, LOW_DETAIL, MEDIUM_DETAIL, HIGH_DETAIL, VERY_HIGH_DETAIL].includes(
+      s.detail,
+    )
   )
     throw new Error("RevisÃ¡ las dimensiones y el espesor.");
 }
@@ -137,20 +144,30 @@ export function masksFromImage(
     const span = faceSpan(face, s);
     // Keep persisted detail values compatible with existing projects. Increase
     // sampling in both axes; the old 160-row cap erased detail in deep panels.
-    const multiplier = s.detail === 224 ? 4 : s.detail === 160 ? 2 : 1;
+    // Higher levels refine the former 224 grid in 50% steps. Round each step's
+    // rows so Muy alto is also exactly 1.5x Alto (to the nearest whole row).
+    const refinements =
+      s.detail === VERY_HIGH_DETAIL ? 2 : s.detail === HIGH_DETAIL ? 1 : 0;
+    const samplingDetail = refinements ? MEDIUM_DETAIL : s.detail;
+    const multiplier =
+      samplingDetail === 224 ? 4 : samplingDetail === 160 ? 2 : 1;
     const baseColumns = Math.max(
       48,
-      Math.round((s.detail * span) / Math.max(s.width, s.height)),
+      Math.round((samplingDetail * span) / Math.max(s.width, s.height)),
     );
     const baseRows = Math.max(
       24,
       Math.min(160, Math.round((baseColumns * s.depth) / span)),
     );
-    const columns = baseColumns * multiplier;
-    const rows = Math.max(
+    let columns = baseColumns * multiplier;
+    let rows = Math.max(
       24,
       Math.min(1024, Math.round((columns * s.depth) / span)),
     );
+    for (let refinement = 0; refinement < refinements; refinement++) {
+      columns *= 1.5;
+      rows = Math.round(rows * 1.5);
+    }
     // Preserve the physical frame width when increasing resolution.
     const borderX = Math.ceil((2 * columns) / baseColumns);
     const borderY = Math.ceil((2 * rows) / baseRows);

@@ -94,7 +94,11 @@ export default function EnclosureControls({
         />
       )}
       <Disclosure
-        title="Base de pared y marco abierto"
+        title={
+          fabrication.illumination === "modular"
+            ? "Base de pared y frente abierto"
+            : "Base de pared y marco abierto"
+        }
         subtitle="Capas, recortes y profundidad total"
         className="shadow-settings-disclosure"
       >
@@ -109,10 +113,16 @@ export default function EnclosureControls({
           <li>Tapitas y paso central</li>
           <li>Tubo y LED</li>
           <li>Paneles de sombra</li>
-          <li>Marco frontal abierto</li>
+          <li>
+            {fabrication.illumination === "modular"
+              ? "Frente abierto sin marco"
+              : "Marco frontal abierto"}
+          </li>
         </ol>
         <p className="shadow-help">
-          El frente es un marco abierto: permite ver el tubo y los paneles. El
+          {fabrication.illumination === "modular"
+            ? "El frente queda abierto, sin marco: permite ver el poste y los paneles. El"
+            : "El frente es un marco abierto: permite ver el tubo y los paneles. El"}{" "}
           cierre queda atrás, sobre el compartimiento de electrónica, junto a la
           pared. Esta tapa puede ser lisa o llevar el mismo diseño en relieve y
           conserva el agujero central circular para el tubo y los cables. La

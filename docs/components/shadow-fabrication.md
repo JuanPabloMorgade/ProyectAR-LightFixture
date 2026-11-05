@@ -2,31 +2,33 @@
 
 ## Armado actual: base contra la pared
 
-La estructura actual sigue la referencia de STL y la aclaración visual del usuario: **base de pared con anclaje y pilas → tapita de pilas → tapa electrónica con agujero central → tubo y LED → cuatro paneles de sombra → embellecedor hacia la persona**. Reemplaza la disposición anterior que ponía la electrónica detrás del frente.
+La estructura actual de 1 W es **base de pared con anclaje y pilas → tapita de pilas → tapa electrónica con agujero central → poste y LED → cuatro paneles de sombra**, con frente abierto sin marco. El cabezal encastra en el poste. Se retiraron el embellecedor delantero y las lengüetas que lo recibían; se conservan las uniones entre paredes, el asiento en la base y la posición del LED.
 
 El editor usa únicamente LED de 1 W con 3 AAA o USB. `enclosure.layout = "wall"` identifica este armado. Los proyectos anteriores, incluidos los de COB, se adaptan a 1 W al abrirse, conservando imagen y medidas e informando el cambio; requieren revisar sus componentes físicos. Los generadores históricos siguen disponibles para leer y comprobar datos anteriores, pero no se ofrecen como alternativas nuevas en la interfaz. Las menciones a COB siguientes documentan esa compatibilidad de la API.
 
 | Pieza | LED de 1 W | COB |
 | --- | --- | --- |
 | Paredes superior/inferior/izquierda/derecha | 01–04 | 01–04 |
-| Embellecedor frontal | 05 | 05, con rebajes COB por detrás |
-| Base de pared con anclaje | 06 | 06 |
-| Tapa electrónica con paso central | 07 | 07 |
-| Tubo hueco Ø10 mm | 08 | — |
-| Cabezal orientado hacia la pared | 09 | — |
-| Tapita del portapilas | 10, sólo 3 AAA | — |
+| Embellecedor frontal | No se genera | 05, con rebajes COB por detrás |
+| Base de pared con anclaje | 05 | 06 |
+| Tapa electrónica con paso central | 06 | 07 |
+| Tubo hueco Ø9 mm | 07 | — |
+| Cabezal orientado hacia la pared | 08 | — |
+| Tapita del portapilas | 09, sólo 3 AAA | — |
 
-Son **10 piezas para 1 W con 3 AAA**, **9 para 1 W USB** y **7 para COB**. STL combinado, ZIP, visor y guía comparten `fabricationParts`. La guía actual recorre doce etapas y diferencia tapa electrónica de tapita de pilas. La electrónica queda dentro de la base posterior, no en el embellecedor.
+Son **9 piezas para 1 W con 3 AAA**, **8 para 1 W USB** y **7 para COB**. STL combinado, ZIP, visor y guía comparten `fabricationParts`. La guía de 1 W recorre once etapas; COB conserva doce. La electrónica queda dentro de la base posterior.
 
 ### Base, tapas y anclaje
 
 `wallmount.ts` genera una base de **20 mm por defecto**, fondo de 2 mm y un solo perímetro elevado de 2 mm. Se elimina la segunda pared exterior que formaba un canal. El fondo sobresale como reborde de apoyo. Dos nervios verticales de 1,2 mm por lado guían las paredes, que bajan por fuera de la base hasta Z=2 mm más media holgura. Sus ranuras interiores reciben los nervios y tienen entrada 0,4 mm más ancha por lado. El rebaje conserva al menos 0,6 mm de cara exterior y termina antes de los recortes. Sin encastres se omiten nervios y ranuras, conservando el tramo inferior cerrado. Los cuatro STL de paredes tienen las ranuras hacia arriba; al montar se invierte el espesor de inferior y derecha conservando las normales. El anclaje mantiene su refuerzo de 6 mm, entrada de 8 mm y cuello de 4 mm configurables.
 
-El portapilas comercial de 3 AAA usa una envolvente inicial **55 × 38 × 14 mm provisional**, editable. Se introduce por una abertura de la **cara posterior**, sin desmontar paredes ni separador. La tapa 10 queda al ras de Z=0, con placa de 1,2 mm y reborde hasta Z=2,8 mm. Un asiento posterior y una muesca permiten presentar y retirar la tapa. El ajuste es guiado, sin pestillo: comprobar retención y usar fijación removible si hace falta. La validación reserva altura para reborde, portapilas, holgura y separador de 2 mm; con el portapilas inicial caben en 20 mm. Los proyectos guardados conservan su altura configurada; el valor inicial nuevo es 20 mm.
+El portapilas comercial de 3 AAA usa una envolvente inicial **55 × 38 × 14 mm provisional**, editable. Se introduce por una abertura de la **cara posterior**, sin desmontar paredes ni separador. La tapa 09 queda al ras de Z=0, con placa de 1,2 mm y reborde hasta Z=2,8 mm. Un asiento posterior y una muesca permiten presentar y retirar la tapa. El ajuste es guiado, sin pestillo: comprobar retención y usar fijación removible si hace falta. La validación reserva altura para reborde, portapilas, holgura y separador de 2 mm; con el portapilas inicial caben en 20 mm. Los proyectos guardados conservan su altura configurada; el valor inicial nuevo es 20 mm.
 
-El alojamiento del tubo en la base y el paso de la tapa son **circulares**: Ø10 mm más la holgura diametral (Ø10,25 mm inicialmente). El collar exterior de la base también es redondo; su fondo permanece ciego y conserva la entrada lateral de cables. COB usa un paso circular de Ø4 mm más holgura. `round-opening.ts` remapea localmente una rejilla conformada a perfiles circulares, con muestreo angular y transición de 2 mm hacia la geometría fija. `meshAxes` evita láminas diminutas al agregar muestras curvas sin desplazar los límites de las piezas. La tapa con relieve usa la misma abertura circular y mantiene una malla cerrada. El ajuste del tubo debe probarse con la impresión real.
+El alojamiento del tubo en la base y el paso de la tapa son **circulares**: Ø9 mm más la holgura diametral (Ø9,25 mm inicialmente). El collar exterior de la base también es redondo; su fondo permanece ciego y conserva la entrada lateral de cables. COB usa un paso circular de Ø4 mm más holgura. `round-opening.ts` remapea localmente una rejilla conformada a perfiles circulares, con muestreo angular y transición de 2 mm hacia la geometría fija. `meshAxes` evita láminas diminutas al agregar muestras curvas sin desplazar los límites de las piezas. La tapa con relieve usa la misma abertura circular y mantiene una malla cerrada. El ajuste del tubo debe probarse con la impresión real.
 
-El tubo circular de Ø10 mm comienza en la base y lleva un canal configurable, inicialmente Ø4 mm. Es un pasacables y ya no soporta mecánicamente el cabezal. El cabezal 09 es un puente plano sujeto a la cara posterior del marco mediante dos tetones de 2,8 × 4 mm y rebajes ciegos de 1 mm. Los rebajes incorporan la holgura y quedan entre las lengüetas de las paredes, retirados de su espesor para evitar interferencias. El cabezal entero está detrás del emisor y no corta el cono de luz. Reemplaza la horquilla anterior que generaba una franja vertical. Presentar y calibrar los encastres; pueden requerir fijación removible. La estrella nominal es Ø20 × 1,2 mm y la altura del emisor sobre ella es **5 mm provisional**. Medir los componentes y acomodar los cables finos antes de imprimir. Los componentes electrónicos visibles no se exportan como plástico.
+El poste circular de Ø9 mm comienza en la base y lleva un canal configurable, inicialmente Ø6 mm (pared de 1,5 mm). Sostiene el cabezal circular 08 mediante un collar de encastre de 6 mm de profundidad, con holgura diametral configurable y un tope de 1,5 mm que conserva el paso para cables. Dos brazos inclinados unen el collar al asiento circular de la estrella; apuntan a esquinas opuestas según la proporción del cuadro. Al montar, respetar esa orientación para coincidir con la simulación. El asiento y el emisor conservan su altura anterior: el extremo del tubo está 8 mm antes del emisor y la cara luminosa de la placa está a una altura de emisor por detrás de él. El frente queda abierto sin marco, puente, tetones ni rebajes para el cabezal. La simulación incluye la sombra de los brazos; conservar la distancia no garantiza ausencia de oclusión. Calibrar el encastre con una impresión de prueba y usar fijación removible si hace falta. La estrella nominal es Ø20 × 1,2 mm y la altura del emisor sobre ella es **5 mm provisional**. El cabezal se imprime con la boca del collar en la cama; revisar los voladizos en el laminador. Los componentes electrónicos visibles no se exportan como plástico.
+
+Los dos brazos del cabezal usan nervios de **1,2 mm de ancho tangencial × 1,6 mm de profundidad radial** constantes, sin ensancharse al aumentar el diámetro de la estrella. Se conservan el collar, el tope y el asiento circular. La regresión de proyección comprueba una reducción de al menos 50% de la sombra adicional del cabezal respecto a los brazos anchos anteriores, en tres configuraciones fijas; no equivale a una reducción de la sombra total ni garantiza el mismo porcentaje con cualquier dibujo. Verificar la resistencia de los nervios y el ajuste con un prototipo.
 
 ### Terminaciones de la base posterior
 
@@ -36,7 +38,7 @@ Las pruebas verifican entradas de anclaje de 6 y 12 mm, cuellos de 2 y 6 mm, pas
 
 ### Frente abierto y tapa trasera lisa o con diseño
 
-El embellecedor 05 es un marco abierto, con banda de espesor + 6 mm (8 mm inicialmente) para 1 W y una banda más ancha para COB. `wall-front.ts` incorpora los dos rebajes del cabezal y la abertura frontal. El cierre continuo queda atrás, en la tapa electrónica 07, junto a la pared.
+El modelo de 1 W no genera embellecedor ni lengüetas delanteras. COB conserva el marco 05 con sus rebajes para la tira, generado por `wall-front.ts`. El cierre continuo queda atrás en la tapa electrónica (06 en 1 W, 07 en COB), junto a la pared.
 
 La clave guardada `enclosure.front` se conserva por compatibilidad, pero ahora controla **el diseño de la tapa trasera**: `plain` o `design`. `wall-rear.ts` genera relieve real de la imagen actual, inicialmente de **0,6 mm**, hacia la persona. La tapa mantiene su agujero central y faldón de ajuste hacia la base. Se unen contactos diagonales para conservar una malla cerrada. El visor remarca las aristas del relieve; el STL no guarda colores.
 

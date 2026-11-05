@@ -1,4 +1,6 @@
 import type { Fabrication } from "./fabrication";
+/** Current round wall-mounted post; historical square posts retain their own size. */
+export const WALL_POST_DIAMETER = 9;
 /** Physical hardware stays in mm, independently of the optical box size. */
 export type ModularSettings = {
   power: "aaa" | "usb";
@@ -19,6 +21,6 @@ export const defaultModular: ModularSettings = {
   holderLength: 55,
   holderWidth: 38,
   holderHeight: 14,
-  cableDiameter: 4,
+  cableDiameter: 6,
 };
 export const isModular = (f?: Fabrication) => f?.illumination === "modular";

@@ -13,6 +13,8 @@ export type ToastProps = {
   duration?: number;
   onDismiss: () => void;
   action?: { label: string; onClick: () => void };
+  /** 0–100 for measured progress; null for an indeterminate loading bar. */
+  progress?: number | null;
 };
 
 const icons = {
@@ -27,7 +29,10 @@ export function Toast({
   title,
   description,
   variant = "info",
-  duration = variant === "error" || variant === "warning" ? 0 : 6000,
+  progress,
+  duration = progress === null || variant === "error" || variant === "warning"
+    ? 0
+    : 6000,
   onDismiss,
   action,
 }: ToastProps) {
@@ -76,6 +81,28 @@ export function Toast({
             <div className="ui-toast-description">{description}</div>
           )}
         </div>
+        {progress !== undefined && (
+          <div
+            className={`ui-toast-progress${progress === null ? " ui-toast-progress-indeterminate" : ""}`}
+            role="progressbar"
+            aria-label={title}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={
+              progress === null
+                ? undefined
+                : Math.max(0, Math.min(100, progress))
+            }
+          >
+            <span
+              style={
+                progress === null
+                  ? undefined
+                  : { width: `${Math.max(0, Math.min(100, progress))}%` }
+              }
+            />
+          </div>
+        )}
         {action && (
           <Button
             variant="unstyled"

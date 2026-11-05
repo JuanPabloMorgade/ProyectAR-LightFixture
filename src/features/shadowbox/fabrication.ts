@@ -250,6 +250,7 @@ function jointWall(raw: WallMask, s: BoxSettings, f: Fabrication): Mesh {
     depth = s.depth * 10,
     end = depth - t / 2 - c / 2;
   const mounted = isWallMount(f);
+  const openFront = mounted && isModular(f);
   const length = span + (f.joints ? t : 0);
   const extra = f.joints ? t / 2 : 0;
   const cornerWidth = (f.joints ? t : t / 2) + c / 2;
@@ -304,7 +305,7 @@ function jointWall(raw: WallMask, s: BoxSettings, f: Fabrication): Mesh {
       const row = Math.min(mask.rows - 1, Math.floor((y / depth) * mask.rows));
       return y < WALL_SEAT_RAIL || !mask.cells[row * mask.columns + col];
     }
-    if (y > end) return inTabs(x - t / 2, span);
+    if (y > end) return !openFront && inTabs(x - t / 2, span);
     const corner = x < t + c / 2 || x > length - t - c / 2;
     if (corner) {
       const phase = Math.min(fingers - 1, Math.floor(y / segment));
@@ -579,7 +580,10 @@ export function fabricationParts(
   )
     throw new Error("Faltan paneles de la caja o hay paneles duplicados.");
   const supported = fabricationMasks(masks, s, f);
-  const parts: FabricatedPart[] = PRINT_PARTS.map((part) => {
+  const primaryParts = PRINT_PARTS.filter(
+    (part) => !(isWallMount(f) && isModular(f) && part.id === "front"),
+  );
+  const parts: FabricatedPart[] = primaryParts.map((part) => {
     const mask = supported.find((m) => m.face === part.id);
     return {
       ...part,

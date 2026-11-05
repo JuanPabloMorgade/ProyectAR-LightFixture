@@ -19,7 +19,7 @@ export function projectionSettings(
   const relativeSource = (s.depth * s.lightPercent) / 100 - previousExtension;
   const nominalDepth = editorDepth + panelExtension;
   const m = f!.modular ?? defaultModular;
-  // Retain clearance behind the board/head. This tail supports the open front frame.
+  // Retain clearance behind the board/head without moving the emitting plane.
   const headAllowance =
     (m.emitterHeight + m.starThickness + 4 + s.thickness / 2 + f!.clearance) /
     10;

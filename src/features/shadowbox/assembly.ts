@@ -91,14 +91,15 @@ export function assemblySequence(f?: Fabrication): {
   if (isWallMount(f))
     return {
       lightStep: 9,
-      resultStep: 11,
+      resultStep: isModular(f) ? 10 : 11,
       steps: [
         {
           title: `Reconocé las ${modularCount(f)} piezas`,
           short: "Piezas",
           part: null,
-          description:
-            "Identificá base con anclaje, tapa electrónica, tubo y cabezal (1 W), paredes y embellecedor. Las pilas tienen una tapita independiente. La base va contra la pared.",
+          description: isModular(f)
+            ? "Identificá base con anclaje, tapa electrónica, poste, cabezal y cuatro paredes. Las pilas tienen una tapita independiente. La base va contra la pared y el frente queda abierto, sin marco."
+            : "Identificá base con anclaje, tapa electrónica, paredes y embellecedor COB. La base va contra la pared.",
         },
         {
           title: "Presentá la base contra la pared",
@@ -153,22 +154,27 @@ export function assemblySequence(f?: Fabrication): {
           short: "Luz",
           part: isModular(f) ? "head" : "front",
           description: isModular(f)
-            ? "Montá la estrella en el cabezal con el LED hacia la pared. Presentá los dos tetones del puente en los rebajes posteriores del marco, probá el ajuste y usá fijación removible si hace falta. El puente queda detrás del LED; el tubo central solo guía los cables y no sostiene el cabezal."
+            ? "Pasá los cables por el collar y encastrá el cabezal circular en el tubo hasta el tope de 6 mm. Orientá los dos brazos hacia esquinas opuestas, como en la vista 3D. Montá la estrella en su asiento con el LED hacia la pared; el tope conserva la distancia del emisor. Probá la holgura y usá fijación removible si hace falta."
             : "La tira va en los rebajes posteriores del marco abierto, con la luz hacia la pared. Soldá y probá los tramos antes de fijarlos. El relieve decorativo queda en la tapa trasera de electrónica.",
         },
-        {
-          title: "Colocá el embellecedor frontal",
-          short: "Embellecedor",
-          part: "front",
-          description:
-            "Encastrá el marco con su cabezal ya montado sobre las cuatro paredes. Dejá el centro abierto y acomodá los cables finos hacia el tubo sin cruzarlos sobre la cara luminosa. El cierre liso o con diseño queda atrás. Calibrá los encastres antes de fijar.",
-        },
+        ...(!isModular(f)
+          ? [
+              {
+                title: "Colocá el embellecedor frontal",
+                short: "Embellecedor",
+                part: "front" as const,
+                description:
+                  "Encastrá el marco abierto sobre las cuatro paredes. En 1 W, el cabezal se sostiene en el poste y queda separado del marco. Acomodá los cables hacia el tubo sin cruzarlos sobre la cara luminosa. El cierre liso o con diseño queda atrás. Calibrá los encastres antes de fijar.",
+              },
+            ]
+          : []),
         {
           title: "Colgá la base y revisá la sombra",
           short: "Resultado",
           part: null,
-          description:
-            "La base se cuelga del tornillo mediante el ojo de cerradura y queda contra la pared. El marco abierto mira a la persona; la sombra aparece alrededor y detrás del cuadro. Comprobá fijación, proyección y temperatura con el primer montaje.",
+          description: isModular(f)
+            ? "La base se cuelga del tornillo mediante el ojo de cerradura y queda contra la pared. El frente queda abierto, sin marco; el LED se sostiene en su poste. Comprobá fijación, proyección y temperatura con el primer montaje."
+            : "La base se cuelga del tornillo mediante el ojo de cerradura y queda contra la pared. El marco abierto mira a la persona; la sombra aparece alrededor y detrás del cuadro. Comprobá fijación, proyección y temperatura con el primer montaje.",
         },
       ],
     };

@@ -38,3 +38,17 @@ test("derived geometry can recover raw settings without accumulating offsets", (
   const hardware = { ...f, modular: { ...f.modular!, emitterHeight: 15 } };
   expect(fitWallLight(impossible, hardware)).toBe(impossible);
 });
+
+test("the minimum LED position keeps the wider collar clear of a decorated electronics lid", () => {
+  const base = currentFabrication();
+  const f = {
+    ...base,
+    clearance: 0.8,
+    enclosure: { ...base.enclosure!, front: "design" as const, relief: 1.5 },
+  };
+  const raw = { ...defaultBox, lightPercent: 10 };
+  const adjusted = fitWallLight(raw, f);
+  const l = wallMountLayout(adjusted, f);
+  expect(l.headOrigin).toBeGreaterThanOrEqual(l.panelStart + f.clearance / 2);
+  expect(() => wallMountLayout(raw, f)).toThrow(/No hay espacio/);
+});

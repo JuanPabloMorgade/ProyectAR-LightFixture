@@ -1,6 +1,10 @@
 import { isWallMount } from "./enclosure-config";
 import { wallMountLayout, wallPartCount } from "./wallmount";
-import { fitWallLight, rawWallSettings } from "./light-position";
+import {
+  fitWallLight,
+  rawWallSettings,
+  minimumWallEmitter,
+} from "./light-position";
 import { solidMesh, type Bounds } from "./solid-mesh";
 import { hasEnclosure } from "./enclosure-config";
 import { validateBox, type BoxSettings } from "./engine";
@@ -78,7 +82,7 @@ export function modularLayout(s: BoxSettings, f: Fabrication) {
       coverZ: l.coverTop,
       tip: l.source,
       suggestedLightPercent: 50,
-      minEmitter: l.depth + 14,
+      minEmitter: l.depth + minimumWallEmitter(f),
     };
   }
   validateBox(s);

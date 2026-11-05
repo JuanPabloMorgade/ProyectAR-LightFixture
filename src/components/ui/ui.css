@@ -354,6 +354,13 @@
 .ui-toast-content { flex: 1; min-width: 0; padding-top: 2px; overflow-wrap: anywhere; }
 .ui-toast-title { display: block; font-size: 14px; line-height: 1.5; font-weight: 650; }
 .ui-toast-description { margin-top: 4px; color: var(--muted); font-size: 13px; line-height: 1.6; }
+.ui-toast-progress { height: 5px; margin-top: 12px; overflow: hidden; border-radius: 999px; background: #ffffff12; }
+.ui-toast-progress > span { display: block; height: 100%; border-radius: inherit; background: var(--toast-accent); }
+.ui-toast-progress-indeterminate > span { width: 35%; animation: ui-toast-loading 1.1s ease-in-out infinite; }
+@keyframes ui-toast-loading {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(290%); }
+}
 .ui-toast-action { margin-top: 8px; min-height: 32px; padding: 4px 0; color: var(--toast-accent); font-weight: 600; text-align: left; }
 .ui-toast .ui-toast-close { flex: 0 0 32px; width: 32px; height: 32px; min-height: 32px; color: var(--muted); border: 0; background: transparent; }
 .ui-toast .ui-toast-close:hover { background: #ffffff0c; color: var(--ink); }
@@ -363,6 +370,7 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .ui-toast { animation: none; }
+  .ui-toast-progress-indeterminate > span { animation: none; transform: translateX(90%); }
 }
 @media (max-width: 680px) {
   .ui-toast-viewport { right: max(12px, env(safe-area-inset-right)); bottom: max(12px, env(safe-area-inset-bottom)); width: calc(100vw - 24px); }

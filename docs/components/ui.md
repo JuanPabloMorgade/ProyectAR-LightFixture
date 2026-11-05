@@ -143,6 +143,8 @@ import {
 
 Los avisos comparten la superficie violeta, bordes, tipografía e iconos del proyecto. `Toast` admite `title`, `description`, `variant` (`success`, `info`, `warning`, `error`), `onDismiss`, `duration` en milisegundos y `action: { label, onClick }`. No requiere proveedor ni dependencias nuevas.
 
+`progress` admite un número de 0 a 100 para avance medido, `null` para una barra indeterminada y `undefined` para ocultarla. La barra expone `role="progressbar"` y omite `aria-valuenow` cuando no hay porcentaje medido. Un aviso indeterminado no se cierra automáticamente; el editor lo actualiza al terminar. Con movimiento reducido se muestra una barra estática.
+
 ```tsx
 import { Toast, ToastViewport } from '@/components/ui';
 
