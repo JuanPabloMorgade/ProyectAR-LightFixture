@@ -25,7 +25,7 @@ import { defaultModular } from "../src/features/shadowbox/modular";
 import { currentFabrication } from "../src/features/shadowbox/editor-defaults";
 import { projectionSettings } from "../src/features/shadowbox/projection-settings";
 
-test("la guía nueva monta base, tapitas, tubo y embellecedor en doce pasos", () => {
+test("la guía monta base, tapitas y poste sin marco en once pasos", () => {
   render(
     <AssemblyGuide
       name="Pared"
@@ -40,20 +40,20 @@ test("la guía nueva monta base, tapitas, tubo y embellecedor en doce pasos", ()
     />,
   );
   expect(
-    screen.getByRole("button", { name: "Paso 1: Reconocé las 10 piezas" }),
+    screen.getByRole("button", { name: "Paso 1: Reconocé las 9 piezas" }),
   ).toBeTruthy();
   fireEvent.click(
     screen.getByRole("button", {
       name: "Paso 2: Presentá la base contra la pared",
     }),
   );
-  expect(screen.getByText("06-base-pared.stl")).toBeTruthy();
+  expect(screen.getByText("05-base-pared.stl")).toBeTruthy();
   fireEvent.click(
     screen.getByRole("button", {
       name: "Paso 3: Instalá las conexiones y cerrá las pilas",
     }),
   );
-  expect(screen.getByText("10-tapa-pilas.stl")).toBeTruthy();
+  expect(screen.getByText("09-tapa-pilas.stl")).toBeTruthy();
   const instructions = screen.getByRole("region", {
     name: "Instrucciones del paso",
   });
@@ -65,22 +65,16 @@ test("la guía nueva monta base, tapitas, tubo y embellecedor en doce pasos", ()
   fireEvent.click(
     screen.getByRole("button", { name: "Paso 4: Colocá la tapa electrónica" }),
   );
-  expect(screen.getByText("07-tapa-electronica.stl")).toBeTruthy();
+  expect(screen.getByText("06-tapa-electronica.stl")).toBeTruthy();
   expect(instructions.scrollTop).toBe(0);
   expect(body.scrollTop).toBe(0);
   fireEvent.click(
     screen.getByRole("button", { name: "Paso 5: Instalá el tubo hueco" }),
   );
-  expect(screen.getByText("08-tubo-hueco.stl")).toBeTruthy();
+  expect(screen.getByText("07-tubo-hueco.stl")).toBeTruthy();
   fireEvent.click(
     screen.getByRole("button", {
-      name: "Paso 11: Colocá el embellecedor frontal",
-    }),
-  );
-  expect(screen.getByText("05-embellecedor.stl")).toBeTruthy();
-  fireEvent.click(
-    screen.getByRole("button", {
-      name: "Paso 12: Colgá la base y revisá la sombra",
+      name: "Paso 11: Colgá la base y revisá la sombra",
     }),
   );
   expect(screen.getByRole("button", { name: "Finalizar" })).toBeTruthy();

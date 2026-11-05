@@ -9,6 +9,7 @@ import {
   type WallMask,
 } from "../src/features/shadowbox/engine";
 import { currentFabrication } from "../src/features/shadowbox/editor-defaults";
+import { WALL_POST_DIAMETER } from "../src/features/shadowbox/modular-config";
 import {
   fabricationParts,
   assemblyMesh,
@@ -149,7 +150,7 @@ test.each([
       "bottom",
       "left",
       "right",
-      "front",
+      ...(f.illumination === "modular" ? [] : ["front"]),
       "base",
       "separator",
       ...(f.illumination === "modular"
@@ -164,10 +165,19 @@ test.each([
       closed(part);
       closed(assemblyMesh(part, s, f));
     }
-    expect(parts.find((p) => p.id === "front")!.filename).toBe(
-      "05-embellecedor",
-    );
-    expect(parts.find((p) => p.id === "base")!.filename).toBe("06-base-pared");
+    if (f.illumination === "modular") {
+      expect(parts.some((p) => p.id === "front")).toBe(false);
+      expect(parts.find((p) => p.id === "base")!.filename).toBe(
+        "05-base-pared",
+      );
+    } else {
+      expect(parts.find((p) => p.id === "front")!.filename).toBe(
+        "05-embellecedor",
+      );
+      expect(parts.find((p) => p.id === "base")!.filename).toBe(
+        "06-base-pared",
+      );
+    }
   },
   15000,
 ); // Curved surfaces require more manifold-edge checks than rectilinear fixtures.
@@ -189,8 +199,7 @@ test("keyhole is open through the reinforced rear pad; battery cover and separat
   expect(
     materialAt(sep, [l.separatorWidth / 2, l.separatorHeight / 2, 1]),
   ).toBe(false);
-  const front = parts.find((p) => p.id === "front")!;
-  expect(materialAt(front, [l.width / 2, l.height / 2, 1])).toBe(false);
+  expect(parts.some((p) => p.id === "front")).toBe(false);
   let low = Infinity,
     high = -Infinity;
   for (let i = 0; i < cover.positions.length; i += 3) {
@@ -294,9 +303,13 @@ test.each(
       front === "design" ? art() : undefined,
     );
     const base = parts.find((p) => p.id === "base")!,
-      lid = parts.find((p) => p.id === "separator")!;
+      lid = parts.find((p) => p.id === "separator")!,
+      post = parts.find((p) => p.id === "post")!;
     closed(base);
     closed(lid);
+    closed(post);
+    expect(post.width).toBe(9);
+    const postRadius = WALL_POST_DIAMETER / 2;
     const r = l.socket / 2,
       outer = l.socketOuter / 2,
       z = (front === "design" ? f.enclosure.relief! : 0) + 1;
@@ -305,15 +318,33 @@ test.each(
         dx = Math.cos(angle),
         dy = Math.sin(angle);
       expect(
-        materialAt(base, [l.width / 2 + 5 * dx, l.height / 2 + 5 * dy, 7]),
+        materialAt(base, [
+          l.width / 2 + postRadius * dx,
+          l.height / 2 + postRadius * dy,
+          7,
+        ]),
       ).toBe(false);
       expect(
         materialAt(lid, [
-          l.separatorWidth / 2 + 5 * dx,
-          l.separatorHeight / 2 + 5 * dy,
+          l.separatorWidth / 2 + postRadius * dx,
+          l.separatorHeight / 2 + postRadius * dy,
           z,
         ]),
       ).toBe(false);
+      // A 6 mm cable bore leaves a 1.5 mm wall in the actual exported tube.
+      for (const [radius, solid] of [
+        [2.9, false],
+        [3.1, true],
+        [4.4, true],
+        [4.6, false],
+      ] as const)
+        expect(
+          materialAt(post, [
+            postRadius + radius * dx,
+            postRadius + radius * dy,
+            3,
+          ]),
+        ).toBe(solid);
       expect(
         materialAt(base, [
           l.width / 2 + (r + 0.08) * dx,
@@ -372,9 +403,10 @@ test("panels seat in the continuous base above the lid and retain LED and front 
   expect(l.panelDepth).toBeCloseTo(41.45);
   expect(l.frontTrim).toBeCloseTo(18.55);
   const cradleBack = l.headZ + l.headSeat + 2;
-  expect(bounds("front").min).toBeGreaterThan(cradleBack + 2);
-  expect(bounds("head").min).toBeGreaterThan(l.source);
-  expect(bounds("head").max).toBeGreaterThan(bounds("front").min);
+  expect(l.outerFace).toBeGreaterThan(cradleBack);
+  expect(bounds("top").max).toBeCloseTo(l.outerFace);
+  expect(bounds("head").min).toBeCloseTo(l.headOrigin);
+  expect(bounds("head").max).toBeCloseTo(cradleBack);
   const boardBack = l.headZ + l.headSeat;
   expect(
     boardBack - led.modular!.starThickness - led.modular!.emitterHeight,
@@ -472,7 +504,7 @@ test("panel starts follow the top of the lid and relief without moving the light
         );
     }
     expect(layout.outerFace).toBeCloseTo(
-      depth + ((raw.depth * raw.lightPercent) / 100) * 10 + 11.45 + 2,
+      layout.panelStart + layout.panelDepth - d.thickness / 2 - f.clearance / 2,
     );
     expect(sourceDistance(d)).toBeCloseTo(
       depth / 10 + (raw.depth * raw.lightPercent) / 100,
@@ -489,9 +521,8 @@ test("artwork belongs to the rear lid and never fills the open front; ZIP includ
     image = art();
   const parts = fabricationParts(masks, s, f, image);
   const rear = parts.find((p) => p.id === "separator")!;
-  const front = parts.find((p) => p.id === "front")!;
   closed(rear);
-  closed(front);
+  expect(parts.some((p) => p.id === "front")).toBe(false);
   const l = wallMountLayout(s, f);
   const span = Math.min(l.separatorWidth, l.separatorHeight) - 12;
   // A rigid Y rotation puts the skirt upward without mirroring the printed art.
@@ -510,11 +541,9 @@ test("artwork belongs to the rear lid and never fills the open front; ZIP includ
   expect(fabricationPoint("separator", x, y, 0, s, f)[0] * 10).toBeCloseTo(
     -span * 0.2,
   );
-  const plainFront = fabricationParts(masks, s, led).find(
-    (p) => p.id === "front",
-  )!;
-  expect(front.positions).toEqual(plainFront.positions);
-  expect(front.indices).toEqual(plainFront.indices);
+  expect(fabricationParts(masks, s, led).some((p) => p.id === "front")).toBe(
+    false,
+  );
   expect(() => fabricationParts(masks, s, f)).toThrow(/Falta la imagen/);
   const zip = buildSTLExport({
     settings: s,
@@ -525,7 +554,9 @@ test("artwork belongs to the rear lid and never fills the open front; ZIP includ
     name: "Pared",
   });
   const text = new TextDecoder().decode(zip.buffer);
-  expect(text).toContain("10-tapa-pilas.stl");
+  expect(text).toContain("09-tapa-pilas.stl");
+  expect(text).not.toContain("05-embellecedor.stl");
+  expect(text).toContain("sin marco");
   expect(text).toContain("mismo diseño en relieve");
   expect(text).toContain("BASE CONTRA LA PARED");
 });
@@ -540,6 +571,8 @@ test("rejects intersecting batteries, bad hanging hardware and an emitter that c
   expect(() =>
     lightingLayout(raw, {
       ...led,
+      // Isolate the battery fit from the wider default cable channel's depth limit.
+      modular: { ...led.modular!, cableDiameter: 4 },
       enclosure: { ...led.enclosure!, depth: 15 },
     }),
   ).toThrow(/portapilas/);
@@ -554,7 +587,9 @@ test("rejects intersecting batteries, bad hanging hardware and an emitter that c
     }),
   ).toThrow(/anclaje/);
   const seq = assemblySequence(led);
-  expect(seq.steps).toHaveLength(12);
+  expect(seq.steps).toHaveLength(11);
+  expect(seq.resultStep).toBe(10);
+  expect(seq.steps.some((step) => step.part === "front")).toBe(false);
   expect(assemblyPlacement("base", led)).toBe(1);
   expect(assemblyPlacement("post", led)).toBeLessThan(
     assemblyPlacement("head", led),
@@ -592,8 +627,8 @@ test("diagonal relief cells beside the central hole remain manifold in both ligh
   }
 }, 10000);
 
-test("the front is a continuous frame with a large through opening in both lighting modes", () => {
-  for (const f of [led, usb, cob]) {
+test("the COB front retains its frame and lighting pockets", () => {
+  for (const f of [cob]) {
     const s = projectionSettings(raw, f),
       l = wallMountLayout(s, f);
     const front = fabricationParts(masks, s, f).find((p) => p.id === "front")!;

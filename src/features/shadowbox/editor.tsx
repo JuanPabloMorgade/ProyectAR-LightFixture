@@ -6,7 +6,7 @@ import {
   reachableMasks,
   occludeSimulation,
 } from "./projection-occlusion";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import {
   Download,
   Upload,
@@ -24,6 +24,10 @@ import {
 } from "lucide-react";
 import {
   IMAGE_SIZE,
+  LOW_DETAIL,
+  MEDIUM_DETAIL,
+  HIGH_DETAIL,
+  VERY_HIGH_DETAIL,
   masksFromImage,
   simulatedImage,
   maskSVG,
@@ -88,6 +92,31 @@ type Crop = {
   invert: boolean;
 };
 type ShadowStep = "how" | "design" | "three";
+type PreviewNotice = {
+  id: number;
+  kind: "detail" | "design" | "image";
+  detail?: number;
+  message?: string;
+  status: "loading" | "done" | "error";
+  hidden: boolean;
+};
+const previewTitles = {
+  detail: {
+    loading: "Cargando detalles…",
+    done: "Detalles actualizados",
+    error: "No se pudieron cargar los detalles",
+  },
+  design: {
+    loading: "Cargando diseño…",
+    done: "Diseño actualizado",
+    error: "No se pudo cargar el diseño",
+  },
+  image: {
+    loading: "Cargando imagen…",
+    done: "Imagen lista para recortar",
+    error: "No se pudo cargar la imagen",
+  },
+};
 const labels: Record<Face, string> = {
   top: "Superior",
   bottom: "Inferior",
@@ -141,6 +170,15 @@ function MaskPreview({ mask }: { mask: WallMask }) {
 }
 
 export default function ShadowEditor() {
+  const previewVersion = useRef(0);
+  const previewFrames = useRef<number[]>([]);
+  const cancelPreview = useRef<(() => void) | null>(null);
+  const [appliedPreview, setAppliedPreview] = useState(0);
+  const [previewPending, startPreviewTransition] = useTransition();
+  const [previewNotice, setPreviewNotice] = useState<PreviewNotice | null>(
+    null,
+  );
+  const previewLoading = previewNotice?.status === "loading" || previewPending;
   const art = useRef<HTMLCanvasElement>(null),
     artModel = useRef<HTMLCanvasElement | null>(null),
     simCanvas = useRef<HTMLCanvasElement>(null),
@@ -238,6 +276,21 @@ export default function ShadowEditor() {
     }
   }, [target, opticalSettings, fabrication]);
   const masks = maskProjection.masks;
+  useEffect(() => {
+    if (
+      previewNotice?.status === "loading" &&
+      !previewPending &&
+      appliedPreview === previewNotice.id
+    ) {
+      setPreviewNotice({
+        ...previewNotice,
+        status:
+          previewNotice.kind === "image" || masks.length === 4
+            ? "done"
+            : "error",
+      });
+    }
+  }, [previewNotice, previewPending, appliedPreview, masks]);
   const simulation = useMemo(
     () =>
       masks.length === 4
@@ -279,19 +332,25 @@ export default function ShadowEditor() {
     );
     setError("");
   }
-  function setArtwork(source: HTMLCanvasElement | HTMLImageElement) {
-    if (!artModel.current) {
-      artModel.current = document.createElement("canvas");
-      artModel.current.width = artModel.current.height = IMAGE_SIZE;
-    }
-    const ctx = artModel.current.getContext("2d", {
+  function prepareArtwork(source: HTMLCanvasElement | HTMLImageElement) {
+    const canvas = document.createElement("canvas");
+    canvas.width = canvas.height = IMAGE_SIZE;
+    const ctx = canvas.getContext("2d", {
       willReadFrequently: true,
     })!;
-    ctx.clearRect(0, 0, IMAGE_SIZE, IMAGE_SIZE);
     ctx.drawImage(source, 0, 0, IMAGE_SIZE, IMAGE_SIZE);
-    if (art.current)
-      art.current.getContext("2d")!.drawImage(artModel.current, 0, 0);
-    commit();
+    const pixels = new Uint8ClampedArray(
+      ctx.getImageData(0, 0, IMAGE_SIZE, IMAGE_SIZE).data,
+    );
+    return () => {
+      artModel.current = canvas;
+      art.current?.getContext("2d")!.drawImage(canvas, 0, 0);
+      setTarget(pixels);
+      setError("");
+    };
+  }
+  function setArtwork(source: HTMLCanvasElement | HTMLImageElement) {
+    prepareArtwork(source)();
   }
   useEffect(() => {
     setArtwork(presetArt("rays"));
@@ -302,6 +361,7 @@ export default function ShadowEditor() {
     }
     return () => {
       exportJob.current?.terminate();
+      stopPreviewChange();
     };
   }, []);
   useEffect(() => {
@@ -335,9 +395,11 @@ export default function ShadowEditor() {
       0,
     );
   }, [crop]);
-  function preset(value: Preset) {
-    setArtwork(presetArt(value));
-    setMessage("Patrón actualizado.");
+  function preset(value: Preset, reset = false) {
+    void updatePreview("design", () => ({
+      apply: prepareArtwork(presetArt(value)),
+      message: reset ? "Patrón restablecido." : "Patrón actualizado.",
+    }));
   }
   function point(
     event: React.PointerEvent<HTMLCanvasElement>,
@@ -366,6 +428,79 @@ export default function ShadowEditor() {
     setSettings((s) => ({ ...s, [key]: value }));
     setMessage("");
   }
+  function stopPreviewChange() {
+    previewVersion.current++;
+    previewFrames.current.forEach((frame) => cancelAnimationFrame(frame));
+    previewFrames.current = [];
+    cancelPreview.current?.();
+    cancelPreview.current = null;
+  }
+  function updatePreview(
+    kind: PreviewNotice["kind"],
+    prepare: () =>
+      | { apply: () => void; message?: string }
+      | Promise<{ apply: () => void; message?: string }>,
+    detail?: number,
+  ): Promise<boolean> {
+    stopPreviewChange();
+    const id = previewVersion.current;
+    setMessage("");
+    setError("");
+    setPreviewNotice({ id, kind, detail, status: "loading", hidden: false });
+    return new Promise((resolve) => {
+      cancelPreview.current = () => resolve(false);
+      // Let the loading notice paint before decoding or calculating the model.
+      previewFrames.current = [
+        requestAnimationFrame(() => {
+          previewFrames.current.push(
+            requestAnimationFrame(async () => {
+              try {
+                const prepared = await prepare();
+                if (id !== previewVersion.current) return;
+                startPreviewTransition(() => {
+                  prepared.apply();
+                  setAppliedPreview(id);
+                  setPreviewNotice((notice) =>
+                    notice?.id === id
+                      ? { ...notice, message: prepared.message }
+                      : notice,
+                  );
+                });
+                cancelPreview.current = null;
+                resolve(true);
+              } catch (error) {
+                if (id !== previewVersion.current) return;
+                const message =
+                  error instanceof Error
+                    ? error.message
+                    : "No se pudo cargar el diseño.";
+                setPreviewNotice((notice) =>
+                  notice?.id === id
+                    ? { ...notice, status: "error", message }
+                    : notice,
+                );
+                setError(message);
+                cancelPreview.current = null;
+                resolve(false);
+              }
+            }),
+          );
+        }),
+      ];
+    });
+  }
+  function changeDetail(detail: number) {
+    if (detail === settings.detail) {
+      stopPreviewChange();
+      setPreviewNotice(null);
+      return;
+    }
+    void updatePreview(
+      "detail",
+      () => ({ apply: () => setSettings((s) => ({ ...s, detail })) }),
+      detail,
+    );
+  }
   function selectStep(next: typeof step, reveal = false) {
     if (next === "three") {
       const adjusted = fitWallLight(settings, fabrication);
@@ -385,27 +520,34 @@ export default function ShadowEditor() {
           ?.scrollIntoView({ block: "start" }),
       );
   }
-  async function loadImage(src: string) {
-    const image = new Image();
-    image.src = src;
-    await image.decode();
-    setArtwork(image);
-  }
-  async function loadProject(project: Project) {
+  async function prepareProject(project: Project) {
     validateBox(project.settings);
     const nextFabrication = currentFabrication(project.fabrication);
-    const adjusted = fitWallLight(project.settings, nextFabrication);
-    setSettings(adjusted);
-    setNumberDrafts({});
-    setFabrication(nextFabrication);
-    setShowInterior(false);
-    setFabricationDrafts({});
-    setName(project.name);
-    await loadImage(project.image);
-    setMessage(
-      `Proyecto «${project.name}» abierto.${project.fabrication?.illumination !== "modular" ? " La iluminación anterior se actualizó a LED de 1 W; revisá el montaje." : ""}${adjusted.lightPercent !== project.settings.lightPercent ? ` Posición del LED ajustada de ${project.settings.lightPercent}% a ${adjusted.lightPercent}% para que entre el cabezal.` : ""}`,
-    );
-    setStep("design");
+    const projectSettings =
+      project.settings.detail === 96
+        ? { ...project.settings, detail: LOW_DETAIL }
+        : project.settings;
+    const adjusted = fitWallLight(projectSettings, nextFabrication);
+    const image = new Image();
+    image.src = project.image;
+    await image.decode();
+    const applyArtwork = prepareArtwork(image);
+    return {
+      apply: () => {
+        setSettings(adjusted);
+        setNumberDrafts({});
+        setFabrication(nextFabrication);
+        setShowInterior(false);
+        setFabricationDrafts({});
+        setName(project.name);
+        applyArtwork();
+        setStep("design");
+      },
+      message: `Proyecto «${project.name}» abierto.${project.fabrication?.illumination !== "modular" ? " La iluminación anterior se actualizó a LED de 1 W; revisá el montaje." : ""}${adjusted.lightPercent !== project.settings.lightPercent ? ` Posición del LED ajustada de ${project.settings.lightPercent}% a ${adjusted.lightPercent}% para que entre el cabezal.` : ""}`,
+    };
+  }
+  function loadProject(project: Project) {
+    return updatePreview("design", () => prepareProject(project));
   }
   function currentProject(): Project {
     return {
@@ -429,9 +571,15 @@ export default function ShadowEditor() {
     }
   }
   async function openSelected() {
+    stopPreviewChange();
+    setPreviewNotice(null);
     try {
-      await designs.openSelected(loadProject);
+      await designs.openSelected(async (project) => {
+        if (!(await loadProject(project)))
+          throw new DOMException("Carga cancelada", "AbortError");
+      });
     } catch (e) {
+      if (e instanceof DOMException && e.name === "AbortError") return;
       setError(
         e instanceof Error ? e.message : "No se pudo abrir el proyecto.",
       );
@@ -446,24 +594,30 @@ export default function ShadowEditor() {
   }
   async function onPhoto(file?: File) {
     if (!file) return;
-    try {
+    await updatePreview("image", async () => {
       const image = await imageFromFile(file);
-      setCrop({
-        image,
-        filename: file.name,
-        zoom: 1,
-        panX: 0,
-        panY: 0,
-        threshold: 128,
-        invert: false,
-      });
-      setError("");
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "No se pudo abrir la imagen.");
-    }
+      return {
+        apply: () =>
+          setCrop({
+            image,
+            filename: file.name,
+            zoom: 1,
+            panX: 0,
+            panY: 0,
+            threshold: 128,
+            invert: false,
+          }),
+      };
+    });
   }
   async function exportSTL() {
-    if (masks.length !== 4 || exportJob.current || fabricationError) return;
+    if (
+      masks.length !== 4 ||
+      exportJob.current ||
+      fabricationError ||
+      previewLoading
+    )
+      return;
     setWorking(true);
     setError("");
     let worker: Worker;
@@ -607,6 +761,7 @@ export default function ShadowEditor() {
         <div className="shadow-header-actions">
           <Button
             variant="secondary"
+            disabled={previewLoading}
             onClick={() =>
               download(
                 JSON.stringify(currentProject()),
@@ -625,7 +780,7 @@ export default function ShadowEditor() {
             <FolderOpen size={16} />
             Importar
           </Button>
-          <Button variant="primary" onClick={save}>
+          <Button variant="primary" disabled={previewLoading} onClick={save}>
             <Save size={16} />
             Guardar
           </Button>
@@ -639,15 +794,17 @@ export default function ShadowEditor() {
               e.target.value = "";
               if (!file) return;
               try {
-                if (file.size > 5_000_000)
-                  throw new Error("El archivo supera los 5 MB.");
-                const raw = await file.text();
-                const data = JSON.parse(raw);
-                const project =
-                  data.version === 1
-                    ? readOld(raw, file.name)
-                    : checkProject(data);
-                await loadProject(project);
+                await updatePreview("design", async () => {
+                  if (file.size > 5_000_000)
+                    throw new Error("El archivo supera los 5 MB.");
+                  const raw = await file.text();
+                  const data = JSON.parse(raw);
+                  const project =
+                    data.version === 1
+                      ? readOld(raw, file.name)
+                      : checkProject(data);
+                  return prepareProject(project);
+                });
               } catch (err) {
                 setError(
                   err instanceof Error
@@ -753,12 +910,22 @@ export default function ShadowEditor() {
             >
               <SelectField
                 label="Detalle"
-                value={settings.detail}
-                onChange={(e) => change("detail", Number(e.target.value))}
+                value={
+                  previewNotice?.kind === "detail" &&
+                  previewNotice.status === "loading"
+                    ? previewNotice.detail
+                    : settings.detail
+                }
+                disabled={previewLoading && previewNotice?.kind !== "detail"}
+                onChange={(e) => changeDetail(Number(e.target.value))}
                 options={[
-                  { value: 96, label: "Borrador" },
-                  { value: 160, label: "Equilibrado" },
-                  { value: 224, label: "Alto" },
+                  { value: LOW_DETAIL, label: "Bajo" },
+                  { value: MEDIUM_DETAIL, label: "Medio" },
+                  { value: HIGH_DETAIL, label: "Alto" },
+                  {
+                    value: VERY_HIGH_DETAIL,
+                    label: "Muy alto",
+                  },
                 ]}
               />
               <p className="shadow-help">
@@ -886,10 +1053,7 @@ export default function ShadowEditor() {
                   <small>{brush}px</small>
                   <Button
                     variant="unstyled"
-                    onClick={() => {
-                      setArtwork(presetArt("rays"));
-                      setMessage("Patrón restablecido.");
-                    }}
+                    onClick={() => preset("rays", true)}
                   >
                     <RotateCcw size={14} />
                     Reiniciar
@@ -1020,7 +1184,15 @@ export default function ShadowEditor() {
                   onChange={(e) => setShowInterior(e.target.checked)}
                 />
               </div>
-              <div className="shadow-three-stage">
+              {isModular(fabrication) && (
+                <p className="shadow-preview-note">
+                  Cabezal circular encastrado al poste, con tope de 6 mm y paso
+                  para cables. Conserva la distancia del emisor a la pared. La
+                  proyección incluye la sombra de sus dos nervios de 1,2 × 1,6
+                  mm: orientalos hacia esquinas opuestas, como en el modelo.
+                </p>
+              )}
+              <div className="shadow-three-stage" aria-busy={previewLoading}>
                 {simulation && masks.length === 4 && !fabricationError ? (
                   <ShadowViewer
                     settings={opticalSettings}
@@ -1141,7 +1313,10 @@ export default function ShadowEditor() {
                     type="button"
                     className="button secondary assembly-open"
                     disabled={
-                      !simulation || masks.length !== 4 || !!fabricationError
+                      previewLoading ||
+                      !simulation ||
+                      masks.length !== 4 ||
+                      !!fabricationError
                     }
                     onClick={() => setAssemblyOpen(true)}
                   >
@@ -1173,7 +1348,10 @@ export default function ShadowEditor() {
                   <Button
                     variant="primary"
                     disabled={
-                      working || masks.length !== 4 || !!fabricationError
+                      previewLoading ||
+                      working ||
+                      masks.length !== 4 ||
+                      !!fabricationError
                     }
                     onClick={() => void exportSTL()}
                   >
@@ -1193,12 +1371,13 @@ export default function ShadowEditor() {
               >
                 {isModular(fabrication) && (
                   <p className="shadow-preview-note">
-                    Marco frontal abierto hacia la persona; cierre y base con
-                    anclaje contra la pared. El tubo queda visible por delante.
-                    Activá Ver interior para revisar las tapitas y el recorrido
-                    de los cables. Medidas de portapilas y altura del emisor
-                    provisionales: revisalas antes de exportar. La vista incluye
-                    la sombra de las piezas impresas con una fuente puntual.
+                    Frente abierto sin marco hacia la persona; cierre y base con
+                    anclaje contra la pared. El cabezal se encastra en el poste
+                    central hasta el tope. Activá Ver interior para revisar las
+                    tapitas y el recorrido de los cables. Medidas de portapilas
+                    y altura del emisor provisionales: revisalas antes de
+                    exportar. La vista incluye la sombra de las piezas impresas
+                    con una fuente puntual.
                   </p>
                 )}
                 <p className="shadow-preview-note">
@@ -1208,7 +1387,7 @@ export default function ShadowEditor() {
                   su área. Se omiten los recortes completamente bloqueados; no
                   se trasladan a otra altura.
                   {isModular(fabrication) &&
-                    " Las paredes y el marco terminan después del cabezal, conservando el espacio de montaje."}
+                    " Las paredes terminan después del cabezal, sin marco ni lengüetas delanteras."}
                 </p>
                 <p>
                   Izquierda y derecha se nombran mirando la caja de frente,
@@ -1305,16 +1484,16 @@ export default function ShadowEditor() {
                       </span>
                     </li>
                     <li>
-                      <strong>Marco frontal abierto</strong>
+                      <strong>Frente abierto sin marco</strong>
                       <span>
-                        Mira hacia la habitación y sostiene el cabezal del LED.
-                        El tubo central lleva los cables.
+                        Mira hacia la habitación. El cabezal del LED se encastra
+                        en el poste central, que también lleva los cables.
                       </span>
                     </li>
                   </ol>
                   <p>
-                    La base inicial mide 20 mm de alto. El montaje usa 10 piezas
-                    con 3 AAA o 9 con USB; el LED, el portapilas y las
+                    La base inicial mide 20 mm de alto. El montaje usa 9 piezas
+                    con 3 AAA u 8 con USB; el LED, el portapilas y las
                     conexiones se compran por separado. Medí tus componentes
                     antes de imprimir.
                   </p>
@@ -1387,6 +1566,47 @@ export default function ShadowEditor() {
         </section>
       </div>
       <ToastViewport>
+        {previewNotice &&
+          !previewNotice.hidden &&
+          !(previewNotice.status === "error" && error) && (
+            <Toast
+              key={`preview-${previewNotice.id}-${previewNotice.status}`}
+              title={previewTitles[previewNotice.kind][previewNotice.status]}
+              description={
+                previewNotice.status === "loading"
+                  ? previewNotice.kind === "image"
+                    ? "Preparando la imagen para el recorte."
+                    : "Actualizando los recortes y la proyección."
+                  : previewNotice.status === "done"
+                    ? (previewNotice.message ??
+                      (previewNotice.kind === "image"
+                        ? "Recortá la imagen y aplicala al diseño."
+                        : "Tu diseño ya usa el detalle elegido."))
+                    : (previewNotice.message ??
+                      "Revisá las medidas del cuadro e intentá de nuevo.")
+              }
+              variant={
+                previewNotice.status === "error"
+                  ? "error"
+                  : previewNotice.status === "done"
+                    ? "success"
+                    : "info"
+              }
+              duration={previewNotice.status === "done" ? 4000 : 0}
+              progress={
+                previewNotice.status === "loading"
+                  ? null
+                  : previewNotice.status === "done"
+                    ? 100
+                    : undefined
+              }
+              onDismiss={() =>
+                setPreviewNotice(
+                  (notice) => notice && { ...notice, hidden: true },
+                )
+              }
+            />
+          )}
         {message && !error && (
           <Toast
             key={message}
@@ -1479,19 +1699,31 @@ export default function ShadowEditor() {
             <Button
               variant="primary"
               onClick={() => {
-                setArtwork(
-                  rasterizeCrop(
-                    crop.image,
-                    crop.zoom,
-                    crop.panX,
-                    crop.panY,
-                    crop.threshold,
-                    crop.invert,
-                  ),
-                );
-                setName(crop.filename.replace(/\.[^.]+$/, "").slice(0, 100));
+                const selectedCrop = crop;
                 setCrop(null);
-                setMessage("Imagen aplicada al diseño.");
+                void updatePreview("design", () => {
+                  const applyArtwork = prepareArtwork(
+                    rasterizeCrop(
+                      selectedCrop.image,
+                      selectedCrop.zoom,
+                      selectedCrop.panX,
+                      selectedCrop.panY,
+                      selectedCrop.threshold,
+                      selectedCrop.invert,
+                    ),
+                  );
+                  return {
+                    apply: () => {
+                      applyArtwork();
+                      setName(
+                        selectedCrop.filename
+                          .replace(/\.[^.]+$/, "")
+                          .slice(0, 100),
+                      );
+                    },
+                    message: "Imagen aplicada al diseño.",
+                  };
+                });
               }}
             >
               Aplicar imagen

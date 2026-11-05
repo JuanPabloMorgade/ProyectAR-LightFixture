@@ -3,7 +3,6 @@ import type { Fabrication } from "./fabrication";
 import { cobLayout, wallFrameBand } from "./cob";
 import { gridSolidMesh, type Point } from "./solid-mesh";
 import { wallMountLayout } from "./wallmount";
-import { headDockSlots } from "./head-mount";
 
 const axes = (values: number[]) =>
   [...new Set(values.map((v) => +v.toFixed(5)))]
@@ -25,9 +24,7 @@ export function wallFrontMesh(
         { ...pocket, depth: f.cob?.recessDepth ?? 0.4 },
         { ...marker, depth: Math.min(0.2, f.cob?.recessDepth ?? 0.4) },
       ])
-    : f.illumination === "modular"
-      ? headDockSlots(w, s.height * 10, f.clearance, t)
-      : [];
+    : [];
   const xs = axes([
     0,
     w,

@@ -14,6 +14,7 @@ import { previewParts, previewMesh } from "./preview-model";
 import { assemblyPosition } from "./assembly";
 import { isCob } from "./cob";
 import { isModular } from "./modular";
+import { wallMountLayout } from "./wallmount";
 import { hasEnclosure } from "./enclosure";
 import { modularVisuals } from "./modular-visuals";
 import { cobVisuals } from "./cob-visuals";
@@ -34,6 +35,7 @@ export default function ShadowViewer({
   fabrication?: Fabrication;
 }) {
   const resetView = useRef<(() => void) | null>(null);
+  const supportView = useRef<(() => void) | null>(null);
   const host = useRef<HTMLDivElement>(null),
     [error, setError] = useState("");
   useEffect(() => {
@@ -62,6 +64,7 @@ export default function ShadowViewer({
     controls.minDistance = size * 0.6;
     controls.maxDistance = Math.max(size * 5, settings.radius * 8);
     const frame = () => {
+      controls.minDistance = size * 0.6;
       const distance = Math.max(
         size * 2.4,
         (interior ? size : settings.radius * 1.05) /
@@ -77,6 +80,22 @@ export default function ShadowViewer({
       controls.update();
     };
     resetView.current = frame;
+    if (isWallMount(fabrication) && isModular(fabrication)) {
+      const layout = wallMountLayout(settings, fabrication!);
+      supportView.current = () => {
+        const diameter = layout.headWidth / 10;
+        const bottom = layout.headOrigin / 10;
+        const top = (layout.headZ + layout.headSeat + 2) / 10;
+        const extent =
+          Math.max(diameter, top - bottom) / Math.min(camera.aspect, 1);
+        controls.minDistance = diameter * 0.8;
+        controls.target.set(0, 0, (bottom + top) / 2);
+        camera.position
+          .copy(controls.target)
+          .add(new THREE.Vector3(1.8, 0.8, 1.7).multiplyScalar(extent));
+        controls.update();
+      };
+    }
     if (separated) frame();
     scene.add(new THREE.AmbientLight(0xffffff, 1.4));
     const key = new THREE.DirectionalLight(0xffe8ba, 2);
@@ -305,6 +324,7 @@ export default function ShadowViewer({
     });
     return () => {
       resetView.current = null;
+      supportView.current = null;
       observer.disconnect();
       renderer.setAnimationLoop(null);
       controls.dispose();
@@ -319,13 +339,24 @@ export default function ShadowViewer({
       className="shadow-three"
       aria-label="Vista 3D de la caja de sombras"
     >
-      <button
-        type="button"
-        className="shadow-viewer-reset"
-        onClick={() => resetView.current?.()}
-      >
-        Centrar vista frontal
-      </button>
+      <div className="shadow-viewer-actions">
+        <button
+          type="button"
+          className="shadow-viewer-reset"
+          onClick={() => resetView.current?.()}
+        >
+          Centrar vista frontal
+        </button>
+        {isWallMount(fabrication) && isModular(fabrication) && (
+          <button
+            type="button"
+            className="shadow-viewer-reset"
+            onClick={() => supportView.current?.()}
+          >
+            Ver encastre del poste
+          </button>
+        )}
+      </div>
       {error && <p role="alert">{error}</p>}
     </div>
   );

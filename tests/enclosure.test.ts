@@ -151,9 +151,13 @@ test("outer cover skirt clears electronics walls and the configured holder", () 
 });
 
 test("rejects electronics that do not fit, exports separate pieces, and closes the face after installing light", () => {
-  expect(() => lightingLayout(s, { ...led, enclosure: { depth: 12 } })).toThrow(
-    /portapilas/,
-  );
+  expect(() =>
+    lightingLayout(s, {
+      ...led,
+      modular: { ...led.modular!, cableDiameter: 4 },
+      enclosure: { depth: 12 },
+    }),
+  ).toThrow(/portapilas/);
   expect(() =>
     lightingLayout(s, { ...led, enclosure: { depth: NaN } }),
   ).toThrow(/profundidad/);

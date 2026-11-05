@@ -3,6 +3,8 @@ import { useState } from "react";
 import { Button, Disclosure, NumberField, SelectField } from "@/components/ui";
 import type { BoxSettings } from "./engine";
 import type { Fabrication } from "./fabrication";
+import { isWallMount } from "./enclosure-config";
+import { WALL_POST_DIAMETER } from "./modular-config";
 import {
   defaultModular,
   modularLayout,
@@ -55,6 +57,7 @@ export default function ModularControls({
   onLightPosition: (n: number) => void;
 }) {
   const m = fabrication.modular ?? defaultModular;
+  const postDiameter = isWallMount(fabrication) ? WALL_POST_DIAMETER : 10;
   const update = (patch: Partial<ModularSettings>) =>
     onChange({ ...m, ...patch });
   let layout: ReturnType<typeof modularLayout> | undefined;
@@ -87,8 +90,8 @@ export default function ModularControls({
       <div className="shadow-modular-summary" aria-live="polite">
         <strong>{modularCount(fabrication)} piezas para imprimir</strong>
         <span>
-          Base, tapa electrónica, tubo, cabezal, cuatro paneles y embellecedor.
-          Con pilas se agrega su tapita independiente.
+          Base, tapa electrónica, poste, cabezal y cuatro paneles, sin marco
+          frontal. Con pilas se agrega su tapita independiente.
         </span>
       </div>
       <h3>Medidas del LED</h3>
@@ -118,7 +121,7 @@ export default function ModularControls({
           {(
             [
               ["starThickness", "Espesor de la estrella", 0.6, 4],
-              ["cableDiameter", "Ancho del paso de cables", 2, 6],
+              ["cableDiameter", "Diámetro interior del tubo", 2, 6],
             ] as const
           ).map(([key, label, min, max]) => (
             <Measure
@@ -139,11 +142,14 @@ export default function ModularControls({
         </p>
         {layout && (
           <p className="shadow-help">
-            Tubo: Ø10 ×{" "}
+            Tubo: Ø{postDiameter} ×{" "}
             {layout.postLength.toLocaleString("es-AR", {
               maximumFractionDigits: 2,
             })}{" "}
-            mm. Emisor a{" "}
+            mm. Canal interior: Ø{m.cableDiameter.toLocaleString("es-AR")} mm;
+            pared del tubo:{" "}
+            {((postDiameter - m.cableDiameter) / 2).toLocaleString("es-AR")} mm.
+            Emisor a{" "}
             {(
               (settings.wallOffset ?? 0) * 10 +
               (settings.depth * 10 * settings.lightPercent) / 100
@@ -202,8 +208,8 @@ export default function ModularControls({
         <div className="shadow-modular-intro">
           <strong>Una luz central, piezas desmontables</strong>
           <p>
-            Base de pared con pilas y anclaje; tubo pasacables y cabezal sujeto
-            al marco por detrás del LED. Paneles y embellecedor independientes.
+            Base de pared con pilas y anclaje; poste hueco y cabezal circular
+            encastrado hasta el tope. Cuatro paneles y frente abierto sin marco.
           </p>
         </div>
 

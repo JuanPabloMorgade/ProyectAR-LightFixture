@@ -38,6 +38,8 @@ npx vitest run tests/assembly-guide.test.tsx tests/shadow-editor.test.tsx
 | `tests/stl-export.test.ts` | STL combinado y ZIP, nombres y cantidades según montaje, CRC, guía, escala y equivalencia de geometría. Conserva casos de cinco piezas de la API anterior. |
 | `tests/fabrication.test.ts` | Encastres y soportes de fabricación, configuraciones válidas e inválidas y compatibilidad con LEDs individuales y COB. |
 | `tests/modular.test.ts` | Generador modular anterior, poste, cabezal, alimentación y separación de componentes. |
+| `tests/head-mount.test.ts` | Cabezal circular sobre el poste: sólido cerrado, holgura del collar, tope, paso para cables y asiento de la estrella en medidas mínimas, iniciales y máximas. |
+| `tests/head-projection.test.ts` | Sombra adicional del cabezal fuera de la sombra de la base: reducción mínima del 50% frente a los brazos anchos en tres configuraciones de referencia. |
 | `tests/enclosure.test.ts` | Caja electrónica anterior, tapas, cables y parámetros de compatibilidad. |
 | `tests/shadow-editor.test.tsx` | Guardado/importación, migración al montaje actual, navegación con teclado, conservación del dibujo, campos numéricos, USB/AAA, descarga vía worker, errores y ausencia de Mostrar rayos. |
 | `tests/assembly-guide.test.tsx` | Doce pasos actuales y secuencias anteriores, identificación de piezas, navegación, foco, restauración del scroll de fondo y reinicio del desplazamiento al cambiar de paso. |

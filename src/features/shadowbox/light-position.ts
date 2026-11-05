@@ -1,7 +1,14 @@
 import type { BoxSettings } from "./engine";
 import type { Fabrication } from "./fabrication";
-import { isWallMount } from "./enclosure-config";
+import { isWallMount, wallPanelStart } from "./enclosure-config";
 import { defaultModular } from "./modular-config";
+import { HEAD_INSERTION, POST_TO_EMITTER } from "./head-mount";
+
+/** Leave the wider head collar in front of the electronics lid, including relief. */
+export function minimumWallEmitter(f: Fabrication) {
+  const lidRelief = isWallMount(f) ? wallPanelStart(f) - f.enclosure!.depth : 0;
+  return HEAD_INSERTION + POST_TO_EMITTER + lidRelief + f.clearance / 2;
+}
 
 export function rawWallSettings(s: BoxSettings): BoxSettings {
   if (s.panelExtension === undefined && s.frontTrim === undefined) return s;
@@ -25,7 +32,7 @@ export function wallLightRange(s: BoxSettings, f: Fabrication) {
   const m = f.modular ?? defaultModular;
   const depth = (s.depth - (s.panelExtension ?? 0) + (s.frontTrim ?? 0)) * 10;
   return {
-    min: Math.max(10, Math.ceil((14 / depth) * 100)),
+    min: Math.max(10, Math.ceil((minimumWallEmitter(f) / depth) * 100)),
     max: Math.min(
       95,
       Math.floor(

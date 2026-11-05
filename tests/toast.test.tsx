@@ -14,6 +14,31 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
+test("la carga muestra una barra indeterminada accesible y permanece hasta terminar", () => {
+  vi.useFakeTimers();
+  const dismiss = vi.fn();
+  const { rerender } = render(
+    <Toast title="Cargando detalles…" progress={null} onDismiss={dismiss} />,
+  );
+  const bar = screen.getByRole("progressbar", { name: "Cargando detalles…" });
+  expect(bar.hasAttribute("aria-valuenow")).toBe(false);
+  act(() => vi.advanceTimersByTime(20000));
+  expect(dismiss).not.toHaveBeenCalled();
+  rerender(
+    <Toast
+      title="Detalles actualizados"
+      progress={100}
+      onDismiss={dismiss}
+      duration={4000}
+    />,
+  );
+  expect(screen.getByRole("progressbar").getAttribute("aria-valuenow")).toBe(
+    "100",
+  );
+  act(() => vi.advanceTimersByTime(4000));
+  expect(dismiss).toHaveBeenCalledOnce();
+});
+
 test("anuncia información y errores con prioridad adecuada, sin mover el foco", () => {
   render(
     <ToastViewport>

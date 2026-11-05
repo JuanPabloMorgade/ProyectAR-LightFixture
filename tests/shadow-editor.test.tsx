@@ -91,7 +91,7 @@ test("entrar en 3D corrige el 85% antiguo sin exigir el botón de montaje", () =
   expect(
     (
       screen.getByRole("button", {
-        name: "Descargar STL · 10 piezas",
+        name: "Descargar STL · 9 piezas",
       }) as HTMLButtonElement
     ).disabled,
   ).toBe(false);
@@ -115,7 +115,7 @@ test("entrar en 3D corrige el 85% antiguo sin exigir el botón de montaje", () =
 test("modular permite corregir ajustes manuales, cambia alimentación y restaura medidas", async () => {
   render(<ShadowEditor />);
   fireEvent.click(screen.getByRole("button", { name: "Vista 3D" }));
-  expect(screen.getByText("10 piezas para imprimir")).toBeTruthy();
+  expect(screen.getByText("9 piezas para imprimir")).toBeTruthy();
   fireEvent.change(
     screen.getByRole("spinbutton", { name: "Posición de luz" }),
     { target: { value: "85" } },
@@ -123,7 +123,7 @@ test("modular permite corregir ajustes manuales, cambia alimentación y restaura
   expect(
     (
       screen.getByRole("button", {
-        name: "Descargar STL · 10 piezas",
+        name: "Descargar STL · 9 piezas",
       }) as HTMLButtonElement
     ).disabled,
   ).toBe(true);
@@ -134,7 +134,7 @@ test("modular permite corregir ajustes manuales, cambia alimentación y restaura
   expect(
     (
       screen.getByRole("button", {
-        name: "Descargar STL · 10 piezas",
+        name: "Descargar STL · 9 piezas",
       }) as HTMLButtonElement
     ).disabled,
   ).toBe(false);
@@ -153,7 +153,7 @@ test("modular permite corregir ajustes manuales, cambia alimentación y restaura
     screen.queryByRole("spinbutton", { name: "Largo del portapilas" }),
   ).toBeNull();
   expect(
-    screen.getByRole("button", { name: "Descargar STL · 9 piezas" }),
+    screen.getByRole("button", { name: "Descargar STL · 8 piezas" }),
   ).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: "Guardar" }));
   const saved = JSON.parse(
@@ -195,7 +195,7 @@ test("modular permite corregir ajustes manuales, cambia alimentación y restaura
   expect(
     (
       screen.getByRole("button", {
-        name: "Descargar STL · 10 piezas",
+        name: "Descargar STL · 9 piezas",
       }) as HTMLButtonElement
     ).disabled,
   ).toBe(true);
@@ -204,6 +204,319 @@ test("modular permite corregir ajustes manuales, cambia alimentación y restaura
 vi.mock("../src/features/shadowbox/viewer", () => ({
   default: () => <div aria-label="Caja 3D de prueba" />,
 }));
+
+function detailFrames() {
+  let id = 0;
+  const callbacks = new Map<number, FrameRequestCallback>();
+  vi.stubGlobal(
+    "requestAnimationFrame",
+    vi.fn((callback: FrameRequestCallback) => {
+      callbacks.set(++id, callback);
+      return id;
+    }),
+  );
+  const cancel = vi.fn((frame: number) => callbacks.delete(frame));
+  vi.stubGlobal("cancelAnimationFrame", cancel);
+  return {
+    callbacks,
+    cancel,
+    next: async () => {
+      await act(async () => {
+        const frame = [...callbacks.values()];
+        callbacks.clear();
+        frame.forEach((callback) => callback(0));
+      });
+    },
+  };
+}
+
+function storeDesign(name: string, width = 15) {
+  const id = `proyectar:shadow:v2:${name}`;
+  localStorage.setItem(
+    id,
+    JSON.stringify({
+      version: 2,
+      name,
+      image: "data:image/png;base64,AA==",
+      settings: {
+        width,
+        height: 15,
+        depth: 6,
+        lightPercent: 50,
+        radius: 55,
+        thickness: 2,
+        margin: 3,
+        detail: 160,
+      },
+    }),
+  );
+  return id;
+}
+
+test("los ejemplos muestran carga y solo se aplica el último diseño seleccionado", async () => {
+  const frames = detailFrames();
+  render(<ShadowEditor />);
+  fireEvent.click(
+    screen.getByRole("button", { name: "Diseñador de patrones" }),
+  );
+  const context = HTMLCanvasElement.prototype.getContext("2d")!;
+  vi.mocked(context.fillText).mockClear();
+  vi.mocked(context.ellipse).mockClear();
+  fireEvent.click(screen.getByRole("button", { name: "Flor" }));
+  fireEvent.click(screen.getByRole("button", { name: "Texto" }));
+  expect(
+    screen.getByRole("progressbar", { name: "Cargando diseño…" }),
+  ).toBeTruthy();
+  expect(
+    (screen.getByRole("button", { name: "Guardar" }) as HTMLButtonElement)
+      .disabled,
+  ).toBe(true);
+  expect(frames.callbacks.size).toBe(1);
+  await frames.next();
+  expect(screen.getByText("Cargando diseño…")).toBeTruthy();
+  await frames.next();
+  await screen.findByText("Diseño actualizado");
+  expect(screen.getByRole("progressbar").getAttribute("aria-valuenow")).toBe(
+    "100",
+  );
+  expect(context.fillText).toHaveBeenCalledWith("LUZ", 0, -8);
+  expect(context.ellipse).not.toHaveBeenCalled();
+  expect(
+    (screen.getByRole("button", { name: "Guardar" }) as HTMLButtonElement)
+      .disabled,
+  ).toBe(false);
+});
+
+test("abrir diseños guardados espera la imagen y descarta una carga anterior que termina tarde", async () => {
+  const frames = detailFrames();
+  const first = storeDesign("Primero", 20),
+    second = storeDesign("Segundo", 22);
+  const decoded: Array<() => void> = [];
+  vi.stubGlobal(
+    "Image",
+    class {
+      src = "";
+      decode() {
+        return new Promise<void>((resolve) => decoded.push(resolve));
+      }
+    },
+  );
+  render(<ShadowEditor />);
+  const saved = screen.getByRole("combobox", { name: "Diseños guardados" });
+  const name = screen.getByRole("textbox", {
+    name: "Nombre",
+  }) as HTMLInputElement;
+  fireEvent.change(saved, { target: { value: first } });
+  fireEvent.click(
+    screen.getByRole("button", { name: "Aplicar diseño guardado" }),
+  );
+  expect(screen.getByText("Cargando diseño…")).toBeTruthy();
+  await frames.next();
+  await frames.next();
+  expect(name.value).toBe("Mi cuadro de sombra");
+  expect(decoded).toHaveLength(1);
+  fireEvent.change(saved, { target: { value: second } });
+  fireEvent.click(
+    screen.getByRole("button", { name: "Aplicar diseño guardado" }),
+  );
+  await frames.next();
+  await frames.next();
+  expect(decoded).toHaveLength(2);
+  await act(async () => decoded[1]());
+  await screen.findByText("Diseño actualizado");
+  expect(name.value).toBe("Segundo");
+  expect(
+    (screen.getByRole("spinbutton", { name: "Ancho" }) as HTMLInputElement)
+      .value,
+  ).toBe("22");
+  await act(async () => decoded[0]());
+  expect(name.value).toBe("Segundo");
+  expect(screen.queryByText("Cargando diseño…")).toBeNull();
+});
+
+test("una imagen guardada inválida termina la carga con error y conserva el diseño actual", async () => {
+  const frames = detailFrames();
+  const id = storeDesign("Imagen rota", 25);
+  vi.stubGlobal(
+    "Image",
+    class {
+      src = "";
+      async decode() {
+        throw new Error("No se pudo decodificar la imagen");
+      }
+    },
+  );
+  render(<ShadowEditor />);
+  fireEvent.change(
+    screen.getByRole("combobox", { name: "Diseños guardados" }),
+    { target: { value: id } },
+  );
+  fireEvent.click(
+    screen.getByRole("button", { name: "Aplicar diseño guardado" }),
+  );
+  expect(screen.getByText("Cargando diseño…")).toBeTruthy();
+  await frames.next();
+  await frames.next();
+  expect((await screen.findByRole("alert")).textContent).toContain(
+    "No se pudo decodificar",
+  );
+  expect(screen.queryByRole("progressbar")).toBeNull();
+  expect(screen.queryByText("Diseño actualizado")).toBeNull();
+  expect(
+    (screen.getByRole("textbox", { name: "Nombre" }) as HTMLInputElement).value,
+  ).toBe("Mi cuadro de sombra");
+  expect(
+    (screen.getByRole("spinbutton", { name: "Ancho" }) as HTMLInputElement)
+      .value,
+  ).toBe("15");
+  expect(
+    (screen.getByRole("button", { name: "Guardar" }) as HTMLButtonElement)
+      .disabled,
+  ).toBe(false);
+});
+
+test("Muy alto carga con un toast, bloquea descargas hasta terminar y guarda el detalle elegido", async () => {
+  const frames = detailFrames();
+  render(<ShadowEditor />);
+  fireEvent.click(screen.getByText("Ajustes avanzados").closest("summary")!);
+  const detail = screen.getByRole("combobox", { name: "Detalle" });
+  expect(
+    Array.from((detail as HTMLSelectElement).options, (option) => [
+      option.text,
+      option.value,
+    ]),
+  ).toEqual([
+    ["Bajo", "160"],
+    ["Medio", "224"],
+    ["Alto", "336"],
+    ["Muy alto", "504"],
+  ]);
+  fireEvent.click(screen.getByRole("button", { name: "Vista 3D" }));
+  fireEvent.change(detail, { target: { value: "504" } });
+  expect(screen.getByText("Cargando detalles…")).toBeTruthy();
+  expect(screen.getByRole("progressbar").hasAttribute("aria-valuenow")).toBe(
+    false,
+  );
+  expect(
+    (screen.getByRole("button", { name: "Guardar" }) as HTMLButtonElement)
+      .disabled,
+  ).toBe(true);
+  expect(
+    (
+      screen.getByRole("button", {
+        name: "Descargar STL · 9 piezas",
+      }) as HTMLButtonElement
+    ).disabled,
+  ).toBe(true);
+  await frames.next();
+  expect(screen.getByText("Cargando detalles…")).toBeTruthy();
+  await frames.next();
+  await screen.findByText("Detalles actualizados");
+  expect(screen.getByRole("progressbar").getAttribute("aria-valuenow")).toBe(
+    "100",
+  );
+  expect(
+    (
+      screen.getByRole("button", {
+        name: "Descargar STL · 9 piezas",
+      }) as HTMLButtonElement
+    ).disabled,
+  ).toBe(false);
+  fireEvent.click(screen.getByRole("button", { name: "Guardar" }));
+  expect(
+    JSON.parse(localStorage.getItem("proyectar:shadow:v2:Mi cuadro de sombra")!)
+      .settings.detail,
+  ).toBe(504);
+}, 15000);
+
+test("un cambio rápido de detalle aplica solo la última selección y cancela los cuadros pendientes al desmontar", async () => {
+  const frames = detailFrames();
+  const { unmount } = render(<ShadowEditor />);
+  fireEvent.click(screen.getByText("Ajustes avanzados").closest("summary")!);
+  const detail = screen.getByRole("combobox", { name: "Detalle" });
+  fireEvent.change(detail, { target: { value: "336" } });
+  fireEvent.change(detail, { target: { value: "224" } });
+  expect(frames.callbacks.size).toBe(1);
+  await frames.next();
+  await frames.next();
+  await screen.findByText("Detalles actualizados");
+  fireEvent.click(screen.getByRole("button", { name: "Guardar" }));
+  expect(
+    JSON.parse(localStorage.getItem("proyectar:shadow:v2:Mi cuadro de sombra")!)
+      .settings.detail,
+  ).toBe(224);
+  fireEvent.change(detail, { target: { value: "336" } });
+  expect(frames.callbacks.size).toBe(1);
+  unmount();
+  expect(frames.callbacks.size).toBe(0);
+});
+
+test("cerrar el toast de carga no cancela el cambio ni vuelve a abrir el aviso al terminar", async () => {
+  const frames = detailFrames();
+  render(<ShadowEditor />);
+  fireEvent.click(screen.getByText("Ajustes avanzados").closest("summary")!);
+  fireEvent.change(screen.getByRole("combobox", { name: "Detalle" }), {
+    target: { value: "224" },
+  });
+  fireEvent.click(
+    screen.getByRole("button", {
+      name: "Cerrar notificación: Cargando detalles…",
+    }),
+  );
+  expect(screen.queryByRole("progressbar")).toBeNull();
+  await frames.next();
+  await frames.next();
+  expect(screen.queryByText("Detalles actualizados")).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "Guardar" }));
+  expect(
+    JSON.parse(localStorage.getItem("proyectar:shadow:v2:Mi cuadro de sombra")!)
+      .settings.detail,
+  ).toBe(224);
+});
+
+test("importar otro proyecto cancela el cambio de detalle pendiente", async () => {
+  const frames = detailFrames();
+  const { container } = render(<ShadowEditor />);
+  fireEvent.click(screen.getByText("Ajustes avanzados").closest("summary")!);
+  fireEvent.change(screen.getByRole("combobox", { name: "Detalle" }), {
+    target: { value: "336" },
+  });
+  const project = {
+    version: 2,
+    name: "Otro detalle",
+    image: "data:image/png;base64,AA==",
+    settings: {
+      width: 15,
+      height: 15,
+      depth: 6,
+      lightPercent: 50,
+      radius: 55,
+      thickness: 2,
+      margin: 3,
+      detail: 96,
+    },
+  };
+  const file = new File([JSON.stringify(project)], "detalle.json", {
+    type: "application/json",
+  });
+  Object.defineProperty(file, "text", {
+    value: async () => JSON.stringify(project),
+  });
+  fireEvent.change(
+    container.querySelector('input[type="file"][accept^=".json"]')!,
+    { target: { files: [file] } },
+  );
+  expect(screen.getByText("Cargando diseño…")).toBeTruthy();
+  await frames.next();
+  await frames.next();
+  await screen.findByRole("button", { name: "Cargar imagen" });
+  expect(frames.callbacks.size).toBe(0);
+  expect(screen.queryByText("Cargando detalles…")).toBeNull();
+  expect(
+    (screen.getByRole("combobox", { name: "Detalle" }) as HTMLSelectElement)
+      .value,
+  ).toBe("160");
+});
 
 beforeEach(() => {
   localStorage.clear();
@@ -260,7 +573,7 @@ test("los ajustes técnicos comienzan plegados y conservan valores al cerrar y g
   fireEvent.click(screen.getByRole("button", { name: "Vista 3D" }));
   const lighting = screen.getByRole("region", { name: "Prepará el armado" });
   const download = screen.getByRole("button", {
-    name: "Descargar STL · 10 piezas",
+    name: "Descargar STL · 9 piezas",
   });
   const preview = container.querySelector(".shadow-three-stage")!;
   expect(
@@ -544,6 +857,7 @@ test("los ejemplos, el dibujo y el recorte confirmado o cancelado conservan el a
   );
   for (const example of ["Rayos", "Flor", "Estrellas", "Texto"]) {
     fireEvent.click(screen.getByRole("button", { name: example }));
+    await screen.findByText("Diseño actualizado");
     fireEvent.click(screen.getByRole("button", { name: "Atrás" }));
     fireEvent.click(screen.getByRole("button", { name: "Siguiente" }));
     fireEvent.click(screen.getByRole("button", { name: "Siguiente" }));
@@ -570,6 +884,7 @@ test("los ejemplos, el dibujo y el recorte confirmado o cancelado conservan el a
     expect(screen.getByRole("button", { name: "Aplicar imagen" })).toBeTruthy(),
   );
   fireEvent.click(screen.getByRole("button", { name: "Aplicar imagen" }));
+  await screen.findByText("Diseño actualizado");
   expect(
     (screen.getByRole("textbox", { name: "Nombre" }) as HTMLInputElement).value,
   ).toBe("luna");
@@ -693,7 +1008,7 @@ test("guarda medidas de estrella y electrónica con campos numéricos editables"
   expect(
     (
       screen.getByRole("button", {
-        name: "Descargar STL · 10 piezas",
+        name: "Descargar STL · 9 piezas",
       }) as HTMLButtonElement
     ).disabled,
   ).toBe(true);
@@ -838,7 +1153,7 @@ test("permite elegir piezas separadas y descarga el ZIP devuelto por el worker",
   expect((format as HTMLSelectElement).value).toBe("combined");
   fireEvent.change(format, { target: { value: "separate" } });
   fireEvent.click(
-    screen.getByRole("button", { name: "Descargar ZIP · 10 STL" }),
+    screen.getByRole("button", { name: "Descargar ZIP · 9 STL" }),
   );
   expect(active!.postMessage).toHaveBeenCalledWith(
     expect.objectContaining({
@@ -871,13 +1186,13 @@ test("permite elegir piezas separadas y descarga el ZIP devuelto por el worker",
   );
   expect(downloads).toEqual(["Mi_cuadro_de_sombra-piezas-separadas.zip"]);
   expect((createURL.mock.calls[0][0] as Blob).type).toBe("application/zip");
-  expect(screen.getByRole("status").textContent).toContain("10 STL separados");
+  expect(screen.getByRole("status").textContent).toContain("9 STL separados");
   expect(active!.terminate).toHaveBeenCalled();
   expect((format as HTMLSelectElement).disabled).toBe(false);
   // A failed export must release the controls and permit a retry.
   fireEvent.change(format, { target: { value: "combined" } });
   fireEvent.click(
-    screen.getByRole("button", { name: "Descargar STL · 10 piezas" }),
+    screen.getByRole("button", { name: "Descargar STL · 9 piezas" }),
   );
   expect(active!.postMessage).toHaveBeenCalledWith(
     expect.objectContaining({ mode: "combined" }),

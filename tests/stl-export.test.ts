@@ -6,13 +6,55 @@ import {
   fabricationParts,
 } from "../src/features/shadowbox/fabrication";
 import { defaultCob } from "../src/features/shadowbox/cob";
+import { currentFabrication } from "../src/features/shadowbox/editor-defaults";
+import { projectionSettings } from "../src/features/shadowbox/projection-settings";
 import {
   defaultBox,
   IMAGE_SIZE,
+  VERY_HIGH_DETAIL,
   masksFromImage,
   PRINT_PARTS,
   printParts,
 } from "../src/features/shadowbox/engine";
+
+test("Muy alto exporta el kit USB completo sin alterar las medidas del poste", () => {
+  const fabrication = currentFabrication();
+  fabrication.modular = { ...fabrication.modular!, power: "usb" };
+  const settings = projectionSettings(
+    { ...defaultBox, lightPercent: 50, detail: VERY_HIGH_DETAIL },
+    fabrication,
+  );
+  const masks = masksFromImage(
+    new Uint8ClampedArray(IMAGE_SIZE * IMAGE_SIZE * 4),
+    settings,
+  );
+  const output = buildSTLExport({
+    settings,
+    masks,
+    fabrication,
+    name: "Muy_alto",
+    mode: "separate",
+  });
+  const files = readZip(output.buffer);
+  const stls = files.filter((file) => file.name.endsWith(".stl"));
+  expect(stls).toHaveLength(8);
+  expect(stls.some((file) => file.name.includes("embellecedor"))).toBe(false);
+  for (const file of stls) {
+    const triangles = new DataView(
+      file.data.buffer,
+      file.data.byteOffset,
+      file.data.byteLength,
+    ).getUint32(80, true);
+    expect(triangles).toBeGreaterThan(0);
+    expect(file.data.byteLength).toBe(84 + triangles * 50);
+  }
+  const post = readSTL(
+    stls.find((file) => file.name.endsWith("07-tubo-hueco.stl"))!.data,
+  );
+  expect(post.max[0] - post.min[0]).toBeCloseTo(9);
+  expect(post.max[1] - post.min[1]).toBeCloseTo(9);
+  expect(post.max[2] - post.min[2]).toBeCloseTo(40);
+});
 
 function readZip(buffer: ArrayBuffer) {
   const view = new DataView(buffer),

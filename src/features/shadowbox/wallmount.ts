@@ -1,6 +1,10 @@
 import { validateBox, sourceDistance, type BoxSettings } from "./engine";
 import type { Fabrication } from "./fabrication";
-import { defaultModular, isModular } from "./modular-config";
+import {
+  defaultModular,
+  isModular,
+  WALL_POST_DIAMETER,
+} from "./modular-config";
 import {
   validateEnclosure,
   wallPanelStart,
@@ -10,13 +14,8 @@ import { projectionSettings } from "./projection-settings";
 import { wallRearMesh } from "./wall-rear";
 import { wallFrameBand } from "./cob";
 import { roundOpening, roundOpeningAxes } from "./round-opening";
-import { wallLightRange } from "./light-position";
-import {
-  HEAD_PIN_WIDTH,
-  HEAD_PIN_LENGTH,
-  HEAD_DOCK_DEPTH,
-  headDockInset,
-} from "./head-mount";
+import { minimumWallEmitter, wallLightRange } from "./light-position";
+import { HEAD_INSERTION, POST_TO_EMITTER, postHeadMesh } from "./head-mount";
 import { solidMesh, type Bounds, type Mesh } from "./solid-mesh";
 import { MARK_DEPTH, modelMark } from "@/lib/model-mark";
 import {
@@ -62,7 +61,10 @@ export function wallMountLayout(raw: BoxSettings, f: Fabrication) {
     // One collar: the shadow walls sleeve around its external guide ribs.
     enclosureInset = wallSeatFit(t, c, f.joints).inset,
     wire = isModular(f) ? m.cableDiameter : 4;
-  if (wallFrameBand(f, s.margin, t) * 2 > Math.min(width, height) - 12)
+  if (
+    !isModular(f) &&
+    wallFrameBand(f, s.margin, t) * 2 > Math.min(width, height) - 12
+  )
     throw new Error(
       "El marco necesita más espacio para conservar el frente abierto: aumentá el cuadro o reducí el ancho de la tira COB.",
     );
@@ -71,22 +73,20 @@ export function wallMountLayout(raw: BoxSettings, f: Fabrication) {
   const hookY = height - 24,
     hookBottom = hookY - 8,
     hookTop = hookY + 14;
-  const socket = 10 + c,
+  const socket = (isModular(f) ? WALL_POST_DIAMETER : 10) + c,
     socketOuter = socket + 4;
   const separatorWidth = width - 2 * (enclosureInset + wall) - c,
     separatorHeight = height - 2 * (enclosureInset + wall) - c;
   const source = sourceDistance(s) * 10;
-  const postLength = source - 8 - floor;
-  // Every part of the carrier stays behind the emitting plane (+Z toward the room).
+  const postLength = source - POST_TO_EMITTER - floor;
+  // Keep the board and emitting plane unchanged when replacing the frame bridge.
   const headZ = source + m.emitterHeight;
+  const headOrigin = source - POST_TO_EMITTER - HEAD_INSERTION;
   const headSeat = m.starThickness;
   const headWidth = m.starDiameter + c + 4;
-  const dockY = (-s.height * 10) / 8;
-  const dockInset = headDockInset(t);
-  const headCenterY = Math.max(headWidth / 2, -dockY + HEAD_PIN_LENGTH / 2);
-  const headPrintHeight = headCenterY + headWidth / 2;
-  const headPinTop =
-    panelStart + s.depth * 10 - t / 2 + HEAD_DOCK_DEPTH - c / 2 - headZ;
+  const headCenterY = headWidth / 2;
+  // Aim the two arms at opposite corners, away from the middle of each panel.
+  const headAngle = Math.atan2(height, width);
   const batteryWidth = m.holderLength + c + 4,
     batteryHeight = m.holderWidth + c + 4;
   // The separator skirt reaches 4.9 mm inward from its edge (wall-rear.ts).
@@ -123,7 +123,7 @@ export function wallMountLayout(raw: BoxSettings, f: Fabrication) {
   }
   if (isModular(f)) {
     const editorDepth = s.depth - (s.panelExtension ?? 0) + (s.frontTrim ?? 0);
-    const min = 14,
+    const min = minimumWallEmitter(f),
       max = editorDepth * 10 - t / 2 - m.emitterHeight - m.starThickness - 3;
     const limits = wallLightRange(s, f);
     if (limits.min > limits.max)
@@ -162,54 +162,55 @@ export function wallMountLayout(raw: BoxSettings, f: Fabrication) {
     source,
     postLength,
     headZ,
+    headOrigin,
     headSeat,
     headWidth,
-    dockY,
-    dockInset,
     headCenterY,
-    headPrintHeight,
-    headPinTop,
+    headAngle,
     batteryWidth,
     batteryHeight,
     batteryX,
     batteryY,
     batteryTop,
     coverTop,
-    outerFace: panelStart + s.depth * 10 + t / 2 + 1,
+    outerFace:
+      panelStart +
+      s.depth * 10 +
+      (isModular(f) ? (f.joints ? -t / 2 - c / 2 : 0) : t / 2 + 1),
   };
 }
 
 export const wallPartCount = (f: Fabrication) =>
-  isModular(f) ? ((f.modular ?? defaultModular).power === "aaa" ? 10 : 9) : 7;
+  isModular(f) ? ((f.modular ?? defaultModular).power === "aaa" ? 9 : 8) : 7;
 export function wallPartInfo(f: Fabrication) {
   return [
     {
       id: "base" as const,
-      filename: "06-base-pared",
+      filename: isModular(f) ? "05-base-pared" : "06-base-pared",
       label: "Base de pared con anclaje y electrónica",
     },
     {
       id: "separator" as const,
-      filename: "07-tapa-electronica",
+      filename: isModular(f) ? "06-tapa-electronica" : "07-tapa-electronica",
       label: "Separador de electrónica con paso central",
     },
     ...(isModular(f)
       ? [
           {
             id: "post" as const,
-            filename: "08-tubo-hueco",
-            label: "Tubo hueco para cables",
+            filename: "07-tubo-hueco",
+            label: "Poste hueco con encastre para el cabezal",
           },
           {
             id: "head" as const,
-            filename: "09-cabezal-led",
-            label: "Cabezal sujeto al marco detrás del LED",
+            filename: "08-cabezal-led",
+            label: "Cabezal circular encastrado al poste",
           },
           ...((f.modular ?? defaultModular).power === "aaa"
             ? [
                 {
                   id: "battery-cover" as const,
-                  filename: "10-tapa-pilas",
+                  filename: "09-tapa-pilas",
                   label: "Tapa de pilas accesible desde la cara posterior",
                 },
               ]
@@ -220,17 +221,18 @@ export function wallPartInfo(f: Fabrication) {
 }
 
 function tube(length: number, wire: number): Mesh {
+  const radius = WALL_POST_DIAMETER / 2;
   const p: number[] = [],
     idx: number[] = [],
     n = 64;
   const ring = (r: number, z: number) =>
     Array.from({ length: n }, (_, i) => [
-      5 + r * Math.cos((i * 2 * Math.PI) / n),
-      5 + r * Math.sin((i * 2 * Math.PI) / n),
+      radius + r * Math.cos((i * 2 * Math.PI) / n),
+      radius + r * Math.sin((i * 2 * Math.PI) / n),
       z,
     ]);
-  const outer0 = ring(5, 0),
-    outer1 = ring(5, length),
+  const outer0 = ring(radius, 0),
+    outer1 = ring(radius, length),
     inner0 = ring(wire / 2, 0),
     inner1 = ring(wire / 2, length);
   function quad(a: number[], b: number[], c: number[], d: number[]) {
@@ -459,7 +461,7 @@ export function wallMountParts(
   const separator = wallRearMesh(
     sw,
     sh,
-    (isModular(f) ? 10 : 4) + c,
+    (isModular(f) ? WALL_POST_DIAMETER : 4) + c,
     f.enclosure?.front === "design",
     f.enclosure?.relief ?? 0.6,
     artwork,
@@ -469,47 +471,20 @@ export function wallMountParts(
     { ...separator, id: "separator", width: sw },
   ];
   if (isModular(f)) {
-    meshes.push({ ...tube(l.postLength, l.wire), id: "post", width: 10 });
-    const hw = l.headWidth,
-      cx = w / 2,
-      cy = l.headCenterY,
-      dock = cy + l.dockY,
-      seat = (m.starDiameter + c) / 2;
-    const back = l.headSeat;
-    // Flat printable bridge: board cradle, rear crossbar and two pins in the frame.
-    // Nothing crosses the emitter plane, so it cannot cast the old vertical stripe.
-    const head = solidMesh(
-      [
-        [cx - hw / 2, cx + hw / 2, cy - hw / 2, cy + hw / 2, 0, back + 2],
-        [l.dockInset, w - l.dockInset, dock - 2, dock + 2, 0, 2],
-        ...(dock < cy - hw / 2
-          ? [[cx - 2, cx + 2, dock, cy - hw / 2 + 2, 0, 2] as Bounds]
-          : []),
-        ...[l.dockInset, w - l.dockInset].map(
-          (x) =>
-            [
-              x - HEAD_PIN_WIDTH / 2,
-              x + HEAD_PIN_WIDTH / 2,
-              dock - HEAD_PIN_LENGTH / 2,
-              dock + HEAD_PIN_LENGTH / 2,
-              0,
-              l.headPinTop,
-            ] as Bounds,
-        ),
-      ],
-      [
-        [cx - seat, cx + seat, cy - seat, cy + seat, 0, back],
-        [
-          cx - seat + 2,
-          cx + seat - 2,
-          cy - seat + 2,
-          cy + seat - 2,
-          back,
-          back + 2,
-        ],
-      ],
+    meshes.push({
+      ...tube(l.postLength, l.wire),
+      id: "post",
+      width: WALL_POST_DIAMETER,
+    });
+    const head = postHeadMesh(
+      m.starDiameter,
+      m.starThickness,
+      m.emitterHeight,
+      l.wire,
+      c,
+      l.headAngle,
     );
-    meshes.push({ ...head, id: "head", width: w });
+    meshes.push({ ...head, id: "head", width: l.headWidth });
     if (m.power === "aaa") {
       const bw = l.batteryWidth - c,
         bh = l.batteryHeight - c,
@@ -546,7 +521,7 @@ export function wallMountParts(
   }));
 }
 
-/** Assembly-relative cm: the wire tube is wall-based; the head docks into the front frame. */
+/** Assembly-relative cm: the hollow post and its removable head are wall-based. */
 export function wallMountPoint(
   id: WallPartId,
   x: number,
@@ -570,12 +545,16 @@ export function wallMountPoint(
           10,
       ];
     case "post":
-      return [(x - 5) / 10, (y - 5) / 10, (2 + z) / 10];
+      return [
+        (x - WALL_POST_DIAMETER / 2) / 10,
+        (y - WALL_POST_DIAMETER / 2) / 10,
+        (2 + z) / 10,
+      ];
     case "head":
       return [
-        (x - l.width / 2) / 10,
+        (x - l.headWidth / 2) / 10,
         (y - l.headCenterY) / 10,
-        (l.headZ + z) / 10,
+        (l.headOrigin + z) / 10,
       ];
     case "battery-cover":
       return [
@@ -591,17 +570,19 @@ export function wallMountGuide(s: BoxSettings, f: Fabrication) {
     m = f.modular ?? defaultModular;
   return [
     "BASE CONTRA LA PARED · CUADRO HACIA LA PERSONA",
-    "Orden: base con anclaje y electrónica → tapita de pilas (3 AAA) → tapa electrónica con paso central → tubo pasacables → cuatro paredes de sombra → cabezal en los rebajes posteriores del marco → marco frontal.",
+    isModular(f)
+      ? "Orden: base con anclaje y electrónica → tapita de pilas (3 AAA) → tapa electrónica con paso central → poste hueco → cuatro paredes de sombra → cabezal circular encastrado al poste. Frente abierto sin marco ni lengüetas delanteras."
+      : "Orden: base con anclaje y electrónica → tapa electrónica con paso central → cuatro paredes de sombra → marco frontal COB.",
     `Anclaje tipo ojo de cerradura: entrada circular Ø${l.entry} mm y cuello de ${l.neck} mm con extremo redondeado; refuerzo de 6 mm de espesor total. Esquinas traseras suavizadas y boca del tubo con chaflán de 0,3 mm. Elegí tornillo y tarugo según la pared y verificá el ajuste/carga físicamente. No se incluyen en los STL.`,
     `La base empieza en la pared (Z=0) y mide ${l.depth} mm de alto. Tiene un solo perímetro elevado, sin canal entre dos paredes. Las paredes de sombra bajan por fuera de ese perímetro hasta el reborde inferior de ${l.floor} mm. Con encastres activos, las dos guías finas de cada lado entran en las ranuras interiores de cada pared al deslizarla desde arriba; holgura total ${f.clearance} mm. Los recortes empiezan sobre la tapa electrónica, a ${l.panelStart} mm. Tramo óptico de panel: ${l.panelDepth.toFixed(2)} mm. Tramo delantero eliminado: ${l.frontTrim.toFixed(2)} mm. Profundidad exterior máxima: ${l.outerFace.toFixed(2)} mm.`,
-    `Paso circular en tapa electrónica: Ø${isModular(f) ? 10 + f.clearance : 4 + f.clearance} mm. El alojamiento ciego de la base también es circular y conserva su fondo. El marco frontal tiene el centro abierto. Pasá los cables por el tubo hacia el interior de la base antes de cerrar.`,
+    `Paso circular en tapa electrónica: Ø${isModular(f) ? WALL_POST_DIAMETER + f.clearance : 4 + f.clearance} mm. El alojamiento ciego de la base también es circular y conserva su fondo. ${isModular(f) ? "El frente queda abierto, sin marco." : "El marco frontal tiene el centro abierto."} Pasá los cables por el tubo hacia el interior de la base antes de cerrar.`,
     ...(isModular(f)
       ? [
-          `Tubo Ø10 mm, canal Ø${l.wire} mm, largo ${l.postLength.toFixed(2)} mm. Apoyalo en el alojamiento de la base; pasa por el hueco de la tapa electrónica.`,
-          `El cabezal sostiene la estrella desde atrás y se fija al marco mediante dos tetones y rebajes guiados de 1 mm. El puente completo queda detrás del emisor y no cruza su cono de luz. Probá el ajuste y usá fijación removible si hace falta. El tubo es solo pasacables. Emisor a ${l.source.toFixed(2)} mm de la pared. Medí altura del emisor y placa real antes de imprimir.`,
+          `Tubo Ø${WALL_POST_DIAMETER} mm, canal Ø${l.wire} mm, pared de ${(WALL_POST_DIAMETER - l.wire) / 2} mm y largo ${l.postLength.toFixed(2)} mm. Apoyalo en el alojamiento de la base; pasa por el hueco de la tapa electrónica.`,
+          `Encastrá el collar del cabezal sobre el tubo hasta su tope de ${HEAD_INSERTION} mm; holgura diametral ${f.clearance.toFixed(2)} mm. Orientá los dos brazos hacia esquinas opuestas como en la vista 3D. La estrella apoya en el asiento circular con el LED hacia la pared. El cabezal se sostiene en el poste, sin marco frontal. La simulación incluye la oclusión de los brazos. Probá el ajuste y usá fijación removible si hace falta. Emisor a ${l.source.toFixed(2)} mm de la pared, sin cambiar su posición. Medí altura del emisor y placa real antes de imprimir.`,
           ...(m.power === "aaa"
             ? [
-                `Portapilas comercial de 3 AAA: ${m.holderLength} × ${m.holderWidth} × ${m.holderHeight} mm provisionales. Se introduce por la abertura posterior. La tapa 10 queda al ras de la cara contra la pared; descolgá el cuadro para cambiar pilas sin desmontar paredes ni separador. Usá la muesca para retirar la tapa. Ajuste guiado sin pestillo: verificá retención o usá fijación removible. No se imprimen contactos metálicos.`,
+                `Portapilas comercial de 3 AAA: ${m.holderLength} × ${m.holderWidth} × ${m.holderHeight} mm provisionales. Se introduce por la abertura posterior. La tapa 09 queda al ras de la cara contra la pared; descolgá el cuadro para cambiar pilas sin desmontar paredes ni separador. Usá la muesca para retirar la tapa. Ajuste guiado sin pestillo: verificá retención o usá fijación removible. No se imprimen contactos metálicos.`,
               ]
             : [
                 "Alimentación USB regulada de 5 V mediante cable pasante; no incluye conector ni circuito de carga.",
@@ -611,8 +592,8 @@ export function wallMountGuide(s: BoxSettings, f: Fabrication) {
       : [
           "COB: colocá la tira en los rebajes posteriores del embellecedor, con la cara luminosa hacia la pared. La fuente puntual se sitúa a la altura real de esa cara; la simulación no modela una tira extendida.",
         ]),
-    `Tapa trasera de electrónica ${f.enclosure?.front === "design" ? "con el mismo diseño en relieve" : "lisa"}, con agujero central para tubo/cables. El relieve mira hacia la persona y forma parte de su STL. El embellecedor delantero es solo un marco abierto.`,
-    "Imprimí la base con su cara posterior en la cama; revisá el pequeño voladizo del asiento de la tapa de pilas. Tapa de pilas con cara exterior lisa en la cama y reborde hacia arriba. Paredes acostadas con las ranuras interiores hacia arriba. Si elegís relieve del separador, revisá orientación y soportes en el laminador. Tubo de pie. Cabezal con la cara del asiento de estrella y del puente en la cama, tetones hacia arriba. Revisá los pequeños puentes de los rebajes del marco en el laminador. Marco COB con rebajes hacia arriba.",
+    `Tapa trasera de electrónica ${f.enclosure?.front === "design" ? "con el mismo diseño en relieve" : "lisa"}, con agujero central para tubo/cables. El relieve mira hacia la persona y forma parte de su STL. ${isModular(f) ? "El frente queda abierto, sin embellecedor." : "El embellecedor delantero es solo un marco abierto."}`,
+    "Imprimí la base con su cara posterior en la cama; revisá el pequeño voladizo del asiento de la tapa de pilas. Tapa de pilas con cara exterior lisa en la cama y reborde hacia arriba. Paredes acostadas con las ranuras interiores hacia arriba. Si elegís relieve del separador, revisá orientación y soportes en el laminador. Tubo de pie. Cabezal con la boca del collar sobre la cama y el asiento circular hacia arriba; revisá los voladizos de los brazos y del asiento en el laminador y agregá soportes si hace falta. Marco COB con rebajes hacia arriba.",
     "Los recortes completamente ocultos por base, tapas y soportes se omiten. La simulación incluye estas piezas impresas con una fuente puntual; no incluye cables, componentes comprados ni penumbra. Los ajustes son guiados: presentá y calibrá antes de fijar y conservá acceso removible a las pilas. Validá sombra y temperatura con un prototipo.",
   ];
 }

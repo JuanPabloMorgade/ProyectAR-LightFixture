@@ -19,22 +19,18 @@ import {
   fabricationMasks,
 } from "../src/features/shadowbox/fabrication";
 import { closed } from "./mesh-assertions";
-import { materialAt } from "./mesh-assertions";
 import {
   wallMountLayout,
   wallMountParts,
   wallMountPoint,
 } from "../src/features/shadowbox/wallmount";
-import {
-  headDockSlots,
-  HEAD_DOCK_DEPTH,
-} from "../src/features/shadowbox/head-mount";
+import { HEAD_INSERTION } from "../src/features/shadowbox/head-mount";
 
 const index = (x: number, y: number, radius: number) =>
   Math.floor((0.5 - y / (2 * radius)) * IMAGE_SIZE) * IMAGE_SIZE +
   Math.floor((x / (2 * radius) + 0.5) * IMAGE_SIZE);
 
-test("the 8 x 13 cm head at 70% stays behind the light and docks into real frame slots", () => {
+test("the post-mounted head retains emitter distance and contributes its real shadow to the preview", () => {
   for (const settings of [
     { ...defaultBox, width: 8, height: 13, lightPercent: 70 },
     { ...defaultBox, lightPercent: 50 },
@@ -56,61 +52,38 @@ test("the 8 x 13 cm head at 70% stays behind the light and docks into real frame
         f,
         l,
       );
-      expect(p[2] * 10).toBeGreaterThan(l.source);
+      expect(Math.abs(p[0] * 10)).toBeLessThanOrEqual(l.headWidth / 2 + 0.001);
       positions.set(p, i);
     }
+    // The tube seats against a physical shoulder, rather than floating below the head.
+    expect(l.headOrigin + HEAD_INSERTION).toBeCloseTo(l.floor + l.postLength);
+    const boardBack = l.headZ + l.headSeat;
+    expect(
+      boardBack - f.modular!.starThickness - f.modular!.emitterHeight,
+    ).toBeCloseTo(l.source);
     const shadow = new Uint8Array(IMAGE_SIZE * IMAGE_SIZE);
     meshShadow({ positions, indices: head.indices }, s, shadow);
-    expect(shadow.some(Boolean)).toBe(false);
-    const image = new Uint8ClampedArray(IMAGE_SIZE * IMAGE_SIZE * 4).fill(255);
-    const masks = masksFromImage(image, s),
-      parts = fabricationParts(masks, s, f);
-    const frame = parts.find((p) => p.id === "front")!;
-    closed(frame);
-    for (const slot of headDockSlots(l.width, s.height * 10, f.clearance)) {
-      const x = l.width / 2 + slot.x,
-        y = l.height / 2 + slot.y;
-      expect(materialAt(frame, [x, y, 0.5])).toBe(false);
-      expect(materialAt(frame, [x, y, HEAD_DOCK_DEPTH + 0.25])).toBe(true);
-      const headX = slot.x < 0 ? l.dockInset : l.width - l.dockInset;
-      expect(
-        materialAt(head, [headX, l.headCenterY + l.dockY, l.headPinTop - 0.1]),
-      ).toBe(true);
-      const p = wallMountPoint(
-        "head",
-        headX,
-        l.headCenterY + l.dockY,
-        l.headPinTop,
-        s,
-        f,
-        l,
-      );
-      const frameZ =
-        p[2] * 10 - ((s.wallOffset ?? 0) * 10 + s.depth * 10) + s.thickness / 2;
-      expect(frameZ).toBeGreaterThan(0);
-      expect(frameZ).toBeLessThan(HEAD_DOCK_DEPTH);
-    }
+    expect(shadow.some(Boolean)).toBe(true);
     const fixture = fixtureShadow(s, f);
+    for (let i = 0; i < shadow.length; i++)
+      if (shadow[i] && !fixture[i])
+        throw new Error("Head shadow missing from fixture preview");
+    // Opposite diagonal arms leave the former central vertical stripe open.
     expect(fixture[index(0, 35, s.radius)]).toBe(0);
     expect(fixture[index(0, -35, s.radius)]).toBe(0);
+    const image = new Uint8ClampedArray(IMAGE_SIZE * IMAGE_SIZE * 4).fill(255);
+    const masks = masksFromImage(image, s);
+    expect(fabricationParts(masks, s, f).some((p) => p.id === "front")).toBe(
+      false,
+    );
     const reachable = reachableMasks(masks, s, fixture).masks;
     const projected = occludeSimulation(
       simulatedImage(fabricationMasks(reachable, s, f), s),
       fixture,
     ).pixels;
-    expect(projected[index(0, 35, s.radius) * 4]).toBe(249);
-    expect(projected[index(0, -35, s.radius) * 4]).toBe(249);
-    for (const face of ["top", "bottom"]) {
-      const mask = reachable.find((m) => m.face === face)!;
-      // A white background must remain open along the former central stripe.
-      const col = Math.floor(mask.columns / 2);
-      expect(
-        Array.from(
-          { length: mask.rows },
-          (_, row) => mask.cells[row * mask.columns + col],
-        ).some(Boolean),
-      ).toBe(true);
-    }
+    for (let i = 0; i < shadow.length; i++)
+      if (shadow[i] && projected[i * 4] !== 26)
+        throw new Error("Head shadow missing from simulation");
   }
 });
 
@@ -151,8 +124,8 @@ test("rays blocked by the rear lid are excluded below the raised panels", () => 
   const reachable = reachableMasks(masks, s, blocked);
   const count = (items: typeof masks) =>
     items.reduce((n, m) => n + m.cells.reduce((a, b) => a + b, 0), 0);
-  expect(count(reachable.masks)).toBe(count(masks));
-  expect(reachable.blockedApertureFraction).toBe(0);
+  expect(count(reachable.masks)).toBeLessThan(count(masks));
+  expect(reachable.blockedApertureFraction).toBeGreaterThan(0);
   expect(count(reachableMasks(reachable.masks, s, blocked).masks)).toBe(
     count(reachable.masks),
   );

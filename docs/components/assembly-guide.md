@@ -12,13 +12,13 @@ En `/cuadros`, el botón `Ver guía de armado` aparece debajo de las medidas del
 
 El modal conserva encabezado, pasos y botones visibles, con una sola zona de desplazamiento: instrucciones en escritorio; modelo e instrucciones juntos en móvil y ventanas de poca altura. La barra es fina y violeta, compartida con el sistema. Las instrucciones admiten foco de teclado y el desplazamiento vuelve al inicio al cambiar de paso.
 
-El montaje actual tiene doce etapas definidas por `assemblySequence`: reconocer piezas; presentar la base y anclaje; instalar conexiones y tapita de pilas; cerrar la tapa electrónica; instalar tubo/paso de cables; montar las cuatro paredes; instalar luz; colocar embellecedor; colgar y comprobar la sombra. `assemblyPlacement` comparte esos tiempos con el visor.
+El montaje de 1 W tiene once etapas definidas por `assemblySequence`: reconocer piezas; presentar la base y anclaje; instalar conexiones y tapita de pilas; cerrar la tapa electrónica; instalar tubo/paso de cables; montar las cuatro paredes; instalar luz; colgar y comprobar la sombra. No incluye marco frontal. COB conserva doce etapas, incluyendo su embellecedor. `assemblyPlacement` comparte esos tiempos con el visor.
 
-En 1 W, el cabezal se monta en dos rebajes posteriores del marco, detrás del LED. El tubo es solo pasacables. La etapa de luz muestra el marco como referencia translúcida en su posición final para identificar el apoyo del puente. La antigua horquilla sobre el tubo se retiró porque obstruía el cono de luz.
+En 1 W, el cabezal circular encastra en el poste hueco hasta un tope de 6 mm. Los dos brazos se orientan hacia esquinas opuestas como en el modelo; el LED mira hacia la pared. El tope mantiene la distancia del emisor, y la proyección incluye la oclusión real del soporte. El frente queda abierto sin marco ni lengüetas delanteras.
 
 Las cuatro paredes bajan por fuera del único perímetro de la base hasta el reborde inferior. Sus ranuras interiores reciben dos nervios finos por lado. No hay canal entre dos paredes de base. La altura inicial es 20 mm y la tapa de pilas queda al ras de la cara posterior. El paso de pilas muestra la cámara desde atrás para revisar ese acceso; se cambia el portapilas descolgando el cuadro sin desmontar los paneles.
 
-Con 3 AAA hay diez archivos: paredes 01–04, marco abierto 05, base 06, tapa electrónica 07, tubo 08, cabezal 09 y tapita de pilas 10. USB elimina la tapita de pilas. COB usa siete piezas, con sus rebajes detrás del perímetro del marco. La base se apoya en Z=0; los paneles se desplazan por `wallOffset`, no así la base. El resultado conserva el frente abierto y muestra la tapa electrónica trasera lisa o con el mismo diseño en relieve. Los lectores históricos sin montaje de pared conservan sus secuencias anteriores.
+Con 3 AAA hay nueve archivos: paredes 01–04, base 05, tapa electrónica 06, tubo 07, cabezal 08 y tapita de pilas 09. USB elimina la tapita de pilas y usa ocho piezas. COB conserva siete piezas, con sus rebajes detrás del perímetro del marco. La base se apoya en Z=0; los paneles se desplazan por `wallOffset`, no así la base. El resultado conserva el frente abierto y muestra la tapa electrónica trasera lisa o con el mismo diseño en relieve. Los lectores históricos sin montaje de pared conservan sus secuencias anteriores.
 
 ## Escena y controles
 
