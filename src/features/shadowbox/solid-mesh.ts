@@ -29,6 +29,9 @@ export function solidMesh(
   extraAxes?: {
     xs: number[];
     ys: number[];
+    /** Critical feature boundaries are retained even below minimumGap. */
+    requiredXs?: number[];
+    requiredYs?: number[];
     zs?: number[];
     minimumGap?: number;
   },
@@ -38,6 +41,7 @@ export function solidMesh(
       ...boxes.flatMap((b) => [b[0], b[1]]),
       ...cuts.flatMap((b) => [b[0], b[1]]),
       ...(outline?.map((p) => p[0]) ?? []),
+      ...(extraAxes?.requiredXs ?? []),
     ],
     extraAxes?.xs,
     extraAxes?.minimumGap,
@@ -47,6 +51,7 @@ export function solidMesh(
       ...boxes.flatMap((b) => [b[2], b[3]]),
       ...cuts.flatMap((b) => [b[2], b[3]]),
       ...(outline?.map((p) => p[1]) ?? []),
+      ...(extraAxes?.requiredYs ?? []),
     ],
     extraAxes?.ys,
     extraAxes?.minimumGap,

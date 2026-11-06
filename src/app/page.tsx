@@ -28,7 +28,7 @@ export default function Home() {
               <span className="visual-tag">RECUERDOS QUE ILUMINAN</span>
             </div>
             <div className="card-content">
-              <div className="card-heading"><span className="card-icon"><Lamp size={20} /></span><h2>Lámparas con fotos</h2></div>
+              <div className="card-heading"><span className="card-icon"><Lamp size={20} /></span><h2>Litofanías</h2></div>
               <p>Convertí una fotografía en un panel que revela sus detalles con luz.</p>
               <span className="card-cta">Crear mi litofanía <ArrowUpRight size={17} /></span>
             </div>

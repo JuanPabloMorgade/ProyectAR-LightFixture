@@ -141,6 +141,65 @@
   flex: none;
   accent-color: var(--accent);
 }
+.ui-switch {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  color: #d0bedf;
+  font-size: 12px;
+  line-height: 1.5;
+  cursor: pointer;
+}
+.ui-switch > input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+.ui-switch-track {
+  position: relative;
+  flex: 0 0 40px;
+  height: 24px;
+  border: 1px solid #756184;
+  border-radius: 999px;
+  background: #33263e;
+  transition: background 0.15s, border-color 0.15s;
+}
+.ui-switch-track::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #d0bedf;
+  transition: transform 0.15s, background 0.15s;
+}
+.ui-switch > input:checked + .ui-switch-track {
+  background: var(--accent-strong, #783ce0);
+  border-color: var(--accent);
+}
+.ui-switch > input:checked + .ui-switch-track::after {
+  transform: translateX(16px);
+  background: #f3eefb;
+}
+.ui-switch > input:focus-visible + .ui-switch-track {
+  outline: 2px solid #ccaaff;
+  outline-offset: 3px;
+}
+.ui-switch:has(input:disabled) {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ui-switch-track,
+  .ui-switch-track::after {
+    transition: none;
+  }
+}
 .ui-range-field .ui-label {
   display: flex;
   justify-content: space-between;

@@ -71,8 +71,7 @@ main { min-height: calc(var(--interface-viewport-height) - 165px); }
 .card-icon { width: 34px; height: 34px; border-radius: 50%; background: #332044; color: #d2b2f6; display: grid; place-items: center; flex-shrink: 0; }
 .card-content h2 { font-size: 20px; letter-spacing: -.5px; margin: 0; }
 .card-content p { font-size: 14px; line-height: 1.6; color: var(--muted); margin: 14px 0 20px; }
-.card-cta { display: inline-flex; align-items: center; gap: 16px; padding: 12px 18px; border: 1px solid #754a9b; background: #281736; border-radius: 28px; font-size: 13px; font-weight: 600; }
-.lamp-card .card-cta { background: var(--action); border-color: #a276e2; }
+.card-cta { display: inline-flex; align-items: center; gap: 16px; padding: 12px 18px; border: 1px solid #a276e2; background: var(--action); border-radius: 28px; font-size: 13px; font-weight: 600; }
 .steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 25px; margin-top: 38px; padding: 27px 0; border-bottom: 1px solid var(--line); }
 .steps > div { padding-left: 34px; position: relative; }
 .steps > div > span { position: absolute; left: 0; top: 2px; font-size: 12px; color: #ba91e0; }

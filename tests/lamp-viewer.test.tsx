@@ -36,8 +36,44 @@ vi.mock("three", async (importOriginal) => {
 
 afterEach(() => {
   cleanup();
+  vi.restoreAllMocks();
   vi.unstubAllGlobals();
   captured.frames = [];
+});
+
+test("portrait fullscreen fits the horizontal axis and resizing preserves the camera angle and distance", () => {
+  let resize = () => {};
+  vi.stubGlobal(
+    "ResizeObserver",
+    class {
+      constructor(callback: () => void) {
+        resize = callback;
+      }
+      observe() {
+        resize();
+      }
+      disconnect() {}
+    },
+  );
+  let width = 390,
+    height = 700;
+  vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(
+    () => ({ width, height }) as DOMRect,
+  );
+  const mesh = createMesh(new Uint8ClampedArray([255, 255, 255, 255]), 1, 1, {
+    ...defaults,
+    resolution: 40,
+  });
+  render(<Viewer {...mesh} lit />);
+  const camera = captured.frames.at(-1)!.camera;
+  const position = camera.position.clone();
+  expect(camera.zoom).toBeCloseTo(390 / 700);
+  width = 900;
+  height = 600;
+  resize();
+  expect(camera.zoom).toBe(1);
+  expect(camera.aspect).toBe(1.5);
+  expect(camera.position.distanceTo(position)).toBe(0);
 });
 
 test("changing the opening replaces the sphere geometry while preserving the inspected angle and zoom", () => {

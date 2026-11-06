@@ -16,9 +16,15 @@ import {
   type Settings,
 } from "./mesh";
 import Viewer from "./viewer";
+import { PreviewViewport } from "./preview-viewport";
 import { StudioStep, VariantPicker } from "./studio-controls";
 import { PhotoGuide } from "./photo-guide";
 import { DesignSettings } from "./design-settings";
+import { TextureCustomizer } from "./texture-customizer";
+import {
+  textureOptions,
+  type FrameTextureOptions,
+} from "./frame-texture-config";
 import { PrintingGuide } from "./printing-guide";
 import "./studio.css";
 import {
@@ -107,6 +113,9 @@ async function readPhoto(src: string) {
 }
 export default function LampEditor() {
   const designs = useSavedDesigns(lampProjectStorage);
+  const [textureDraft, setTextureDraft] = useState<FrameTextureOptions | null>(
+    null,
+  );
   const [settings, setSettings] = useState<Settings>(defaults),
     [name, setName] = useState("Mi primera litofanía"),
     [photo, setPhoto] = useState(""),
@@ -139,6 +148,21 @@ export default function LampEditor() {
     photoRequest = useRef(0),
     fileInput = useRef<HTMLInputElement>(null),
     projectInput = useRef<HTMLInputElement>(null);
+  const meshKey = useRef<string | undefined>(undefined);
+  const pixelRevision = useRef<{ pixels: ImageData | null; id: number }>({
+    pixels: null,
+    id: 0,
+  });
+  const generationKey = JSON.stringify({
+    ...settings,
+    housing: settings.housing
+      ? {
+          ...settings.housing,
+          ...textureOptions(settings.housing),
+          ...textureDraft,
+        }
+      : undefined,
+  });
   async function applyPhoto(src: string, isExample = false) {
     const id = ++photoRequest.current;
     const result = await readPhoto(src);
@@ -159,11 +183,14 @@ export default function LampEditor() {
         setError(data.error);
         return;
       }
-      setMesh({ positions: data.positions, indices: data.indices });
-      setSphereCap(data.sphereCap ?? null);
+      if (!data.meshUnchanged) {
+        setMesh({ positions: data.positions, indices: data.indices });
+        setSphereCap(data.sphereCap ?? null);
+        setPrintPanel(data.printPanel ?? null);
+        setPrintSupport(data.printSupport ?? null);
+        meshKey.current = data.meshKey;
+      }
       setHousingParts(data.housingParts ?? []);
-      setPrintPanel(data.printPanel ?? null);
-      setPrintSupport(data.printSupport ?? null);
     };
     w.onerror = () => {
       setBusy(false);
@@ -192,6 +219,8 @@ export default function LampEditor() {
   }, []);
   useEffect(() => {
     if (!pixels || !worker.current) return;
+    if (pixelRevision.current.pixels !== pixels)
+      pixelRevision.current = { pixels, id: pixelRevision.current.id + 1 };
     const id = ++request.current;
     setBusy(true);
     setError("");
@@ -202,12 +231,39 @@ export default function LampEditor() {
           pixels: pixels.data,
           width: pixels.width,
           height: pixels.height,
-          settings,
+          settings: JSON.parse(generationKey),
+          imageId: pixelRevision.current.id,
+          currentMeshKey: meshKey.current,
         }),
-      180,
+      textureDraft ? 350 : 180,
     );
     return () => clearTimeout(timer);
-  }, [pixels, settings]);
+  }, [pixels, generationKey]);
+  function previewTexture(next: FrameTextureOptions) {
+    if (JSON.stringify(next) === JSON.stringify(textureDraft)) return;
+    request.current++;
+    setBusy(true);
+    setTextureDraft(next);
+  }
+  function cancelTexture() {
+    if (
+      JSON.stringify(textureDraft) !==
+      JSON.stringify(textureOptions(settings.housing))
+    ) {
+      request.current++;
+      setBusy(true);
+    }
+    setTextureDraft(null);
+  }
+  function applyTexture() {
+    if (!textureDraft || busy || error) return;
+    setSettings((s) => ({
+      ...s,
+      housing: { ...(s.housing ?? defaultHousing), ...textureDraft },
+    }));
+    setTextureDraft(null);
+    setNotice("");
+  }
   const change = <K extends Exclude<keyof Settings, "housing" | "shape">>(
     key: K,
     value: Settings[K],
@@ -295,6 +351,7 @@ export default function LampEditor() {
   const showStand = standEnabled && printPreview;
   const ready =
     !!mesh &&
+    !textureDraft &&
     !busy &&
     !error &&
     (!boxEnabled || housingParts.length === 3) &&
@@ -320,7 +377,7 @@ export default function LampEditor() {
     <div className="lamp-studio">
       <section className="editor-heading">
         <div>
-          <div className="eyebrow">ESTUDIO / LÁMPARAS CON FOTOS</div>
+          <div className="eyebrow">ESTUDIO / LITOFANÍAS</div>
           <h1>Un recuerdo que ilumina.</h1>
           <p>Convertí tu foto en una litofanía lista para imprimir.</p>
         </div>
@@ -471,6 +528,9 @@ export default function LampEditor() {
               settings={settings}
               change={change}
               updateHousing={updateHousing}
+              onCustomizeTexture={() =>
+                setTextureDraft(textureOptions(settings.housing))
+              }
               reset={() => {
                 setSettings(defaults);
                 setBusy(true);
@@ -481,77 +541,79 @@ export default function LampEditor() {
         </aside>
         <div className="lamp-output" id="lamp-preview" tabIndex={-1}>
           <section className="preview-panel">
-            <div className="preview-toolbar">
-              <span className="preview-title">
-                <span /> VISTA PREVIA 3D
-              </span>
-              <Button
-                variant="unstyled"
-                className={lit ? "light-toggle on" : "light-toggle"}
-                onClick={() => setLit(!lit)}
-                aria-pressed={lit}
-              >
-                <Sun size={16} />
-                {lit ? "Luz encendida" : "Material"}
-              </Button>
-              {standEnabled && (
-                <Checkbox
-                  label="Ver soporte de impresión"
-                  checked={printPreview}
-                  onChange={(e) => setPrintPreview(e.target.checked)}
-                />
-              )}
-              {boxEnabled && !showStand && (
-                <Checkbox
-                  label="Ver interior de la caja"
-                  checked={interior}
-                  onChange={(e) => setInterior(e.target.checked)}
-                />
-              )}
-              {sphere && (
-                <Checkbox
-                  label="Ver tapa separada"
-                  checked={interior}
-                  onChange={(e) => setInterior(e.target.checked)}
-                />
-              )}
-            </div>
-            <div className={"preview-stage " + (lit ? "illuminated" : "")}>
-              {mesh ? (
-                <Viewer
-                  {...mesh}
-                  lit={lit}
-                  sphereCap={sphereCap ?? undefined}
-                  onError={setErrorToast}
-                  housingParts={
-                    boxEnabled && !showStand ? housingParts : undefined
-                  }
-                  printSupport={
-                    showStand ? (printSupport ?? undefined) : undefined
-                  }
-                  interior={interior}
-                />
-              ) : (
-                <div className="loading">Preparando tu diseño…</div>
-              )}
-              <span className="stage-caption">
-                {showStand
-                  ? "Soporte removible en violeta · Retiralo después de imprimir"
-                  : "Arrastrá para girar · Rueda para acercar"}
-              </span>
-              {busy && (
-                <span className="calculating">
-                  {boxEnabled
-                    ? "Generando panel y caja…"
-                    : "Generando relieve…"}
+            <PreviewViewport
+              controls={
+                <>
+                  <Button
+                    variant="unstyled"
+                    className={lit ? "light-toggle on" : "light-toggle"}
+                    onClick={() => setLit(!lit)}
+                    aria-pressed={lit}
+                  >
+                    <Sun size={16} />
+                    {lit ? "Luz encendida" : "Material"}
+                  </Button>
+                  {standEnabled && (
+                    <Checkbox
+                      label="Ver soporte de impresión"
+                      checked={printPreview}
+                      onChange={(e) => setPrintPreview(e.target.checked)}
+                    />
+                  )}
+                  {boxEnabled && !showStand && (
+                    <Checkbox
+                      label="Ver interior de la caja"
+                      checked={interior}
+                      onChange={(e) => setInterior(e.target.checked)}
+                    />
+                  )}
+                  {sphere && (
+                    <Checkbox
+                      label="Ver tapa separada"
+                      checked={interior}
+                      onChange={(e) => setInterior(e.target.checked)}
+                    />
+                  )}
+                </>
+              }
+            >
+              <div className={"preview-stage " + (lit ? "illuminated" : "")}>
+                {mesh ? (
+                  <Viewer
+                    {...mesh}
+                    lit={lit}
+                    sphereCap={sphereCap ?? undefined}
+                    onError={setErrorToast}
+                    housingParts={
+                      boxEnabled && !showStand ? housingParts : undefined
+                    }
+                    printSupport={
+                      showStand ? (printSupport ?? undefined) : undefined
+                    }
+                    interior={interior}
+                  />
+                ) : (
+                  <div className="loading">Preparando tu diseño…</div>
+                )}
+                <span className="stage-caption">
+                  {showStand
+                    ? "Soporte removible en violeta · Retiralo después de imprimir"
+                    : "Arrastrá para girar · Rueda para acercar"}
                 </span>
-              )}
-              {error && mesh && (
-                <span className="calculating">
-                  Vista anterior · Corregí los parámetros para actualizar.
-                </span>
-              )}
-            </div>
+                {busy && (
+                  <span className="calculating">
+                    {boxEnabled
+                      ? "Generando panel y caja…"
+                      : "Generando relieve…"}
+                  </span>
+                )}
+                {error && mesh && (
+                  <span className="calculating">
+                    Vista anterior · Corregí los parámetros para actualizar.
+                  </span>
+                )}
+              </div>
+            </PreviewViewport>
             <div className="preview-meta">
               <div>
                 <span>DIMENSIONES DEL DISEÑO</span>
@@ -657,6 +719,28 @@ export default function LampEditor() {
           />
         </div>
       </div>
+      {textureDraft && (
+        <TextureCustomizer
+          options={textureDraft}
+          onChange={previewTexture}
+          onCancel={cancelTexture}
+          onApply={applyTexture}
+          busy={busy || !mesh || housingParts.length !== 3}
+          error={error}
+          preview={
+            mesh ? (
+              <Viewer
+                {...mesh}
+                housingParts={housingParts}
+                lit={lit}
+                onError={setErrorToast}
+              />
+            ) : (
+              <div className="loading">Preparando tu marco…</div>
+            )
+          }
+        />
+      )}
       <ToastViewport>
         {errorToast ? (
           <Toast

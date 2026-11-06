@@ -83,7 +83,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
           {[
             ["/", "Estudio"],
             ["/cuadros", "Cuadros de sombra"],
-            ["/lamparas", "Lámparas con fotos"],
+            ["/lamparas", "Litofanías"],
           ].map(([url, label]) => (
             <Link
               href={url}
@@ -135,7 +135,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
               <Sun size={17} aria-hidden="true" /> Cuadros de sombra
             </Link>
             <Link href="/lamparas">
-              <Lamp size={17} aria-hidden="true" /> Lámparas con fotos
+              <Lamp size={17} aria-hidden="true" /> Litofanías
             </Link>
           </nav>
           <div className="footer-local">

@@ -2,6 +2,7 @@ import { RotateCcw } from "lucide-react";
 import {
   Button,
   Checkbox,
+  Switch,
   NumberField,
   RangeField,
   SelectField,
@@ -15,12 +16,14 @@ import {
 } from "./housing-config";
 import { hasPrintStand } from "./print-stand";
 import { Disclosure, FieldHelp } from "./studio-controls";
+import { TextureSummary } from "./texture-customizer";
 
 export function DesignSettings({
   settings,
   change,
   updateHousing,
   reset,
+  onCustomizeTexture,
 }: {
   settings: Settings;
   change: (
@@ -29,6 +32,7 @@ export function DesignSettings({
   ) => void;
   updateHousing: (patch: Partial<HousingSettings>) => void;
   reset: () => void;
+  onCustomizeTexture: () => void;
 }) {
   const sphere = settings.shape === "sphere";
   const housing = settings.housing ?? defaultHousing;
@@ -88,12 +92,12 @@ export function DesignSettings({
       </div>
       {!sphere && (
         <div className="lamp-options">
-          <Checkbox
+          <Switch
             label="Exportar de pie con soporte removible"
             checked={hasPrintStand(settings)}
             onChange={(e) => change("printStand", e.target.checked)}
           />
-          <Checkbox
+          <Switch
             label="Generar caja trasera"
             checked={boxEnabled}
             disabled={settings.angle === 180}
@@ -133,6 +137,9 @@ export function DesignSettings({
             )
           )}
         </div>
+      )}
+      {boxEnabled && (
+        <TextureSummary options={housing} onCustomize={onCustomizeTexture} />
       )}
       <Disclosure
         title="Ajustes avanzados"

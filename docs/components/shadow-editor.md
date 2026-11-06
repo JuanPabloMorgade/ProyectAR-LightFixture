@@ -20,7 +20,7 @@ En el diseñador, la carga y los ejemplos preceden a la barra de dibujo. Dibujar
 
 Vista 3D muestra primero visor e inspección interior, dimensiones y cantidad de piezas. Siguen las comprobaciones visibles de montaje, la alimentación y medidas principales de LED/base. `modular-controls.tsx` pliega Estrella y LED, Portapilas y Conexión; `enclosure-controls.tsx` pliega geometría de base y anclaje. Holguras y encastres forman otro desplegable. Cerrar estos bloques no desmonta sus controles ni cambia valores. La descarga y la guía de armado preceden al bloque de interpretación técnica de la proyección. Los errores de fabricación siguen visibles y bloquean exportaciones inválidas.
 
-`Disclosure` y `FieldHelp`, en `src/components/ui/studio.tsx` y `studio.css`, son compartidos con Lámparas con fotos. Reutilizan `details/summary` nativos y el modal accesible existente. El rediseño no modifica motores de imagen, proyección, geometría, guías 3D ni formatos de proyecto o exportación.
+`Disclosure` y `FieldHelp`, en `src/components/ui/studio.tsx` y `studio.css`, son compartidos con Litofanías. Reutilizan `details/summary` nativos y el modal accesible existente. El rediseño no modifica motores de imagen, proyección, geometría, guías 3D ni formatos de proyecto o exportación.
 
 ## Estado y dependencias
 
