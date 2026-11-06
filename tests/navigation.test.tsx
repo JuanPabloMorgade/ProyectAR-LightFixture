@@ -58,7 +58,7 @@ test("el botón anuncia el estado y controla la navegación existente", () => {
   expect(nav.classList.contains("is-open")).toBe(false);
 });
 
-test.each(["Estudio", "Cuadros de sombra", "Lámparas con fotos"])(
+test.each(["Estudio", "Cuadros de sombra", "Litofanías"])(
   "seleccionar %s cierra el menú incluso si el destino ya está activo",
   (label) => {
     render(
@@ -138,7 +138,7 @@ test("la portada ofrece acceso a los dos editores y explica el flujo", () => {
   ).toBe("/cuadros");
   expect(
     within(main)
-      .getByRole("link", { name: /Lámparas con fotos/ })
+      .getByRole("link", { name: /Litofanías/ })
       .getAttribute("href"),
   ).toBe("/lamparas");
   expect(
@@ -172,7 +172,7 @@ test("la navegación indica la ruta activa sin marcar las demás", () => {
   const nav = screen.getByRole("navigation", { name: "Navegación principal" });
   expect(
     within(nav)
-      .getByRole("link", { name: "Lámparas con fotos" })
+      .getByRole("link", { name: "Litofanías" })
       .getAttribute("aria-current"),
   ).toBe("page");
   expect(

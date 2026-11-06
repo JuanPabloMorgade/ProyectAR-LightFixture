@@ -6,6 +6,7 @@ import { sphereGrid } from "./sphere";
 import { SPHERE_LED_GUIDANCE } from "./sphere-export";
 import { Disclosure } from "./studio-controls";
 import { MODEL_MARK } from "@/lib/model-mark";
+import { frameTextureGuide } from "./frame-texture";
 
 export function PrintingGuide({
   settings,
@@ -82,7 +83,15 @@ export function PrintingGuide({
               <p>En Curvo, revisá los soportes en el laminador.</p>
             )}
             {box && (
-              <p>Imprimí la caja, el marco y la tapa en material opaco.</p>
+              <>
+                <p>Imprimí la caja, el marco y la tapa en material opaco.</p>
+                <p>
+                  {frameTextureGuide(
+                    settings.housing?.frameTexture,
+                    settings.housing,
+                  )}
+                </p>
+              </>
             )}
           </>
         )}

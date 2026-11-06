@@ -11,7 +11,7 @@ Esta carpeta describe las rutas y los componentes principales de ProyectAR segú
 
 - [Inicio (`/`)](pages/inicio.md): entrada al estudio y navegación hacia los editores.
 - [Cuadros de sombra (`/cuadros`)](pages/cuadros.md): montaje del editor de cuadros.
-- [Lámparas con fotos (`/lamparas`)](pages/lamparas.md): montaje del editor de litofanías.
+- [Litofanías (`/lamparas`)](pages/lamparas.md): montaje del editor de litofanías.
 
 ## Componentes
 

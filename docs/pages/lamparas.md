@@ -1,4 +1,4 @@
-# Lámparas con fotos (`/lamparas`)
+# Litofanías (`/lamparas`)
 
 **Archivo:** `src/app/lamparas/page.tsx`.
 
@@ -10,7 +10,9 @@ Monta [LampEditor](../components/lamp-editor.md) dentro de [Shell](../components
 2. Primero se elige Plana, Curva o Esfera navideña mediante tarjetas. Los paneles de 180° existentes siguen abriéndose.
 3. Se carga JPG/PNG/WebP con recomendaciones junto al cargador y una guía visual. Las fotos de esfera reciben orientación de proporciones sin bloquear la creación.
 4. Se ajustan medidas y opciones básicas; espesores, contraste, inversión y Detalle están en Ajustes avanzados.
-5. El visor conserva luz, giro, zoom e inspección de componentes. La descarga aparece inmediatamente después del resumen. Las guías de impresión, montaje y datos técnicos son desplegables; la seguridad necesaria queda visible.
+   Al activar Generar caja trasera, Textura del marco muestra un resumen compacto y Personalizar textura abre una galería con 12 acabados: Sin textura, Líneas, Ondas, Puntos, Hexagonal, Low Poly, Topográfica, Diamante, Voronoi, Madera, Concéntrica y Martillada. Incluye filtros por categoría y mantiene Esquinas del marco como primer grupo de controles. El modal permite elegir Frente, Laterales o Todo el exterior, presets de intensidad y ajustes de profundidad y escala; incluye el mismo visor 3D. Aplicar confirma y Cancelar o Escape descarta el borrador. El relieve de hasta 0,6 mm hacia adentro se refleja en los STL de las piezas elegidas, sin cambiar foto, tamaño exterior ni encastres; se conserva en los proyectos guardados.
+   Esquinas del marco permite conservar las puntas rectas o redondearlas de 0 a 100 % (radio máximo de perfil: 2,4 mm), incluso sin textura. Se aplica al exterior de caja, marco y tapa, se muestra en 3D y se exporta en sus STL; conserva el hueco de la foto y los encastres. Los proyectos anteriores mantienen esquinas rectas.
+5. El visor tiene mayor altura y conserva luz, giro, zoom e inspección de componentes. El botón de la esquina superior derecha amplía la vista a pantalla completa; se vuelve con el mismo botón o Escape. Si el navegador no permite pantalla completa nativa, se amplía dentro de la ventana con foco contenido y fondo inactivo. El mismo visor permanece montado para conservar ángulo y zoom. La descarga aparece inmediatamente después del resumen. Las guías de impresión, montaje y datos técnicos son desplegables; la seguridad necesaria queda visible.
 6. Nombre, guardados, Exportar proyecto, Importar y Guardar están en una barra compacta. Los [guardados compartidos](../components/saved-designs.md) mantienen independientes lámparas y cuadros.
 
 ## Variantes

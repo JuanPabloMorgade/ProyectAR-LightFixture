@@ -1,0 +1,392 @@
+﻿.texture-summary {
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: #110c1a80;
+}
+.texture-summary h4 {
+  margin: 0 0 12px;
+  font-size: 14px;
+}
+.texture-summary-selection {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.texture-summary-selection > .texture-thumbnail {
+  flex: 0 0 54px;
+  width: 54px;
+  height: 44px;
+  border-radius: 9px;
+  border: 1px solid var(--line);
+}
+.texture-summary-selection strong {
+  display: block;
+  font-size: 14px;
+}
+.texture-summary-selection div > span {
+  display: block;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--muted);
+  margin-top: 3px;
+}
+.texture-state {
+  width: 7px;
+  height: 7px;
+  flex: 0 0 7px;
+  border-radius: 50%;
+  background: var(--muted);
+  margin-left: auto;
+}
+.texture-state.is-active {
+  background: var(--accent);
+  box-shadow: 0 0 10px #a879ff55;
+}
+.texture-summary .texture-customize-button {
+  width: 100%;
+  min-height: 42px;
+  padding: 10px 14px;
+  font-size: 13px;
+}
+.texture-modal {
+  width: min(1180px, calc(100vw / var(--interface-scale) - 32px));
+  max-width: calc(100vw / var(--interface-scale) - 32px);
+  max-height: calc(var(--interface-viewport-height) - 32px);
+  padding: 0;
+  overflow: hidden;
+}
+.texture-modal[open] {
+  display: flex;
+  flex-direction: column;
+}
+.texture-modal .ui-modal-header {
+  padding: 24px 28px 0;
+  margin-bottom: 0;
+  flex: none;
+}
+.texture-modal-description {
+  margin: 8px 28px 20px;
+  color: var(--muted);
+  line-height: 1.6;
+  font-size: 14px;
+}
+.texture-modal-body {
+  display: grid;
+  grid-auto-rows: max-content;
+  grid-template-columns: minmax(0, 1.35fr) minmax(280px, 1fr);
+  gap: 24px;
+  padding: 4px 28px 24px;
+  overflow: auto;
+  min-height: 0;
+  overscroll-behavior: contain;
+}
+.texture-modal-settings {
+  min-width: 0;
+}
+.texture-fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0 0 24px;
+  min-width: 0;
+}
+.texture-fieldset legend {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+.texture-fieldset legend > span {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--accent);
+  margin-left: auto;
+}
+.texture-fieldset:disabled {
+  opacity: 0.45;
+}
+.texture-fieldset.texture-corners-section {
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--line);
+}
+.texture-gallery {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+.texture-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.texture-filters button {
+  color: var(--muted);
+  background: var(--dark);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 9px 12px;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.texture-filters button:hover,
+.texture-filters button[aria-pressed="true"] {
+  color: var(--ink);
+  border-color: var(--accent);
+  background: #a879ff18;
+}
+.texture-filters button:focus-visible {
+  outline: 2px solid #ccaaff;
+  outline-offset: 3px;
+}
+.texture-current {
+  margin: 12px 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+.texture-current strong {
+  color: var(--accent);
+}
+.texture-card {
+  position: relative;
+  padding: 7px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--dark);
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    background 0.15s;
+  min-width: 0;
+}
+.texture-card:hover {
+  border-color: var(--accent);
+  background: #2a1a3b;
+}
+.texture-card.is-selected {
+  border-color: var(--accent);
+  background: #a879ff18;
+  box-shadow: 0 0 0 1px #a879ff55;
+}
+.texture-card > input,
+.texture-segments input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+}
+.texture-card:has(input:focus-visible),
+.texture-segments label:has(input:focus-visible) {
+  outline: 2px solid #ccaaff;
+  outline-offset: 3px;
+}
+.texture-card .texture-thumbnail {
+  display: block;
+  width: 100%;
+  height: 76px;
+  border-radius: 8px;
+}
+.texture-card-name {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 3px;
+  font-size: 13px;
+  font-weight: 600;
+  margin: 9px 3px 4px;
+}
+.texture-card-name svg {
+  flex: none;
+  color: var(--accent);
+}
+.texture-card small {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.5;
+  margin: 0 3px 3px;
+}
+.texture-segments {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.texture-segments label {
+  position: relative;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 10px 8px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--dark);
+  font-size: 13px;
+  cursor: pointer;
+}
+.texture-segments label.is-selected {
+  background: #a879ff18;
+  border-color: var(--accent);
+}
+.texture-segments label:hover {
+  border-color: var(--accent);
+}
+.texture-fieldset:disabled label {
+  cursor: default;
+}
+.texture-segments small {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 4px;
+}
+.texture-corner-shapes {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-bottom: 18px;
+}
+.texture-corner-shapes label {
+  gap: 10px;
+}
+.texture-summary-selection .texture-corner-summary {
+  display: block;
+  font-size: 11px;
+  margin-top: 4px;
+  color: var(--accent);
+}
+.texture-fieldset .field-hint {
+  margin-bottom: 0;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.texture-advanced .texture-fieldset {
+  display: grid;
+  gap: 20px;
+  margin: 0;
+}
+.texture-advanced .ui-range-field .ui-label {
+  font-size: 13px;
+}
+.texture-preview {
+  position: sticky;
+  top: 0;
+  align-self: start;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  overflow: hidden;
+  background: var(--dark);
+}
+.texture-preview-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 16px;
+  font-size: 14px;
+}
+.texture-preview-heading > span {
+  font-size: 11px;
+  color: var(--muted);
+}
+.texture-preview-stage {
+  height: 330px;
+  position: relative;
+  background: radial-gradient(ellipse, #3e3044, #120d1b 85%);
+}
+.texture-preview p {
+  margin: 12px 16px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+.texture-preview .texture-error {
+  color: var(--error);
+}
+.texture-modal .ui-modal-footer {
+  flex: none;
+  padding: 16px 28px;
+  margin: 0;
+  border-top: 1px solid var(--line);
+  background: var(--surface);
+}
+.texture-modal .ui-modal-footer .button {
+  padding: 12px 18px;
+  font-size: 13px;
+}
+.texture-modal .texture-reset {
+  margin-right: auto;
+}
+@media (max-width: 1100px) {
+  .texture-gallery {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 760px) {
+  .texture-modal {
+    width: calc(100vw - 20px);
+    max-width: calc(100vw - 20px);
+    max-height: calc(100dvh - 20px);
+    border-radius: 18px;
+  }
+  .texture-modal .ui-modal-header {
+    padding: 18px 16px 0;
+    gap: 10px;
+  }
+  .texture-modal .ui-modal-header h2 {
+    font-size: 20px;
+  }
+  .texture-modal-description {
+    margin: 8px 16px 16px;
+    font-size: 13px;
+  }
+  .texture-modal-body {
+    grid-template-columns: 1fr;
+    padding: 4px 16px 20px;
+    gap: 20px;
+  }
+  .texture-preview {
+    position: static;
+    grid-row: 1;
+  }
+  .texture-preview-stage {
+    height: 210px;
+  }
+  .texture-preview-heading {
+    padding: 12px 14px;
+  }
+  .texture-preview p {
+    margin-block: 8px;
+  }
+  .texture-gallery {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .texture-card .texture-thumbnail {
+    height: 76px;
+  }
+  .texture-modal .ui-modal-footer {
+    padding: 12px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .texture-modal .ui-modal-footer .button {
+    padding: 11px 12px;
+  }
+  .texture-modal .texture-reset {
+    width: 100%;
+    justify-content: flex-start;
+    padding-block: 4px;
+  }
+  .texture-segments label {
+    font-size: 12px;
+    padding-inline: 6px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .texture-card {
+    transition: none;
+  }
+}

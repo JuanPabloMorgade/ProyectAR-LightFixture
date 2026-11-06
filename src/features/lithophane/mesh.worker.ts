@@ -3,18 +3,29 @@ import { createSphereCap } from "./sphere-cap";
 import { createHousingParts } from "./housing";
 import { createPrintStand, hasPrintStand } from "./print-stand";
 self.onmessage = (event) => {
-  const { id, pixels, width, height, settings } = event.data;
+  const { id, pixels, width, height, settings, imageId, currentMeshKey } =
+    event.data;
   try {
-    const mesh = createMesh(pixels, width, height, settings);
+    const { housing: _, ...photoSettings } = settings;
+    const meshKey = JSON.stringify([imageId, width, height, photoSettings]);
+    // Only reuse buffers the client has actually accepted. Stale worker results
+    // cannot cause a newer request to reuse a photo the client never received.
+    const meshUnchanged = imageId !== undefined && meshKey === currentMeshKey;
+    const mesh = meshUnchanged
+      ? null
+      : createMesh(pixels, width, height, settings);
     const housingParts = createHousingParts(settings);
     const sphereCap =
-      settings.shape === "sphere" ? createSphereCap(settings) : null;
-    const prepared = hasPrintStand(settings)
-      ? createPrintStand(mesh, settings)
-      : null;
+      !meshUnchanged && settings.shape === "sphere"
+        ? createSphereCap(settings)
+        : null;
+    const prepared =
+      mesh && hasPrintStand(settings) ? createPrintStand(mesh, settings) : null;
     self.postMessage(
       {
         id,
+        meshKey,
+        meshUnchanged,
         ...mesh,
         housingParts,
         sphereCap,
@@ -23,8 +34,7 @@ self.onmessage = (event) => {
       },
       {
         transfer: [
-          mesh.positions.buffer,
-          mesh.indices.buffer,
+          ...(mesh ? [mesh.positions.buffer, mesh.indices.buffer] : []),
           ...(sphereCap
             ? [sphereCap.positions.buffer, sphereCap.indices.buffer]
             : []),

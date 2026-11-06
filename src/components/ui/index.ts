@@ -1,4 +1,5 @@
 export { Button, IconButton, type ButtonProps } from "./button";
+export { Switch } from "./switch";
 export {
   Input,
   TextArea,

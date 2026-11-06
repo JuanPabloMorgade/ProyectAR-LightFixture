@@ -7,6 +7,7 @@ import {
   render as renderComponent,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import LampEditor from "../src/features/lithophane/editor";
 import { defaults } from "../src/features/lithophane/mesh";
@@ -44,6 +45,127 @@ function selectVariant(value: string) {
   if (!radio) throw new Error(`Missing variant ${value}`);
   fireEvent.click(radio);
 }
+
+test("el modal aplica, guarda, recupera, cancela y restablece solo la textura", async () => {
+  const first = render(<LampEditor />);
+  const save = () => screen.getByRole("button", { name: /^Guardar$/ });
+  const customize = () =>
+    screen.getByRole("button", { name: "Personalizar textura" });
+  const apply = () => screen.getByRole("button", { name: "Aplicar textura" });
+  const ready = () =>
+    waitFor(() => expect(save().hasAttribute("disabled")).toBe(false), {
+      timeout: 10000,
+    });
+  await ready();
+  expect(
+    screen.queryByRole("button", { name: "Personalizar textura" }),
+  ).toBeNull();
+  fireEvent.click(
+    screen.getByRole("switch", { name: "Generar caja trasera" }),
+  );
+  await ready();
+  fireEvent.click(customize());
+  const dialog = screen.getByRole("dialog", {
+    name: "Personaliz\u00e1 la textura de tu marco",
+  });
+  expect(
+    screen.getByRole("radio", { name: "Sin textura" }).hasAttribute("checked"),
+  ).toBe(true);
+  expect(
+    screen.getByRole("radio", { name: "Laterales" }).matches(":disabled"),
+  ).toBe(true);
+  expect(
+    screen.getByRole("radio", { name: "Redondeadas" }).matches(":disabled"),
+  ).toBe(false);
+  fireEvent.click(screen.getByRole("radio", { name: "Redondeadas" }));
+  expect(
+    (
+      screen.getByRole("slider", {
+        name: "Redondeo de esquinas",
+      }) as HTMLInputElement
+    ).value,
+  ).toBe("50");
+  fireEvent.change(
+    screen.getByRole("slider", { name: "Redondeo de esquinas" }),
+    { target: { value: "37" } },
+  );
+  fireEvent.click(screen.getByRole("radio", { name: "Ondas" }));
+  fireEvent.click(screen.getByRole("radio", { name: "Puntos" }));
+  fireEvent.click(screen.getByRole("radio", { name: "Laterales" }));
+  fireEvent.click(screen.getByRole("radio", { name: /Medio/ }));
+  fireEvent.click(within(dialog).getByText("Ajustes avanzados"));
+  fireEvent.change(
+    screen.getByRole("slider", { name: "Profundidad del relieve" }),
+    { target: { value: "0.35" } },
+  );
+  expect(screen.getByText("Personalizado")).toBeTruthy();
+  fireEvent.change(
+    screen.getByRole("slider", { name: "Escala del patr\u00f3n" }),
+    { target: { value: "1.5" } },
+  );
+  await waitFor(() => expect(apply().hasAttribute("disabled")).toBe(false), {
+    timeout: 10000,
+  });
+  fireEvent.click(apply());
+  expect(screen.queryByRole("dialog")).toBeNull();
+  await ready();
+  fireEvent.click(save());
+  const stored = JSON.parse(
+    localStorage.getItem(localStorage.getItem(LAMP_LAST_KEY)!)!,
+  );
+  expect(stored.settings.housing).toMatchObject({
+    frameTexture: "dots",
+    frameTextureArea: "sides",
+    frameTextureDepth: 0.35,
+    frameTextureScale: 1.5,
+    frameCornerRounding: 37,
+    depth: 25,
+  });
+  first.unmount();
+  render(<LampEditor />);
+  await openSavedDesign();
+  fireEvent.click(customize());
+  expect(
+    (
+      screen.getByRole("slider", {
+        name: "Redondeo de esquinas",
+      }) as HTMLInputElement
+    ).value,
+  ).toBe("37");
+  expect(
+    (screen.getByRole("radio", { name: "Puntos" }) as HTMLInputElement).checked,
+  ).toBe(true);
+  fireEvent.click(screen.getByRole("button", { name: "Restablecer" }));
+  fireEvent.click(screen.getByRole("button", { name: "Cancelar" }));
+  await ready();
+  fireEvent.click(save());
+  expect(
+    JSON.parse(localStorage.getItem(localStorage.getItem(LAMP_LAST_KEY)!)!)
+      .settings,
+  ).toEqual(stored.settings);
+  fireEvent.click(customize());
+  expect(
+    (screen.getByRole("radio", { name: "Puntos" }) as HTMLInputElement).checked,
+  ).toBe(true);
+  fireEvent.click(screen.getByRole("button", { name: "Restablecer" }));
+  await waitFor(() => expect(apply().hasAttribute("disabled")).toBe(false), {
+    timeout: 10000,
+  });
+  fireEvent.click(apply());
+  await ready();
+  fireEvent.click(save());
+  expect(
+    JSON.parse(localStorage.getItem(localStorage.getItem(LAMP_LAST_KEY)!)!)
+      .settings.housing,
+  ).toMatchObject({
+    frameTexture: "none",
+    frameTextureDepth: 0.6,
+    frameTextureScale: 1,
+    frameTextureArea: "all",
+    frameCornerRounding: 0,
+    depth: 25,
+  });
+}, 30000);
 
 test("la foto centrada se guarda, se recupera y conserva su ajuste entre variantes", async () => {
   const first = render(<LampEditor />);
@@ -247,6 +369,18 @@ class MockWorker {
 }
 
 beforeEach(() => {
+  Object.defineProperty(HTMLDialogElement.prototype, "showModal", {
+    configurable: true,
+    value: function (this: HTMLDialogElement) {
+      this.setAttribute("open", "");
+    },
+  });
+  Object.defineProperty(HTMLDialogElement.prototype, "close", {
+    configurable: true,
+    value: function (this: HTMLDialogElement) {
+      this.removeAttribute("open");
+    },
+  });
   localStorage.clear();
   mockCanvasAndImages();
   vi.stubGlobal("Worker", MockWorker);
@@ -256,6 +390,8 @@ afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
+  Reflect.deleteProperty(HTMLDialogElement.prototype, "showModal");
+  Reflect.deleteProperty(HTMLDialogElement.prototype, "close");
 });
 
 async function openSavedDesign(id = localStorage.getItem(LAMP_LAST_KEY)!) {
@@ -510,7 +646,7 @@ test("la caja opcional se guarda, restaura y descarga como kit; la esfera conser
   );
   selectVariant("0");
   fireEvent.click(
-    screen.getByRole("checkbox", { name: "Generar caja trasera" }),
+    screen.getByRole("switch", { name: "Generar caja trasera" }),
   );
   fireEvent.change(
     screen.getByRole("spinbutton", { name: "Espacio para la luz" }),
@@ -534,7 +670,7 @@ test("la caja opcional se guarda, restaura y descarga como kit; la esfera conser
   await waitFor(() =>
     expect(
       (
-        screen.getByRole("checkbox", {
+        screen.getByRole("switch", {
           name: "Generar caja trasera",
         }) as HTMLInputElement
       ).checked,
@@ -556,7 +692,7 @@ test("la caja opcional se guarda, restaura y descarga como kit; la esfera conser
         .hasAttribute("disabled"),
     ).toBe(false),
   );
-  const toggle = screen.queryByRole("checkbox", {
+  const toggle = screen.queryByRole("switch", {
     name: "Generar caja trasera",
   });
   expect(toggle).toBeNull();
@@ -575,7 +711,7 @@ test("una caja que invade el radio curvo bloquea la descarga y permite corregirl
   );
   selectVariant("120");
   fireEvent.click(
-    screen.getByRole("checkbox", { name: "Generar caja trasera" }),
+    screen.getByRole("switch", { name: "Generar caja trasera" }),
   );
   fireEvent.change(
     screen.getByRole("spinbutton", { name: "Espacio para la luz" }),
@@ -661,7 +797,7 @@ test("la esfera guarda su diámetro y variante, restaura y descarga un STL propi
   expect(screen.queryByRole("spinbutton", { name: "Alto" })).toBeNull();
   expect(screen.getByLabelText("Modelo 3D de prueba").dataset.cap).toBe("true");
   expect(
-    screen.queryByRole("checkbox", {
+    screen.queryByRole("switch", {
       name: "Exportar de pie con soporte removible",
     }),
   ).toBeNull();
@@ -1010,7 +1146,7 @@ test("el soporte se puede inspeccionar sin la caja, desactivar y recuperar desac
   const first = render(<LampEditor />);
   const save = () => screen.getByRole("button", { name: /^Guardar$/ });
   const stand = () =>
-    screen.getByRole("checkbox", {
+    screen.getByRole("switch", {
       name: "Exportar de pie con soporte removible",
     }) as HTMLInputElement;
   const viewer = () => screen.getByLabelText("Modelo 3D de prueba");
@@ -1021,7 +1157,7 @@ test("el soporte se puede inspeccionar sin la caja, desactivar y recuperar desac
   );
   expect(viewer().dataset.support).toBe("true");
   fireEvent.click(
-    screen.getByRole("checkbox", { name: "Generar caja trasera" }),
+    screen.getByRole("switch", { name: "Generar caja trasera" }),
   );
   await waitFor(() => expect(save().hasAttribute("disabled")).toBe(false));
   expect(viewer().dataset.housing).toBe("0");

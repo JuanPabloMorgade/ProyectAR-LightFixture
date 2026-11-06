@@ -159,6 +159,9 @@ export default function Viewer({
       // CSS sizes the canvas; only resize its buffer to avoid applying zoom twice.
       renderer.setSize(width, height, false);
       camera.aspect = width / Math.max(1, height);
+      // Fit the narrower axis too, especially in tall mobile fullscreen views.
+      // OrbitControls keeps the user's distance and angle while projection resizes.
+      camera.zoom = Math.min(1, Math.max(0.01, camera.aspect));
       camera.updateProjectionMatrix();
     });
     observer.observe(el);

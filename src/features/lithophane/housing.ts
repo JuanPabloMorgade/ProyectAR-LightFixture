@@ -3,6 +3,18 @@ import { validateSettings, type Settings } from "./mesh";
 import { defaultHousing, hasHousing } from "./housing-config";
 import { roundOpening, roundOpeningAxes } from "../shadowbox/round-opening";
 import { MARK_DEPTH, modelMark } from "@/lib/model-mark";
+import {
+  textureOptions,
+  frameCornerRadius,
+  textureSamplingStep,
+} from "./frame-texture-config";
+import { frameCornerAxes, roundFrameCorner } from "./frame-corners";
+import {
+  frameTextureDepth,
+  frameTextureGuide,
+  surfaceTextureDepth,
+  subdivideHousingSurface,
+} from "./frame-texture";
 
 export type HousingPart = Mesh & {
   id: "body" | "bezel" | "lid";
@@ -89,19 +101,107 @@ export function createHousingParts(s: Settings): HousingPart[] {
     : [];
   const wireRadius = 2,
     wireY = -l.innerY + 10;
-  const mesh = (boxes: Bounds[], cuts: Bounds[] = [], cable = false): Mesh => {
+  const texture = l.frameTexture ?? "none";
+  const textureConfig = textureOptions(l);
+  const cornerRadius = Math.min(
+    w,
+    frameCornerRadius(textureConfig.frameCornerRounding),
+  );
+  const mesh = (
+    boxes: Bounds[],
+    cuts: Bounds[] = [],
+    cable = false,
+    part: HousingPart["id"] = "body",
+  ): Mesh => {
     const axes = cable
       ? roundOpeningAxes(0, wireY, [wireRadius, wireRadius + 1, wireRadius + 2])
       : { xs: [], ys: [] };
     let source = solidMesh(boxes, cuts, undefined, 0, {
       xs: [...curveAxes, ...axes.xs],
       ys: axes.ys,
+      requiredXs: frameCornerAxes(l.outerX, cornerRadius),
+      requiredYs: frameCornerAxes(l.outerY, cornerRadius),
       minimumGap: 0.05,
     });
+    if (
+      texture !== "none" &&
+      (textureConfig.frameTextureArea !== "front" || part === "bezel")
+    )
+      source = subdivideHousingSurface(
+        source,
+        textureSamplingStep(texture, textureConfig.frameTextureScale),
+      );
     if (cable) source = roundOpening(source, 0, wireY, wireRadius);
     const positions = new Float32Array(source.positions.length);
     for (let i = 0; i < positions.length; i += 3) {
       let u = source.positions[i];
+      let y = source.positions[i + 1];
+      let depth = source.positions[i + 2];
+      const near = (a: number, b: number) => Math.abs(a - b) < 0.00001;
+      if (texture !== "none" && textureConfig.frameTextureArea !== "front") {
+        const z0 =
+          part === "lid" ? l.back - w : part === "bezel" ? l.front : l.back;
+        const z1 =
+          part === "bezel" ? l.front + w : part === "lid" ? l.back : l.front;
+        // Leave the inner faces, photo seat and all guiding skirts untouched.
+        if (near(Math.abs(u), l.outerX))
+          u -=
+            Math.sign(u) *
+            surfaceTextureDepth(
+              texture,
+              y,
+              depth,
+              Math.min(l.outerY - Math.abs(y), depth - z0, z1 - depth),
+              textureConfig,
+            );
+        if (near(Math.abs(y), l.outerY))
+          y -=
+            Math.sign(y) *
+            surfaceTextureDepth(
+              texture,
+              source.positions[i],
+              depth,
+              Math.min(
+                l.outerX - Math.abs(source.positions[i]),
+                depth - z0,
+                z1 - depth,
+              ),
+              textureConfig,
+            );
+      }
+      if (
+        part === "bezel" &&
+        textureConfig.frameTextureArea !== "sides" &&
+        near(depth, l.front + w)
+      )
+        depth -= frameTextureDepth(
+          texture,
+          u,
+          source.positions[i + 1],
+          l.outerX,
+          l.outerY,
+          l.halfWidth - OVERLAP,
+          l.halfHeight - OVERLAP,
+          textureConfig,
+        );
+      if (
+        part === "lid" &&
+        textureConfig.frameTextureArea === "all" &&
+        // Move the rear maker mark's floor and walls with the exterior field.
+        // Moving only the face can push it through the engraved floor.
+        depth <= l.back - w + MARK_DEPTH + 0.00001
+      )
+        depth += surfaceTextureDepth(
+          texture,
+          u,
+          y,
+          Math.min(
+            l.outerX - Math.abs(u),
+            l.outerY - Math.abs(y),
+            Math.hypot(u, y - wireY) - wireRadius - 2,
+          ),
+          textureConfig,
+        );
       if (cable && l.radius) {
         // Keep the rear exit circular and 4 mm wide in assembly coordinates,
         // even where the curved lid has a smaller radius than the photo.
@@ -118,15 +218,8 @@ export function createHousingParts(s: Settings): HousingPart[] {
               : edge +
                 ((x - wireRadius) * (fixed - edge)) / (fixed - wireRadius));
       }
-      positions.set(
-        housingPoint(
-          u,
-          source.positions[i + 1],
-          source.positions[i + 2],
-          l.radius,
-        ),
-        i,
-      );
+      [u, y] = roundFrameCorner(u, y, l.outerX, l.outerY, cornerRadius);
+      positions.set(housingPoint(u, y, depth, l.radius), i);
     }
     return { positions, indices: source.indices };
   };
@@ -170,6 +263,8 @@ export function createHousingParts(s: Settings): HousingPart[] {
       ),
     ],
     bezelMark.cuts(l.front, l.front + MARK_DEPTH),
+    false,
+    "bezel",
   );
   const lidMark = modelMark(
     l.radius ? -l.innerX / 2 : 0,
@@ -202,6 +297,7 @@ export function createHousingParts(s: Settings): HousingPart[] {
       ],
     ],
     true,
+    "lid",
   );
   return [
     {
@@ -248,16 +344,25 @@ export function housingPrintMesh(part: HousingPart, s: Settings): Mesh {
 
 export function housingGuide(s: Settings) {
   const l = housingLayout(s);
+  const textureConfig = textureOptions(l);
+  const cornerRadius = Math.min(
+    l.wall,
+    frameCornerRadius(textureConfig.frameCornerRounding),
+  );
   return [
     "ProyectAR · Litofanía con caja trasera",
     `Panel ${s.width} × ${s.height} mm; arco ${s.angle}°. Profundidad radial de caja ${l.depth} mm; pared ${l.wall} mm; holgura total ${l.clearance} mm.`,
     "01: panel de la foto. 02: caja. 03: marco frontal. 04: tapa trasera.",
+    frameTextureGuide(l.frameTexture, l),
+    cornerRadius
+      ? `Esquinas exteriores redondeadas al ${textureConfig.frameCornerRounding.toLocaleString("es-AR")} %: radio ${cornerRadius.toLocaleString("es-AR")} mm. El hueco de la foto, los asientos y los encastres conservan su perfil recto. El redondeo está incluido en caja, marco y tapa.`
+      : "Esquinas exteriores rectas (redondeo 0 %).",
     "Colocá la foto desde el frente de la caja, con el relieve hacia la habitación y el dorso hacia la luz. Apoya en el asiento interior. El marco frontal sujeta 2 mm del perímetro y entra con reborde de guiado.",
     "Instalá la iluminación en la cara interior de la tapa posterior y pasá el cable por el agujero circular de Ø4 mm de esa tapa, cerca del borde inferior. El cable sale hacia atrás. La tapa tiene un reborde guiado y se retira para acceder a la luz. No se incluyen LED, fuente, conector ni tornillos.",
     "Son ajustes guiados sin pestillo. Probá la holgura con tu impresora y usá una fijación removible si hace falta. El marco y la tapa se imprimen separados; no deben fusionarse con el panel.",
     l.radius
       ? "Caja y tapas curvas se entregan orientadas de pie sobre su borde inferior. Revisá apoyos y soportes para los tramos superiores en el laminador."
-      : "Caja plana con abertura posterior sobre la cama; marco con cara exterior sobre la cama y reborde hacia arriba; tapa posterior con cara lisa sobre la cama. Revisá los pequeños voladizos del asiento.",
+      : "Caja plana con abertura posterior sobre la cama; marco con cara exterior sobre la cama y reborde hacia arriba; tapa posterior con cara exterior sobre la cama. Revisá los pequeños voladizos del asiento.",
     "Usá iluminación LED y comprobá el espacio de sus componentes, la distribución de luz y la temperatura antes de cerrar. La vista iluminada es una aproximación visual del relieve, no una simulación de la lámpara instalada.",
   ].join("\n");
 }
